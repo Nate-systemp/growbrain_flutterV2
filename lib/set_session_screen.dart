@@ -24,7 +24,8 @@ class SetSessionScreen extends StatefulWidget {
 }
 
 class _SetSessionScreenState extends State<SetSessionScreen> {
-  final List<String> games = ['Attention', 'Verbal', 'Memory', 'Logic'];
+  final List<String> allGames = ['Attention', 'Verbal', 'Memory', 'Logic'];
+  List<String> availableGames = []; // Will be filtered based on student's cognitive needs
   final Set<String> selectedGames = {};
   final Map<String, List<String>> categoryGames = {
     'Attention': ['Who Moved?', 'Light Tap', 'Find Me'],
@@ -42,7 +43,30 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeAvailableGames();
     _loadSession();
+  }
+
+  void _initializeAvailableGames() {
+    // Filter games based on student's cognitive needs
+    availableGames.clear();
+    
+    // Check which cognitive needs are enabled for this student
+    final bool hasAttention = widget.student['attention'] == true;
+    final bool hasVerbal = widget.student['verbal'] == true;
+    final bool hasMemory = widget.student['memory'] == true;
+    final bool hasLogic = widget.student['logic'] == true;
+    
+    // Add available game categories based on student's needs
+    if (hasAttention) availableGames.add('Attention');
+    if (hasVerbal) availableGames.add('Verbal');
+    if (hasMemory) availableGames.add('Memory');
+    if (hasLogic) availableGames.add('Logic');
+    
+    // If no cognitive needs are selected, show all games (fallback)
+    if (availableGames.isEmpty) {
+      availableGames.addAll(allGames);
+    }
   }
 
   Future<void> _loadSession() async {
@@ -58,12 +82,24 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
           .get();
       final data = doc.data();
       if (data != null && data['session'] is List) {
+        final sessionData = List<String>.from(data['session']);
+        print('Loading session for student: $sessionData'); // Debug print
         setState(() {
           selectedGames.clear();
-          selectedGames.addAll(List<String>.from(data['session']));
+          selectedGames.addAll(sessionData);
+        });
+      } else {
+        print('No session data found for student'); // Debug print
+        setState(() {
+          selectedGames.clear();
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      print('Error loading session: $e'); // Debug print
+      setState(() {
+        selectedGames.clear();
+      });
+    }
   }
 
   Future<void> _openCategoryModal(String category) async {
@@ -128,6 +164,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       builder: (ctx) => PlaySessionModal(
         studentName: widget.student['fullName'] ?? 'Student',
         games: selectedGames.toList(),
+        gameDifficulties: gameDifficulties,
       ),
     );
     if (result == 'play' && selectedGames.contains('Match Cards')) {
@@ -192,8 +229,6 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     }
     if (result == 'play' && selectedGames.contains('Light Tap')) {
       final difficulty = gameDifficulties['Light Tap'] ?? 'Starter';
-      final challengeFocus = 'Attention'; // Since Light Tap is under Attention
-      final gameName = 'Light Tap';
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => LightTapGame(
@@ -204,7 +239,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       );
     }
     if (result == 'play' && selectedGames.contains('Find Me')) {
-      final difficulty = gameDifficulties['Find Me'] ?? 'Starter';
+      final difficulty = gameDifficulties['Find Me'] ?? 'Easy';
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => FindMeGame(
@@ -436,231 +471,85 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       return Scaffold(
         backgroundColor: const Color(0xFF5B6F4A),
         body: SafeArea(
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 700),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 children: [
-                  // Left panel
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Back button
+                  Row(
                     children: [
-                      // For Teachers button (replaces Back button)
                       Container(
-                        width: 240,
-                        margin: const EdgeInsets.only(bottom: 18),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black87,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(32),
-                            ),
-                            elevation: 2,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 18,
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.person_outline, size: 32),
-                          label: const Text('For Teachers'),
-                        ),
-                      ),
-                      // Selected Games panel
-                      Container(
-                        width: 260,
-                        height: 380,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.10),
-                              blurRadius: 8,
-                              offset: const Offset(2, 4),
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                          horizontal: 0,
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.only(
-                                top: 22,
-                                bottom: 14,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF7F7F7),
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(28),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Selected Games',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      color: Colors.grey[800],
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: 'Nunito',
-                                    ),
-                                  ),
-                                  Text(
-                                    'for $studentName',
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF393C48),
-                                      fontFamily: 'Nunito',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Message about clicking games to set difficulty
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Tap on selected games to set difficulty',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Nunito',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // 2x3 grid with 5 slots (last slot centered)
-                            SizedBox(
-                              height: 220,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _SelectedGameSlot(
-                                        game: selectedGames.length > 0
-                                            ? selectedGames.elementAt(0)
-                                            : null,
-                                        onSetDifficulty: (g) =>
-                                            _showSetDifficultyModal(g),
-                                      ),
-                                      const SizedBox(width: 28),
-                                      _SelectedGameSlot(
-                                        game: selectedGames.length > 1
-                                            ? selectedGames.elementAt(1)
-                                            : null,
-                                        onSetDifficulty: (g) =>
-                                            _showSetDifficultyModal(g),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 28),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _SelectedGameSlot(
-                                        game: selectedGames.length > 2
-                                            ? selectedGames.elementAt(2)
-                                            : null,
-                                        onSetDifficulty: (g) =>
-                                            _showSetDifficultyModal(g),
-                                      ),
-                                      const SizedBox(width: 28),
-                                      _SelectedGameSlot(
-                                        game: selectedGames.length > 3
-                                            ? selectedGames.elementAt(3)
-                                            : null,
-                                        onSetDifficulty: (g) =>
-                                            _showSetDifficultyModal(g),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 28),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _SelectedGameSlot(
-                                        game: selectedGames.length > 4
-                                            ? selectedGames.elementAt(4)
-                                            : null,
-                                        faded: true,
-                                        onSetDifficulty: (g) =>
-                                            _showSetDifficultyModal(g),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        child: IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.black87,
+                            size: 24,
+                          ),
+                          tooltip: 'Back to Teacher Dashboard',
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      // Save and Play buttons below the panel
-                      SizedBox(
-                        width: 220,
-                        child: Column(
-                          children: [
-                            _YellowButton(
-                              label: 'Save',
-                              onTap: _saving
-                                  ? () {}
-                                  : () {
-                                      _saveSession();
-                                    },
-                            ),
-                            const SizedBox(height: 18),
-                            _YellowButton(label: 'Play', onTap: _showPlayModal),
-                          ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'Set Session for ${widget.student['fullName'] ?? 'Student'}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 56),
-                  // Main grid
-                  Expanded(
-                    child: Center(
-                      child: SizedBox(
-                        width: 520,
-                        child: GridView.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 36,
-                          crossAxisSpacing: 36,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
+                  const SizedBox(height: 20),
+                  
+                  // Main content row
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWideScreen = constraints.maxWidth > 800;
+                      
+                      if (isWideScreen) {
+                        // Wide screen layout - side by side
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final category in games)
-                              _GameCard(
-                                label: category,
-                                icon: _iconForCategory(category),
-                                color: _colorForCategory(category),
-                                selected: selectedGames.any(
-                                  (g) => categoryGames[category]!.contains(g),
-                                ),
-                                onTap: () => _openCategoryModal(category),
-                              ),
+                            // Left panel - Selected Games
+                            Expanded(
+                              flex: 2,
+                              child: _buildSelectedGamesPanel(studentName),
+                            ),
+                            const SizedBox(width: 20),
+                            // Right panel - Game Categories
+                            Expanded(
+                              flex: 3,
+                              child: _buildGameCategoriesPanel(),
+                            ),
                           ],
-                        ),
-                      ),
-                    ),
+                        );
+                      } else {
+                        // Narrow screen layout - stacked
+                        return Column(
+                          children: [
+                            _buildSelectedGamesPanel(studentName),
+                            const SizedBox(height: 20),
+                            _buildGameCategoriesPanel(),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -671,15 +560,214 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     } catch (e, st) {
       debugPrint('Error in SetSessionScreen build: $e\n$st');
       return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
+        backgroundColor: const Color(0xFF5B6F4A),
+        body: const Center(
           child: Text(
-            'Something went wrong. Please restart the app.',
-            style: TextStyle(color: Colors.red, fontSize: 20),
+            'Error loading session screen',
+            style: TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
       );
     }
+  }
+
+  Widget _buildSelectedGamesPanel(String studentName) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 350),
+      child: Column(
+        children: [
+          // Selected Games panel
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 300, maxHeight: 400),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 8,
+                  offset: const Offset(2, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Selected Games',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'for ${studentName.split(' ').first}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Tap on selected games to set difficulty',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.black38,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Game slots
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // First row - 2 games
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _SelectedGameSlot(
+                              game: selectedGames.isNotEmpty
+                                  ? selectedGames.elementAt(0)
+                                  : null,
+                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
+                            ),
+                            _SelectedGameSlot(
+                              game: selectedGames.length > 1
+                                  ? selectedGames.elementAt(1)
+                                  : null,
+                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
+                            ),
+                          ],
+                        ),
+                        // Second row - 2 games
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _SelectedGameSlot(
+                              game: selectedGames.length > 2
+                                  ? selectedGames.elementAt(2)
+                                  : null,
+                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
+                            ),
+                            _SelectedGameSlot(
+                              game: selectedGames.length > 3
+                                  ? selectedGames.elementAt(3)
+                                  : null,
+                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
+                            ),
+                          ],
+                        ),
+                        // Third row - 1 game (bonus)
+                        _SelectedGameSlot(
+                          game: selectedGames.length > 4
+                              ? selectedGames.elementAt(4)
+                              : null,
+                          faded: true,
+                          onSetDifficulty: (g) => _showSetDifficultyModal(g),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Action buttons
+          Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      selectedGames.clear();
+                      gameDifficulties.clear();
+                    });
+                  },
+                  child: const Text('Clear All'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _YellowButton(
+                label: 'Save',
+                onTap: _saving
+                    ? () {}
+                    : () {
+                        _saveSession();
+                      },
+              ),
+              const SizedBox(height: 10),
+              _YellowButton(label: 'Play', onTap: _showPlayModal),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameCategoriesPanel() {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 500),
+      child: GridView.count(
+        crossAxisCount: 2,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 20,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.2,
+        children: [
+          for (final category in allGames)
+            _GameCard(
+              label: category,
+              icon: _iconForCategory(category),
+              color: _colorForCategory(category),
+              selected: selectedGames.any(
+                (g) => categoryGames[category]!.contains(g),
+              ),
+              enabled: availableGames.contains(category),
+              onTap: availableGames.contains(category) 
+                  ? () => _openCategoryModal(category)
+                  : () {}, // Empty function for disabled cards
+            ),
+        ],
+      ),
+    );
   }
 
   IconData _iconForCategory(String category) {
@@ -718,12 +806,14 @@ class _GameCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
   const _GameCard({
     required this.label,
     required this.icon,
     required this.color,
     required this.selected,
+    this.enabled = true,
     required this.onTap,
     Key? key,
   }) : super(key: key);
@@ -731,19 +821,25 @@ class _GameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: Container(
         width: 210,
         height: 210,
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: enabled ? Colors.white : Colors.grey[200],
           borderRadius: BorderRadius.circular(36),
-          boxShadow: [
+          boxShadow: enabled ? [
             BoxShadow(
               color: Colors.black.withOpacity(0.13),
               blurRadius: 10,
               offset: const Offset(2, 8),
+            ),
+          ] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(1, 4),
             ),
           ],
           border: selected ? Border.all(color: color, width: 5) : null,
@@ -751,27 +847,42 @@ class _GameCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 80, color: color),
+            Icon(
+              icon, 
+              size: 80, 
+              color: enabled ? color : Colors.grey[400],
+            ),
             const SizedBox(height: 18),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF7F7F7),
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                color: enabled ? const Color(0xFFF7F7F7) : Colors.grey[100],
+                borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(32),
                 ),
               ),
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF393C48),
-                  fontFamily: 'Nunito',
-                  letterSpacing: 1.2,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: enabled ? const Color(0xFF393C48) : Colors.grey[500],
+                      fontFamily: 'Nunito',
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  if (!enabled)
+                    Icon(
+                      Icons.lock,
+                      size: 24,
+                      color: Colors.grey[600],
+                    ),
+                ],
               ),
             ),
           ],
@@ -1510,9 +1621,11 @@ class _SelectedGameSlot extends StatelessWidget {
 class PlaySessionModal extends StatefulWidget {
   final String studentName;
   final List<String> games;
+  final Map<String, String> gameDifficulties;
   const PlaySessionModal({
     required this.studentName,
     required this.games,
+    required this.gameDifficulties,
     Key? key,
   }) : super(key: key);
 
@@ -1597,9 +1710,34 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 6,
                                       ),
-                                      child: Text(
-                                        g,
-                                        style: const TextStyle(fontSize: 18),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              g,
+                                              style: const TextStyle(fontSize: 18),
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF5B6F4A),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              widget.gameDifficulties[g] ?? 'Easy',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -1678,18 +1816,22 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
             ),
             // Close button
             Positioned(
-              top: -18,
-              right: -18,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
+              top: -12,
+              right: -12,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 28),
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 26),
                 ),
               ),
             ),

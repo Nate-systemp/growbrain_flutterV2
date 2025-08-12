@@ -1,284 +1,218 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
-import 'dart:async';
+import 'dart:math' as math;
+
+enum ShapeType { circle, square, triangle, diamond, pentagon, hexagon, star, oval }
+
+class GameShape {
+  ShapeType type;
+  Color color;
+  bool isMoved;
+
+  GameShape({
+    required this.type,
+    required this.color,
+    this.isMoved = false,
+  });
+}
 
 class WhoMovedGame extends StatefulWidget {
   final String difficulty;
-  final void Function({
+  final String? challengeFocus;
+  final String? gameName;
+  final Future<void> Function({
     required int accuracy,
     required int completionTime,
     required String challengeFocus,
     required String gameName,
     required String difficulty,
   })? onGameComplete;
-  final String challengeFocus;
-  final String gameName;
 
   const WhoMovedGame({
-    Key? key,
+    super.key, 
     required this.difficulty,
+    this.challengeFocus,
+    this.gameName,
     this.onGameComplete,
-    required this.challengeFocus,
-    required this.gameName,
-  }) : super(key: key);
+  });
 
   @override
-  State<WhoMovedGame> createState() => _WhoMovedGameState();
+  _WhoMovedGameState createState() => _WhoMovedGameState();
 }
 
 class _WhoMovedGameState extends State<WhoMovedGame>
     with TickerProviderStateMixin {
-  late List<Character> characters;
-  late Stopwatch stopwatch;
+  List<GameShape> shapes = [];
+  int movedShapeIndex = -1;
+  int? selectedShapeIndex;
+  int score = 0;
+  int timer = 0;
+  int roundsPlayed = 0;
+  int correctAnswers = 0;
+  late DateTime gameStartTime;
+  late AnimationController _spinController;
+  late Animation<double> _spinAnimation;
   bool gameStarted = false;
-  bool showingInitialPositions = true;
+  bool showingAnimation = false;
   bool canSelect = false;
   bool gameCompleted = false;
-  int round = 1;
-  int totalRounds = 5;
-  int correctAnswers = 0;
-  int? movedCharacterIndex;
-  int? selectedCharacterIndex;
-  late String difficulty;
-  late int numberOfCharacters;
-  late Duration observationTime;
-  late Duration movementDuration;
+  
+  // Fixed 3 rounds per game
+  static const int totalRounds = 3;
 
-  // Animation controllers
-  late AnimationController _moveAnimationController;
-  late Animation<Offset> _moveAnimation;
+  int get numberOfShapes {
+    switch (widget.difficulty) {
+      case 'Easy':
+        return 3;
+      case 'Medium':
+        return 5;
+      case 'Hard':
+        return 8;
+      default:
+        return 3;
+    }
+  }
 
-  final List<Map<String, dynamic>> characterTypes = [
-    {'name': 'Robot', 'icon': Icons.android, 'color': Color(0xFF81C784)}, // Soft green
-    {'name': 'Star', 'icon': Icons.star, 'color': Color(0xFFFFD54F)}, // Soft yellow
-    {'name': 'Heart', 'icon': Icons.favorite, 'color': Color(0xFFEF9A9A)}, // Soft red
-    {'name': 'Diamond', 'icon': Icons.diamond, 'color': Color(0xFFCE93D8)}, // Soft purple
-    {'name': 'Circle', 'icon': Icons.circle, 'color': Color(0xFFA5D6A7)}, // Soft light green
-    {'name': 'Square', 'icon': Icons.crop_square, 'color': Color(0xFFFFCC80)}, // Soft orange
-    {'name': 'Triangle', 'icon': Icons.change_history, 'color': Color(0xFFF8BBD9)}, // Soft pink
-    {'name': 'Hexagon', 'icon': Icons.hexagon, 'color': Color(0xFF80CBC4)}, // Soft teal
-    {'name': 'Flower', 'icon': Icons.local_florist, 'color': Color(0xFFE1BEE7)}, // Soft lavender
-    {'name': 'Sun', 'icon': Icons.wb_sunny, 'color': Color(0xFFFFF176)}, // Soft light yellow
-  ];
+  // Get timer duration based on difficulty and round progression
+  int get timerDuration {
+    int baseDuration;
+    switch (widget.difficulty) {
+      case 'Easy':
+        baseDuration = 30;
+        break;
+      case 'Medium':
+        baseDuration = 25;
+        break;
+      case 'Hard':
+        baseDuration = 20;
+        break;
+      default:
+        baseDuration = 30;
+    }
+    
+    // Reduce timer by 5 seconds each round (but minimum 10 seconds)
+    int reduction = (roundsPlayed) * 5;
+    return math.max(10, baseDuration - reduction);
+  }
+
+  // Get spin duration based on difficulty and round progression
+  Duration get spinDuration {
+    double baseDurationSeconds;
+    switch (widget.difficulty) {
+      case 'Easy':
+        baseDurationSeconds = 3.0;
+        break;
+      case 'Medium':
+        baseDurationSeconds = 2.5;
+        break;
+      case 'Hard':
+        baseDurationSeconds = 2.0;
+        break;
+      default:
+        baseDurationSeconds = 3.0;
+    }
+    
+    // Increase speed (reduce duration) each round by 0.3 seconds (minimum 1 second)
+    double speedIncrease = (roundsPlayed) * 0.3;
+    double finalDuration = math.max(1.0, baseDurationSeconds - speedIncrease);
+    
+    return Duration(milliseconds: (finalDuration * 1000).round());
+  }
 
   @override
   void initState() {
     super.initState();
-    difficulty = widget.difficulty;
-    stopwatch = Stopwatch();
-    _setupDifficulty();
-    _initializeAnimations();
+    gameStartTime = DateTime.now();
+    _spinController = AnimationController(
+      duration: spinDuration, // Will be updated per round
+      vsync: this,
+    );
+    _spinAnimation = Tween<double>(
+      begin: 0,
+      end: 2 * math.pi,
+    ).animate(CurvedAnimation(
+      parent: _spinController,
+      curve: Curves.easeInOut,
+    ));
+
     _initializeGame();
+    // Don't start timer automatically - wait for user to start round
   }
 
   @override
   void dispose() {
-    _moveAnimationController.dispose();
+    _spinController.dispose();
     super.dispose();
   }
 
-  void _setupDifficulty() {
-    switch (difficulty) {
-      case 'Easy':
-        numberOfCharacters = 3;
-        observationTime = const Duration(seconds: 3);
-        movementDuration = const Duration(milliseconds: 800);
-        break;
-      case 'Medium':
-        numberOfCharacters = 5;
-        observationTime = const Duration(seconds: 2);
-        movementDuration = const Duration(milliseconds: 600);
-        break;
-      case 'Hard':
-        numberOfCharacters = 8;
-        observationTime = const Duration(seconds: 1);
-        movementDuration = const Duration(milliseconds: 400);
-        break;
-      default:
-        numberOfCharacters = 3;
-        observationTime = const Duration(seconds: 3);
-        movementDuration = const Duration(milliseconds: 800);
-    }
-  }
-
-  void _initializeAnimations() {
-    _moveAnimationController = AnimationController(
-      duration: movementDuration,
-      vsync: this,
-    );
-
-    _moveAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0.0, -0.5), // Move up slightly
-    ).animate(CurvedAnimation(
-      parent: _moveAnimationController,
-      curve: Curves.easeInOut,
-    ));
-  }
-
   void _initializeGame() {
-    // Create characters
-    characters = [];
-    final shuffledTypes = List.from(characterTypes)..shuffle();
-    
-    for (int i = 0; i < numberOfCharacters; i++) {
-      characters.add(Character(
-        name: shuffledTypes[i]['name'],
-        icon: shuffledTypes[i]['icon'],
-        color: shuffledTypes[i]['color'],
-        position: i,
-        originalPosition: i,
+    final colors = [
+      const Color(0xFF5B6F4A), // Dark green
+      const Color(0xFFFFD740), // Yellow
+      const Color(0xFF8BC34A), // Light green
+      const Color(0xFFFF9800), // Orange
+      const Color(0xFF2196F3), // Blue
+      const Color(0xFF9C27B0), // Purple
+      const Color(0xFFE91E63), // Pink
+      const Color(0xFF607D8B), // Blue grey
+    ];
+
+    final shapeTypes = ShapeType.values;
+    shapes.clear();
+
+    for (int i = 0; i < numberOfShapes; i++) {
+      shapes.add(GameShape(
+        type: shapeTypes[i % shapeTypes.length],
+        color: colors[i % colors.length],
       ));
     }
 
-    movedCharacterIndex = null;
-    selectedCharacterIndex = null;
+    movedShapeIndex = math.Random().nextInt(numberOfShapes);
+    selectedShapeIndex = null;
     canSelect = false;
-    _startRound();
+    showingAnimation = false;
   }
 
-  void _startRound() {
+  void _startRoundTimer() {
     setState(() {
-      showingInitialPositions = true;
+      timer = timerDuration;
+    });
+    
+    _runTimer();
+  }
+  
+  void _runTimer() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && timer > 0 && canSelect && !gameCompleted) {
+        setState(() {
+          timer--;
+        });
+        _runTimer();
+      } else if (timer <= 0 && canSelect) {
+        // Time's up for this round
+        _handleTimeUp();
+      }
+    });
+  }
+
+  void _handleTimeUp() {
+    setState(() {
       canSelect = false;
-      selectedCharacterIndex = null;
     });
-
-    // Show initial positions
-    Timer(observationTime, () {
-      if (mounted) {
-        _performMovement();
-      }
-    });
-  }
-
-  void _performMovement() {
-    if (!mounted) return;
-
-    setState(() {
-      showingInitialPositions = false;
-    });
-
-    // Choose a random character to move
-    movedCharacterIndex = Random().nextInt(numberOfCharacters);
-
-    // Start movement animation
-    _moveAnimationController.forward().then((_) {
-      _moveAnimationController.reverse().then((_) {
-        if (mounted) {
-          setState(() {
-            canSelect = true;
-          });
-        }
-      });
-    });
-  }
-
-  void _selectCharacter(int index) {
-    if (!canSelect || gameCompleted) return;
-
-    setState(() {
-      selectedCharacterIndex = index;
-    });
-
-    // Check if correct
-    bool isCorrect = index == movedCharacterIndex;
-    if (isCorrect) {
-      correctAnswers++;
-    }
-
-    // Show feedback briefly
-    _showFeedback(isCorrect);
-
-    Timer(const Duration(seconds: 1), () {
-      if (mounted) {
-        _nextRound();
-      }
-    });
-  }
-
-  void _showFeedback(bool correct) {
+    
+    // Show time's up dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: correct ? Colors.green[100] : Colors.red[100],
-        title: Text(
-          correct ? 'Correct!' : 'Try Again!',
-          style: TextStyle(
-            color: correct ? Colors.green[800] : Colors.red[800],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          correct 
-            ? 'Great observation!' 
-            : 'The ${characters[movedCharacterIndex!].name} moved!',
-        ),
-      ),
-    );
-
-    Timer(const Duration(seconds: 1), () {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    });
-  }
-
-  void _nextRound() {
-    if (round >= totalRounds) {
-      _endGame();
-    } else {
-      setState(() {
-        round++;
-      });
-      _initializeGame();
-    }
-  }
-
-  void _endGame() {
-    if (gameCompleted) return;
-    
-    setState(() {
-      gameCompleted = true;
-    });
-    
-    stopwatch.stop();
-    final accuracy = ((correctAnswers / totalRounds) * 100).round();
-    final completionTime = stopwatch.elapsed.inSeconds;
-
-    if (widget.onGameComplete != null) {
-      widget.onGameComplete!(
-        accuracy: accuracy,
-        completionTime: completionTime,
-        challengeFocus: widget.challengeFocus,
-        gameName: widget.gameName,
-        difficulty: widget.difficulty,
-      );
-    }
-
-    // Show final results
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Game Complete!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Rounds: $round/$totalRounds'),
-            Text('Correct: $correctAnswers'),
-            Text('Accuracy: $accuracy%'),
-            Text('Time: ${completionTime}s'),
-          ],
-        ),
+      builder: (context) => AlertDialog(
+        title: const Text('Time\'s Up!'),
+        content: const Text('You ran out of time for this round.'),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pop();
               Navigator.of(context).pop();
+              _nextRound();
             },
-            child: const Text('OK'),
+            child: const Text('Next Round'),
           ),
         ],
       ),
@@ -286,274 +220,562 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _startGame() {
+    // Update animation controller duration for this round
+    _spinController.dispose();
+    _spinController = AnimationController(
+      duration: spinDuration,
+      vsync: this,
+    );
+    _spinAnimation = Tween<double>(
+      begin: 0,
+      end: 2 * math.pi,
+    ).animate(CurvedAnimation(
+      parent: _spinController,
+      curve: Curves.easeInOut,
+    ));
+
     setState(() {
       gameStarted = true;
+      showingAnimation = true;
+      canSelect = false;
+      timer = 0; // Reset timer display
     });
-    stopwatch.start();
-    _startRound();
+
+    // Wait 2 seconds for memorization
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _spinController.forward().then((_) {
+          setState(() {
+            showingAnimation = false;
+            canSelect = true;
+          });
+          // Start the round timer only after animation completes
+          _startRoundTimer();
+        });
+      }
+    });
+  }
+
+  void _selectShape(int index) {
+    if (!canSelect) return;
+
+    setState(() {
+      selectedShapeIndex = index;
+      canSelect = false; // Prevent multiple selections
+    });
+
+    if (index == movedShapeIndex) {
+      score += 10;
+      correctAnswers++;
+      _showResult(true);
+    } else {
+      _showResult(false);
+    }
+  }
+
+  void _showResult(bool correct) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(correct ? 'Correct!' : 'Wrong!'),
+        content: Text(correct
+            ? 'Well done! You spotted the moving shape.'
+            : 'The spinning shape was a different one.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _nextRound();
+            },
+            child: const Text('Next'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _nextRound() {
+    setState(() {
+      roundsPlayed++;
+    });
+
+    // Check if we've completed all 3 rounds
+    if (roundsPlayed >= totalRounds) {
+      _endGame();
+      return;
+    }
+
+    // Reset for next round
+    _spinController.reset();
+    setState(() {
+      gameStarted = false;
+      timer = 0;
+    });
+    _initializeGame();
+  }
+
+  void _endGame() {
+    setState(() {
+      gameCompleted = true;
+      canSelect = false;
+    });
+
+    // Call the completion callback if provided
+    if (widget.onGameComplete != null) {
+      final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
+      final accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
+      
+      widget.onGameComplete!(
+        accuracy: accuracy,
+        completionTime: completionTime,
+        challengeFocus: widget.challengeFocus ?? 'Memory',
+        gameName: widget.gameName ?? 'Who Moved?',
+        difficulty: widget.difficulty,
+      );
+    }
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Game Complete!'),
+        content: Text('You completed all $totalRounds rounds!\nCorrect answers: $correctAnswers/$totalRounds\nFinal score: $score'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text('Back to Menu'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetGame();
+            },
+            child: const Text('Play Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resetGame() {
+    setState(() {
+      score = 0;
+      timer = 0;
+      gameStarted = false;
+      roundsPlayed = 0;
+      correctAnswers = 0;
+      gameCompleted = false;
+      canSelect = false;
+      showingAnimation = false;
+    });
+    gameStartTime = DateTime.now();
+    _spinController.reset();
+    _initializeGame();
+  }
+
+  Widget _buildShapeGrid() {
+    // Calculate grid dimensions for compact layout
+    int columns;
+    double shapeSize;
+    
+    switch (numberOfShapes) {
+      case 3:
+        columns = 3;
+        shapeSize = 80.0;
+        break;
+      case 5:
+        columns = 3;
+        shapeSize = 75.0; // Increased from 70.0
+        break;
+      case 8:
+        columns = 4;
+        shapeSize = 60.0; // Increased from 50.0
+        break;
+      default:
+        columns = 3;
+        shapeSize = 80.0;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use available space efficiently
+        double availableWidth = constraints.maxWidth;
+        
+        // Calculate spacing to use available space
+        double spacing = numberOfShapes == 8 ? 6.0 : 10.0; // Increased spacing slightly
+        
+        // Ensure shapes fit within available space
+        double maxShapeSize = (availableWidth - (columns - 1) * spacing) / columns;
+        shapeSize = math.min(shapeSize, maxShapeSize - 16); // Account for padding
+        
+        return Wrap(
+          alignment: WrapAlignment.center,
+          spacing: spacing,
+          runSpacing: spacing,
+          children: List.generate(numberOfShapes, (index) {
+            bool isSelected = selectedShapeIndex == index;
+            bool isMoved = index == movedShapeIndex && showingAnimation;
+            
+            return AnimatedBuilder(
+              animation: _spinAnimation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: isMoved ? _spinAnimation.value : 0,
+                  child: GestureDetector(
+                    onTap: () => _selectShape(index),
+                    child: Container(
+                      width: canSelect ? shapeSize + 16 : shapeSize, // Add padding only when clickable
+                      height: canSelect ? shapeSize + 16 : shapeSize,
+                      decoration: BoxDecoration(
+                        color: canSelect 
+                            ? Colors.white.withOpacity(0.8)
+                            : Colors.transparent, // No background during animation
+                        border: isSelected
+                            ? Border.all(color: Colors.red, width: 3)
+                            : canSelect 
+                                ? Border.all(color: Colors.grey.withOpacity(0.3), width: 1)
+                                : null, // No border during animation
+                        borderRadius: canSelect ? BorderRadius.circular(12) : null,
+                        boxShadow: canSelect ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
+                      ),
+                      child: Center(
+                        child: CustomShapeWidget(
+                          shape: shapes[index],
+                          size: canSelect ? shapeSize - 8 : shapeSize, // Original size during animation
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF3F4F6), // Soft gray background
+      backgroundColor: const Color(0xFFF5F5DC), // Beige background
       appBar: AppBar(
-        title: const Text('Who Moved?'),
-        backgroundColor: Color(0xFF90CAF9), // Soft blue
+        backgroundColor: const Color(0xFF5B6F4A), // Dark green
+        foregroundColor: Colors.white,
+        title: Text(
+          'Who Moved? - ${widget.difficulty}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         elevation: 0,
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Game info
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildInfoCard('Round', '$round/$totalRounds'),
-                  _buildInfoCard('Correct', '$correctAnswers'),
-                  _buildInfoCard('Difficulty', difficulty),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Instructions
-            if (!gameStarted) ...[
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Header with score, round, and timer
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: Colors.blue[100],
+                  color: const Color(0xFF5B6F4A),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(
-                      Icons.visibility,
-                      size: 48,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Watch carefully!',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
                     Text(
-                      'You will see $numberOfCharacters characters. One of them will move briefly. Can you spot which one moved?',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _startGame,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF81C784), // Soft green
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
+                      'Score: $score',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: const Text(
-                        'Start Game',
-                        style: TextStyle(fontSize: 18),
+                    ),
+                    Text(
+                      'Round: ${roundsPlayed + 1}/$totalRounds',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      canSelect && timer > 0 
+                          ? 'Time: ${timer}s' 
+                          : showingAnimation 
+                              ? 'Get Ready...' 
+                              : '',
+                      style: TextStyle(
+                        color: timer <= 5 && canSelect ? Colors.red : Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
-            ] else ...[
+              const SizedBox(height: 20),
+              
               // Game area
               Expanded(
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          spreadRadius: 3,
-                          blurRadius: 10,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      if (!gameStarted) ...[
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.visibility,
+                                size: 80,
+                                color: Color(0xFF5B6F4A),
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Round-based Challenge!',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5B6F4A),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Complete 3 rounds. Each round gets faster!\nOne shape will spin. Can you spot which one?',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              if (roundsPlayed > 0) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF5B6F4A).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Round ${roundsPlayed + 1} - Speed: ${spinDuration.inMilliseconds}ms - Timer: ${timerDuration}s',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF5B6F4A),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                              const SizedBox(height: 30),
+                              ElevatedButton(
+                                onPressed: _startGame,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5B6F4A),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                    vertical: 15,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Start Round',
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // Game status text
+                        Text(
+                          showingAnimation
+                              ? 'Watch the spinning shape!'
+                              : canSelect
+                                  ? 'Which shape was spinning?'
+                                  : 'Memorize the positions...',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5B6F4A),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Shapes grid
+                        Expanded(
+                          child: Center(
+                            child: _buildShapeGrid(),
+                          ),
                         ),
                       ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (showingInitialPositions) ...[
-                          const Text(
-                            'Memorize the positions...',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ] else if (!canSelect) ...[
-                          const Text(
-                            'Watch for movement!',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ] else ...[
-                          const Text(
-                            'Which character moved?',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        _buildCharacterGrid(),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoCard(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCharacterGrid() {
-    final crossAxisCount = numberOfCharacters <= 3 ? 3 : 
-                          numberOfCharacters <= 6 ? 3 : 4;
-    
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 1,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: numberOfCharacters,
-      itemBuilder: (context, index) {
-        final character = characters[index];
-        final isSelected = selectedCharacterIndex == index;
-        final isMoved = index == movedCharacterIndex;
-        
-        Widget characterWidget = GestureDetector(
-          onTap: () => _selectCharacter(index),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isSelected 
-                ? Colors.blue[200] 
-                : Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected 
-                  ? Colors.blue 
-                  : Colors.grey[300]!,
-                width: isSelected ? 3 : 1,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  character.icon,
-                  size: 40,
-                  color: character.color,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  character.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-
-        // Apply animation to the moved character
-        if (isMoved && !showingInitialPositions && !canSelect) {
-          return AnimatedBuilder(
-            animation: _moveAnimation,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: _moveAnimation.value * 50, // Scale the movement
-                child: characterWidget,
-              );
-            },
-          );
-        }
-
-        return characterWidget;
-      },
     );
   }
 }
 
-class Character {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final int position;
-  final int originalPosition;
+class CustomShapeWidget extends StatelessWidget {
+  final GameShape shape;
+  final double size;
 
-  Character({
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.position,
-    required this.originalPosition,
+  const CustomShapeWidget({
+    super.key,
+    required this.shape,
+    required this.size,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: ShapePainter(shape.type, shape.color),
+    );
+  }
+}
+
+class ShapePainter extends CustomPainter {
+  final ShapeType shapeType;
+  final Color color;
+
+  ShapePainter(this.shapeType, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 5;
+
+    switch (shapeType) {
+      case ShapeType.circle:
+        canvas.drawCircle(center, radius, paint);
+        break;
+      case ShapeType.square:
+        final rect = Rect.fromCenter(
+          center: center,
+          width: radius * 1.6,
+          height: radius * 1.6,
+        );
+        canvas.drawRect(rect, paint);
+        break;
+      case ShapeType.triangle:
+        final path = Path();
+        path.moveTo(center.dx, center.dy - radius);
+        path.lineTo(center.dx - radius, center.dy + radius);
+        path.lineTo(center.dx + radius, center.dy + radius);
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+      case ShapeType.diamond:
+        final path = Path();
+        path.moveTo(center.dx, center.dy - radius);
+        path.lineTo(center.dx + radius, center.dy);
+        path.lineTo(center.dx, center.dy + radius);
+        path.lineTo(center.dx - radius, center.dy);
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+      case ShapeType.pentagon:
+        final path = Path();
+        for (int i = 0; i < 5; i++) {
+          final angle = (i * 2 * math.pi / 5) - math.pi / 2;
+          final x = center.dx + radius * math.cos(angle);
+          final y = center.dy + radius * math.sin(angle);
+          if (i == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+      case ShapeType.hexagon:
+        final path = Path();
+        for (int i = 0; i < 6; i++) {
+          final angle = (i * 2 * math.pi / 6) - math.pi / 2;
+          final x = center.dx + radius * math.cos(angle);
+          final y = center.dy + radius * math.sin(angle);
+          if (i == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+      case ShapeType.star:
+        final path = Path();
+        for (int i = 0; i < 5; i++) {
+          final outerAngle = (i * 2 * math.pi / 5) - math.pi / 2;
+          final innerAngle = ((i + 0.5) * 2 * math.pi / 5) - math.pi / 2;
+          final outerX = center.dx + radius * math.cos(outerAngle);
+          final outerY = center.dy + radius * math.sin(outerAngle);
+          final innerX = center.dx + (radius * 0.5) * math.cos(innerAngle);
+          final innerY = center.dy + (radius * 0.5) * math.sin(innerAngle);
+          
+          if (i == 0) {
+            path.moveTo(outerX, outerY);
+          } else {
+            path.lineTo(outerX, outerY);
+          }
+          path.lineTo(innerX, innerY);
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+      case ShapeType.oval:
+        final rect = Rect.fromCenter(
+          center: center,
+          width: radius * 2,
+          height: radius * 1.2,
+        );
+        canvas.drawOval(rect, paint);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

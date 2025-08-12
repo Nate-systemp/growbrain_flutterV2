@@ -12,888 +12,763 @@ class FindMeGame extends StatefulWidget {
     required String difficulty,
   })? onGameComplete;
 
-  const FindMeGame({Key? key, required this.difficulty, this.onGameComplete}) : super(key: key);
+  const FindMeGame({
+    super.key,
+    required this.difficulty,
+    this.onGameComplete,
+  });
 
   @override
-  _FindMeGameState createState() => _FindMeGameState();
+  State<FindMeGame> createState() => _FindMeGameState();
 }
 
-class GameCharacter {
-  final int id;
-  final String name;
-  final Color baseColor;
-  final String accessory;
-  final bool hasScarf;
-  final Color scarfColor;
-  final bool hasHat;
-  final bool hasDifferentEyes;
-  
-  GameCharacter({
-    required this.id,
-    required this.name,
-    required this.baseColor,
-    this.accessory = '',
-    this.hasScarf = false,
-    this.scarfColor = Colors.transparent,
-    this.hasHat = false,
-    this.hasDifferentEyes = false,
-  });
-}
+class _FindMeGameState extends State<FindMeGame>
+    with TickerProviderStateMixin {
+  late AnimationController _cardAnimationController;
+  late AnimationController _scoreAnimationController;
+  late Animation<double> _cardAnimation;
+  late Animation<double> _scoreAnimation;
 
-class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
+  List<GameObject> gameObjects = [];
+  GameObject? targetObject;
   int score = 0;
-  int round = 1;
-  int maxRounds = 10;
-  bool gameActive = false;
+  int timeLeft = 60;
+  Timer? gameTimer;
+  Timer? showTimer;
   bool gameStarted = false;
-  bool showingTarget = false;
-  bool shuffling = false;
-  bool canSelect = false;
-  GameCharacter? targetCharacter;
-  List<GameCharacter> allCharacters = [];
-  List<GameCharacter> shuffledCharacters = [];
-  Timer? revealTimer;
-  Timer? shuffleTimer;
-  AnimationController? shuffleController;
-  Random random = Random();
-  int characterCount = 6;
-  int revealDuration = 3000; // milliseconds
-  int shuffleDuration = 2000;
-  int correctSelections = 0;
-  int wrongSelections = 0;
-  DateTime gameStartTime = DateTime.now();
-  
-  // Soft, accessible colors for children with cognitive impairments
-  final List<Color> baseColors = [
-    Color(0xFFFFF176), // Soft yellow
-    Color(0xFF81C784), // Soft green
-    Color(0xFF90CAF9), // Soft blue
-    Color(0xFFEF9A9A), // Soft red
-    Color(0xFFCE93D8), // Soft purple
-    Color(0xFFFFCC80), // Soft orange
-  ];
-  
-  final List<Color> accessoryColors = [
-    Color(0xFFEF9A9A), // Soft red
-    Color(0xFF90CAF9), // Soft blue
-    Color(0xFF81C784), // Soft green
-    Color(0xFFCE93D8), // Soft purple
-    Color(0xFFFFCC80), // Soft orange
-  ];
+  bool gameEnded = false;
+  bool isShowingTarget = false;
+  int round = 1;
+  static const int maxRounds = 5;
 
   @override
   void initState() {
     super.initState();
-    shuffleController = AnimationController(
-      duration: Duration(milliseconds: shuffleDuration),
-      vsync: this,
-    );
+    _initializeAnimations();
     _initializeGame();
   }
 
+  void _initializeAnimations() {
+    _cardAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scoreAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _cardAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _cardAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _scoreAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.5,
+    ).animate(CurvedAnimation(
+      parent: _scoreAnimationController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
   void _initializeGame() {
-    switch (widget.difficulty) {
-      case 'Easy':
-        characterCount = 6;
-        revealDuration = 3000;
-        shuffleDuration = 1500; // Slow shuffle
-        maxRounds = 8;
+    _generateGameObjects();
+    _selectTarget();
+  }
+
+  void _generateGameObjects() {
+    final List<Map<String, dynamic>> objectData = [
+      {'icon': Icons.sports_soccer, 'name': 'Ball'},
+      {'icon': Icons.car_rental, 'name': 'Car'},
+      {'icon': Icons.home, 'name': 'House'},
+      {'icon': Icons.favorite, 'name': 'Heart'},
+      {'icon': Icons.star, 'name': 'Star'},
+      {'icon': Icons.pets, 'name': 'Pet'},
+      {'icon': Icons.local_florist, 'name': 'Flower'},
+      {'icon': Icons.cake, 'name': 'Cake'},
+      {'icon': Icons.music_note, 'name': 'Music'},
+      {'icon': Icons.sunny, 'name': 'Sun'},
+      {'icon': Icons.umbrella, 'name': 'Umbrella'},
+      {'icon': Icons.airplane_ticket, 'name': 'Plane'},
+      {'icon': Icons.school, 'name': 'School'},
+      {'icon': Icons.book, 'name': 'Book'},
+      {'icon': Icons.emoji_food_beverage, 'name': 'Cup'},
+      {'icon': Icons.face, 'name': 'Face'},
+    ];
+
+    gameObjects.clear();
+    final selectedObjects = List.from(objectData);
+    selectedObjects.shuffle();
+
+    // Object count based on difficulty
+    int objectCount;
+    switch (widget.difficulty.toLowerCase()) {
+      case 'easy':
+        objectCount = 4;
         break;
-      case 'Medium':
-        characterCount = 10;
-        revealDuration = 2500;
-        shuffleDuration = 2500; // Moderate shuffle
-        maxRounds = 10;
+      case 'medium':
+        objectCount = 6;
         break;
-      case 'Hard':
-        characterCount = 16;
-        revealDuration = 2000;
-        shuffleDuration = 3500; // Fast shuffle
-        maxRounds = 12;
+      case 'hard':
+        objectCount = 9;
         break;
+      default:
+        objectCount = 6;
+    }
+    
+    for (int i = 0; i < objectCount; i++) {
+      final object = selectedObjects[i];
+      gameObjects.add(GameObject(
+        id: i,
+        icon: object['icon'],
+        name: object['name'],
+        isTarget: false,
+      ));
+    }
+  }
+
+  void _selectTarget() {
+    if (gameObjects.isNotEmpty) {
+      final random = Random();
+      targetObject = gameObjects[random.nextInt(gameObjects.length)];
+      targetObject!.isTarget = true;
     }
   }
 
   void _startGame() {
     setState(() {
-      gameActive = true;
       gameStarted = true;
-      score = 0;
-      round = 1;
-      correctSelections = 0;
-      wrongSelections = 0;
-      gameStartTime = DateTime.now();
+      isShowingTarget = true;
     });
-    _showInstructions();
+
+    _cardAnimationController.forward();
+
+    // Show target for 3 seconds
+    showTimer = Timer(const Duration(seconds: 3), () {
+      setState(() {
+        isShowingTarget = false;
+      });
+      _startTimer();
+    });
   }
 
-  void _showInstructions() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Watch carefully! A target character will be shown.',
-              style: TextStyle(fontSize: 16, color: Color(0xFF2C3E50)),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'After it hides and all characters shuffle, find and tap the same character!',
-              style: TextStyle(fontSize: 16, color: Color(0xFF2C3E50)),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              _getDifficultyDescription(),
-              style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50), fontStyle: FontStyle.italic),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _nextRound();
-            },
-            child: Text('Start', style: TextStyle(color: Color(0xFF81C784))),
-          ),
-        ],
-      ),
-    );
+  void _startTimer() {
+    gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        timeLeft--;
+      });
+
+      if (timeLeft <= 0) {
+        _endGame();
+      }
+    });
   }
 
-  String _getDifficultyDescription() {
-    switch (widget.difficulty) {
-      case 'Easy':
-        return 'Characters will have obvious differences.';
-      case 'Medium':
-        return 'Characters will have small differences like accessories.';
-      case 'Hard':
-        return 'Characters will look very similar with tiny differences.';
-      default:
-        return '';
+  void _onObjectTapped(GameObject object) {
+    if (!gameStarted || gameEnded || isShowingTarget) return;
+
+    if (object.isTarget) {
+      _correctAnswer();
+    } else {
+      _wrongAnswer();
     }
+  }
+
+  void _correctAnswer() {
+    setState(() {
+      score += 10;
+    });
+
+    _scoreAnimationController.forward().then((_) {
+      _scoreAnimationController.reverse();
+    });
+
+    _nextRound();
+  }
+
+  void _wrongAnswer() {
+    setState(() {
+      timeLeft = (timeLeft - 5).clamp(0, 60);
+    });
+
+    // Show feedback animation
+    _cardAnimationController.reverse().then((_) {
+      _cardAnimationController.forward();
+    });
   }
 
   void _nextRound() {
-    if (round <= maxRounds && gameActive) {
-      setState(() {
-        showingTarget = false;
-        shuffling = false;
-        canSelect = false;
-      });
-      _generateCharacters();
-      _revealTarget();
-    } else {
+    if (round >= maxRounds) {
       _endGame();
+      return;
     }
-  }
 
-  void _generateCharacters() {
-    allCharacters.clear();
-    
-    // Generate target character
-    targetCharacter = _generateTargetCharacter();
-    allCharacters.add(targetCharacter!);
-    
-    // Generate similar decoy characters
-    for (int i = 1; i < characterCount; i++) {
-      allCharacters.add(_generateSimilarCharacter(i, targetCharacter!));
-    }
-    
-    // Create shuffled list
-    shuffledCharacters = List.from(allCharacters);
-    shuffledCharacters.shuffle(random);
-  }
-
-  GameCharacter _generateTargetCharacter() {
-    Color baseColor = baseColors[random.nextInt(baseColors.length)];
-    
-    switch (widget.difficulty) {
-      case 'Easy':
-        return GameCharacter(
-          id: 0,
-          name: _getCharacterType(),
-          baseColor: baseColor,
-        );
-        
-      case 'Medium':
-        bool hasScarf = random.nextBool();
-        return GameCharacter(
-          id: 0,
-          name: _getCharacterType(),
-          baseColor: baseColor,
-          hasScarf: hasScarf,
-          scarfColor: hasScarf ? accessoryColors[random.nextInt(accessoryColors.length)] : Colors.transparent,
-          accessory: !hasScarf ? _getAccessory() : '',
-        );
-        
-      case 'Hard':
-        return GameCharacter(
-          id: 0,
-          name: _getCharacterType(),
-          baseColor: baseColor,
-          hasScarf: true,
-          scarfColor: accessoryColors[random.nextInt(accessoryColors.length)],
-          hasHat: random.nextBool(),
-          hasDifferentEyes: random.nextBool(),
-          accessory: _getAccessory(),
-        );
-        
-      default:
-        return GameCharacter(id: 0, name: 'duck', baseColor: baseColor);
-    }
-  }
-
-  GameCharacter _generateSimilarCharacter(int id, GameCharacter target) {
-    switch (widget.difficulty) {
-      case 'Easy':
-        // Easy: Big visual differences
-        Color differentColor = baseColors[random.nextInt(baseColors.length)];
-        while (differentColor == target.baseColor) {
-          differentColor = baseColors[random.nextInt(baseColors.length)];
-        }
-        return GameCharacter(
-          id: id,
-          name: _getCharacterType(),
-          baseColor: differentColor,
-        );
-        
-      case 'Medium':
-        // Medium: Small differences (same color, different accessories OR same accessories, different color)
-        if (random.nextBool()) {
-          // Same color, different accessories
-          return GameCharacter(
-            id: id,
-            name: target.name,
-            baseColor: target.baseColor,
-            hasScarf: !target.hasScarf,
-            scarfColor: target.hasScarf ? Colors.transparent : accessoryColors[random.nextInt(accessoryColors.length)],
-            accessory: target.accessory.isEmpty ? _getAccessory() : '',
-          );
-        } else {
-          // Different color, similar accessories
-          Color differentColor = _getSimilarColor(target.baseColor);
-          return GameCharacter(
-            id: id,
-            name: target.name,
-            baseColor: differentColor,
-            hasScarf: target.hasScarf,
-            scarfColor: target.scarfColor,
-            accessory: target.accessory,
-          );
-        }
-        
-      case 'Hard':
-        // Hard: Nearly identical with tiny differences
-        if (random.nextDouble() < 0.3) {
-          // Same everything except scarf color
-          Color differentScarfColor = accessoryColors[random.nextInt(accessoryColors.length)];
-          while (differentScarfColor == target.scarfColor) {
-            differentScarfColor = accessoryColors[random.nextInt(accessoryColors.length)];
-          }
-          return GameCharacter(
-            id: id,
-            name: target.name,
-            baseColor: target.baseColor,
-            hasScarf: target.hasScarf,
-            scarfColor: differentScarfColor,
-            hasHat: target.hasHat,
-            hasDifferentEyes: target.hasDifferentEyes,
-            accessory: target.accessory,
-          );
-        } else if (random.nextDouble() < 0.5) {
-          // Same everything except hat
-          return GameCharacter(
-            id: id,
-            name: target.name,
-            baseColor: target.baseColor,
-            hasScarf: target.hasScarf,
-            scarfColor: target.scarfColor,
-            hasHat: !target.hasHat,
-            hasDifferentEyes: target.hasDifferentEyes,
-            accessory: target.accessory,
-          );
-        } else {
-          // Same everything except eyes
-          return GameCharacter(
-            id: id,
-            name: target.name,
-            baseColor: target.baseColor,
-            hasScarf: target.hasScarf,
-            scarfColor: target.scarfColor,
-            hasHat: target.hasHat,
-            hasDifferentEyes: !target.hasDifferentEyes,
-            accessory: target.accessory,
-          );
-        }
-        
-      default:
-        return GameCharacter(id: id, name: 'duck', baseColor: Colors.yellow);
-    }
-  }
-
-  String _getCharacterType() {
-    List<String> types = ['duck', 'cat', 'dog', 'bird', 'fish'];
-    return types[random.nextInt(types.length)];
-  }
-
-  String _getAccessory() {
-    List<String> accessories = ['bow', 'glasses', 'crown', 'flower', ''];
-    return accessories[random.nextInt(accessories.length)];
-  }
-
-  Color _getSimilarColor(Color baseColor) {
-    // Return a slightly different shade of similar color
-    if (baseColor == Color(0xFFFFF176)) return Color(0xFFFFEB3B); // Yellow variations
-    if (baseColor == Color(0xFF81C784)) return Color(0xFF4CAF50); // Green variations
-    if (baseColor == Color(0xFF90CAF9)) return Color(0xFF2196F3); // Blue variations
-    if (baseColor == Color(0xFFEF9A9A)) return Color(0xFFF44336); // Red variations
-    if (baseColor == Color(0xFFCE93D8)) return Color(0xFF9C27B0); // Purple variations
-    if (baseColor == Color(0xFFFFCC80)) return Color(0xFFFF9800); // Orange variations
-    return baseColors[random.nextInt(baseColors.length)];
-  }
-
-  void _revealTarget() {
     setState(() {
-      showingTarget = true;
+      round++;
+      isShowingTarget = true;
     });
-    
-    revealTimer = Timer(Duration(milliseconds: revealDuration), () {
-      _hideAndShuffle();
-    });
-  }
 
-  void _hideAndShuffle() {
-    setState(() {
-      showingTarget = false;
-      shuffling = true;
-    });
-    
-    _performShuffle();
-    
-    shuffleTimer = Timer(Duration(milliseconds: shuffleDuration), () {
+    _generateGameObjects();
+    _selectTarget();
+
+    // Show new target for 2 seconds (decreasing time)
+    showTimer = Timer(Duration(seconds: 3 - (round ~/ 3)), () {
       setState(() {
-        shuffling = false;
-        canSelect = true;
-      });
-      
-      // Auto-advance after timeout (15 seconds to find)
-      Timer(Duration(seconds: 15), () {
-        if (canSelect && gameActive) {
-          _handleTimeOut();
-        }
+        isShowingTarget = false;
       });
     });
-  }
-
-  void _performShuffle() {
-    shuffleController?.forward().then((_) {
-      shuffleController?.reset();
-    });
-    
-    // Multiple shuffle passes based on difficulty
-    int shuffleCount = widget.difficulty == 'Easy' ? 2 : 
-                      widget.difficulty == 'Medium' ? 4 : 6;
-    
-    for (int i = 0; i < shuffleCount; i++) {
-      Timer(Duration(milliseconds: i * 300), () {
-        if (mounted) {
-          setState(() {
-            shuffledCharacters.shuffle(random);
-          });
-        }
-      });
-    }
-    
-    // Add some fake movements for distraction in hard mode
-    if (widget.difficulty == 'Hard') {
-      Timer(Duration(milliseconds: shuffleDuration - 500), () {
-        if (mounted) {
-          setState(() {
-            // Small position adjustments for distraction
-            shuffledCharacters.shuffle(random);
-          });
-        }
-      });
-    }
-  }
-
-  void _handleCharacterTap(GameCharacter character) {
-    if (!canSelect || !gameActive) return;
-    
-    setState(() {
-      canSelect = false;
-    });
-    
-    if (character.id == targetCharacter!.id) {
-      // Correct character found!
-      int timeBonus = _calculateTimeBonus();
-      setState(() {
-        score += (20 + timeBonus);
-        correctSelections++;
-      });
-      _showFeedback(true, timeBonus);
-    } else {
-      // Wrong character
-      setState(() {
-        score = max(0, score - 10);
-        wrongSelections++;
-      });
-      _showFeedback(false, 0);
-    }
-  }
-
-  int _calculateTimeBonus() {
-    // Simple time bonus calculation
-    return random.nextInt(10) + 5;
-  }
-
-  void _handleTimeOut() {
-    setState(() {
-      canSelect = false;
-      score = max(0, score - 5);
-      wrongSelections++;
-    });
-    _showFeedback(false, 0);
-  }
-
-  void _showFeedback(bool correct, int timeBonus) {
-    String message = correct ? 
-      'Great! You found the target!' : 
-      'Oops! That\'s not the right character.';
-    
-    if (timeBonus > 0) {
-      message += '\n+$timeBonus time bonus!';
-    }
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFFF8F9FA),
-        title: Text(
-          correct ? 'Well Done!' : 'Try Again!',
-          style: TextStyle(color: correct ? Color(0xFF81C784) : Color(0xFFEF9A9A)),
-        ),
-        content: Text(
-          message,
-          style: TextStyle(color: Color(0xFF2C3E50)),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                round++;
-              });
-              _nextRound();
-            },
-            child: Text('Continue', style: TextStyle(color: Color(0xFF81C784))),
-          ),
-        ],
-      ),
-    );
   }
 
   void _endGame() {
+    gameTimer?.cancel();
+    showTimer?.cancel();
     setState(() {
-      gameActive = false;
+      gameEnded = true;
     });
-    revealTimer?.cancel();
-    shuffleTimer?.cancel();
-    
-    // Calculate accuracy and completion time
-    double accuracy = correctSelections + wrongSelections > 0 ? (correctSelections / (correctSelections + wrongSelections)) * 100 : 0;
-    int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
+      final accuracy = gameObjects.isNotEmpty ? ((score / gameObjects.length) * 100).round() : 0;
+      final timeTaken = 60 - timeLeft;
+      
       widget.onGameComplete!(
-        accuracy: accuracy.round(),
-        completionTime: completionTime,
-        challengeFocus: 'Attention',
+        accuracy: accuracy,
+        completionTime: timeTaken,
+        challengeFocus: 'Visual attention and memory',
         gameName: 'Find Me',
         difficulty: widget.difficulty,
       );
     }
+
+    _showGameOverDialog();
+  }
+
+  void _showGameOverDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF5B6F4A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Game Over!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.emoji_events,
+                color: const Color(0xFFFFD740),
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Final Score: $score',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Rounds Completed: $round',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _resetGame();
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFD740),
+                      foregroundColor: const Color(0xFF5B6F4A),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Play Again',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white24,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Exit',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _resetGame() {
+    gameTimer?.cancel();
+    showTimer?.cancel();
+    setState(() {
+      score = 0;
+      timeLeft = 60;
+      round = 1;
+      gameStarted = false;
+      gameEnded = false;
+      isShowingTarget = false;
+    });
+    _cardAnimationController.reset();
+    _scoreAnimationController.reset();
+    _initializeGame();
   }
 
   @override
   void dispose() {
-    revealTimer?.cancel();
-    shuffleTimer?.cancel();
-    shuffleController?.dispose();
+    gameTimer?.cancel();
+    showTimer?.cancel();
+    _cardAnimationController.dispose();
+    _scoreAnimationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA), // Soft light background
+      backgroundColor: const Color(0xFFF5F5DC),
       appBar: AppBar(
-        title: Text('Find Me - ${widget.difficulty}'),
-        backgroundColor: Color(0xFFCE93D8), // Soft purple
+        backgroundColor: const Color(0xFF5B6F4A),
         foregroundColor: Colors.white,
+        title: Text(
+          'Find Me! - ${widget.difficulty}',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Score Display
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              if (isShowingTarget) _buildTargetDisplay(),
+              if (!isShowingTarget && gameStarted && !gameEnded) 
+                _buildInstructions(),
+              const SizedBox(height: 20),
+              Expanded(child: _buildGameGrid()),
+              if (!gameStarted) _buildStartButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF5B6F4A),
+            const Color(0xFF6B7F5A),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            icon: Icons.score,
+            label: 'Score',
+            value: score.toString(),
+            animation: _scoreAnimation,
+          ),
+          _buildStatItem(
+            icon: Icons.timer,
+            label: 'Time',
+            value: timeLeft.toString(),
+          ),
+          _buildStatItem(
+            icon: Icons.flag,
+            label: 'Round',
+            value: '$round/$maxRounds',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    Animation<double>? animation,
+  }) {
+    Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          color: const Color(0xFFFFD740),
+          size: 24,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+
+    if (animation != null) {
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: animation.value,
+            child: content,
+          );
+        },
+      );
+    }
+
+    return content;
+  }
+
+  Widget _buildTargetDisplay() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFD740),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Find This Object:',
+            style: TextStyle(
+              color: const Color(0xFF5B6F4A),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (targetObject != null)
             Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF5B6F4A),
+                  width: 2,
+                ),
+              ),
+              child: Column(
                 children: [
-                  Column(
-                    children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                    ],
+                  Icon(
+                    targetObject!.icon,
+                    size: 32,
+                    color: const Color(0xFF5B6F4A),
                   ),
-                  Text('Round: $round/$maxRounds', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                  Column(
-                    children: [
-                      if (showingTarget) 
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFF176),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('MEMORIZE!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                        ),
-                      if (shuffling) 
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFCC80),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('SHUFFLING...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                        ),
-                      if (canSelect) 
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF81C784),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('FIND IT!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-                        ),
-                    ],
+                  const SizedBox(height: 4),
+                  Text(
+                    targetObject!.name,
+                    style: TextStyle(
+                      color: const Color(0xFF5B6F4A),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-            
-            // Game Area
-            Expanded(
-              child: Center(
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildStartScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Find Me',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+  Widget _buildInstructions() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5B6F4A).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF5B6F4A).withValues(alpha: 0.3),
         ),
-        SizedBox(height: 20),
-        Text(
-          'Difficulty: ${widget.difficulty}',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _startGame,
-          child: Text('Start Game'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search,
+            color: const Color(0xFF5B6F4A),
+            size: 24,
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGameArea() {
-    if (!gameActive) {
-      return _buildEndScreen();
-    }
-    
-    if (showingTarget) {
-      return _buildTargetReveal();
-    }
-    
-    return _buildCharacterGrid();
-  }
-
-  Widget _buildTargetReveal() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Remember this character:',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            color: Color(0xFFFFF176).withOpacity(0.3),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Color(0xFFFFF176), width: 4),
-          ),
-          child: Center(
-            child: _buildCharacterWidget(targetCharacter!, isTarget: true),
-          ),
-        ),
-        SizedBox(height: 40),
-        Text(
-          'Get ready to find it after shuffling!',
-          style: TextStyle(fontSize: 18, color: Color(0xFF2C3E50)),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCharacterGrid() {
-    int crossAxisCount = widget.difficulty == 'Easy' ? 3 : 
-                        widget.difficulty == 'Medium' ? 4 : 4;
-    
-    return Padding(
-      padding: EdgeInsets.all(20),
-      child: AnimatedBuilder(
-        animation: shuffleController ?? const AlwaysStoppedAnimation(0),
-        builder: (context, child) {
-          return Transform.scale(
-            scale: shuffling ? 1.0 + shuffleController!.value * 0.05 : 1.0,
-            child: GridView.builder(
-              shrinkWrap: true,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Tap the ${targetObject?.name ?? "object"} you just saw!',
+              style: TextStyle(
+                color: const Color(0xFF5B6F4A),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
-              itemCount: shuffledCharacters.length,
-              itemBuilder: (context, index) {
-                GameCharacter character = shuffledCharacters[index];
-                return GestureDetector(
-                  onTap: () => _handleCharacterTap(character),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Color(0xFFE0E0E0), width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: _buildCharacterWidget(character),
-                    ),
-                  ),
-                );
-              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCharacterWidget(GameCharacter character, {bool isTarget = false}) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // Main character body
-            Container(
-              width: isTarget ? 80 : 50,
-              height: isTarget ? 80 : 50,
-              decoration: BoxDecoration(
-                color: character.baseColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: Color(0xFF2C3E50), width: 2),
-              ),
-              child: Center(
-                child: Icon(
-                  _getCharacterIcon(character.name),
-                  color: Colors.white,
-                  size: isTarget ? 40 : 25,
-                ),
-              ),
-            ),
-            
-            // Hat
-            if (character.hasHat)
-              Positioned(
-                top: isTarget ? -5 : -3,
-                child: Container(
-                  width: isTarget ? 30 : 20,
-                  height: isTarget ? 15 : 10,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF2C3E50),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            
-            // Different eyes
-            if (character.hasDifferentEyes)
-              Positioned(
-                top: isTarget ? 20 : 12,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: isTarget ? 6 : 4,
-                      height: isTarget ? 6 : 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: isTarget ? 8 : 6),
-                    Container(
-                      width: isTarget ? 4 : 3,
-                      height: isTarget ? 4 : 3,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+  Widget _buildGameGrid() {
+    if (gameObjects.isEmpty) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: const Color(0xFF5B6F4A),
         ),
-        
-        // Scarf
-        if (character.hasScarf)
-          Container(
-            margin: EdgeInsets.only(top: 5),
-            width: isTarget ? 60 : 40,
-            height: isTarget ? 8 : 6,
-            decoration: BoxDecoration(
-              color: character.scarfColor,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.white, width: 1),
-            ),
-          ),
-        
-        // Accessory text
-        if (character.accessory.isNotEmpty)
-          Text(
-            character.accessory,
-            style: TextStyle(
-              fontSize: isTarget ? 10 : 8,
-              color: Color(0xFF2C3E50),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-      ],
-    );
-  }
+      );
+    }
 
-  IconData _getCharacterIcon(String characterType) {
-    switch (characterType) {
-      case 'duck':
-        return Icons.pets;
-      case 'cat':
-        return Icons.pets;
-      case 'dog':
-        return Icons.pets;
-      case 'bird':
-        return Icons.flutter_dash;
-      case 'fish':
-        return Icons.set_meal;
+    // Determine grid layout based on difficulty
+    int crossAxisCount;
+    switch (widget.difficulty.toLowerCase()) {
+      case 'easy':
+        crossAxisCount = 2; // 2x2 for 4 objects
+        break;
+      case 'medium':
+        crossAxisCount = 3; // 2x3 for 6 objects  
+        break;
+      case 'hard':
+        crossAxisCount = 3; // 3x3 for 9 objects
+        break;
       default:
-        return Icons.face;
+        crossAxisCount = 3;
     }
-  }
-
-  Widget _buildEndScreen() {
-    double accuracy = correctSelections + wrongSelections > 0 ? 
-        (correctSelections / (correctSelections + wrongSelections)) * 100 : 0;
     
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Game Complete!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Accuracy: ${accuracy.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Found: $correctSelections/${correctSelections + wrongSelections}',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              score = 0;
-              round = 1;
-              gameStarted = false;
-              correctSelections = 0;
-              wrongSelections = 0;
-            });
+    int rowCount = (gameObjects.length / crossAxisCount).ceil();
+
+    return AnimatedBuilder(
+      animation: _cardAnimation,
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate compact card size that fits all items on screen
+            double spacing = 6.0; // Reduced spacing for more compact layout
+            double availableWidth = constraints.maxWidth - (spacing * (crossAxisCount + 1));
+            double availableHeight = constraints.maxHeight - (spacing * (rowCount + 1));
+            
+            double cardWidth = availableWidth / crossAxisCount;
+            double cardHeight = availableHeight / rowCount;
+            double cardSize = min(cardWidth, cardHeight);
+            
+            // Make cards more compact - reduce maximum size
+            cardSize = min(cardSize, 80.0); // Reduced from 100px to 80px
+            
+            return Center(
+              child: Container(
+                padding: EdgeInsets.all(spacing),
+                child: Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  alignment: WrapAlignment.center,
+                  children: gameObjects.map((object) {
+                    return Transform.scale(
+                      scale: _cardAnimation.value,
+                      child: SizedBox(
+                        width: cardSize,
+                        height: cardSize,
+                        child: _buildCompactGameCard(object, cardSize),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
           },
-          child: Text('Play Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Back to Menu'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF90CAF9),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
+
+  Widget _buildCompactGameCard(GameObject object, double cardSize) {
+    return GestureDetector(
+      onTap: () => _onObjectTapped(object),
+      child: Container(
+        width: cardSize,
+        height: cardSize,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              const Color(0xFFF8F8F8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF5B6F4A).withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              object.icon,
+              size: cardSize * 0.35, // Dynamic icon size based on card size
+              color: const Color(0xFF5B6F4A),
+            ),
+            SizedBox(height: cardSize * 0.08),
+            Text(
+              object.name,
+              style: TextStyle(
+                color: const Color(0xFF5B6F4A),
+                fontSize: cardSize * 0.12, // Dynamic font size
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartButton() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      child: ElevatedButton(
+        onPressed: _startGame,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF5B6F4A),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 4,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.play_arrow,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Start Game',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class GameObject {
+  final int id;
+  final IconData icon;
+  final String name;
+  bool isTarget;
+
+  GameObject({
+    required this.id,
+    required this.icon,
+    required this.name,
+    this.isTarget = false,
+  });
 }

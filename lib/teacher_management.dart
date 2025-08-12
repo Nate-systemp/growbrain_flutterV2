@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'set_session_screen.dart';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 
 class TeacherManagementScreen extends StatefulWidget {
@@ -47,7 +48,11 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
         .doc(user.uid)
         .collection('students')
         .get();
-    students = snap.docs.map((d) => d.data()).toList();
+    students = snap.docs.map((d) {
+      final data = d.data();
+      data['id'] = d.id; // Include the document ID
+      return data;
+    }).toList();
     setState(() => _loadingStudents = false);
   }
 
@@ -237,8 +242,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                                     color: Color(0xFF484F5C),
                                   ),
                                   const SizedBox(width: 16),
-                                  SizedBox(
-                                    width: 120,
+                                  Expanded(
                                     child: Text(
                                       student['fullName'] ?? '',
                                       style: const TextStyle(
@@ -247,6 +251,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                                         fontWeight: FontWeight.w500,
                                       ),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                   const SizedBox(width: 24),
@@ -358,24 +363,6 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
               );
             }
             // Aggregate data
-            final avgAccuracy = allRecords.isNotEmpty
-                ? allRecords
-                          .map(
-                            (r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0,
-                          )
-                          .reduce((a, b) => a + b) /
-                      allRecords.length
-                : 0.0;
-            final avgCompletion = allRecords.isNotEmpty
-                ? allRecords
-                          .map(
-                            (r) =>
-                                (r['completionTime'] as num?)?.toDouble() ??
-                                0.0,
-                          )
-                          .reduce((a, b) => a + b) /
-                      allRecords.length
-                : 0.0;
             final accuracyTrend =
                 allRecords.where((r) => r['date'] != null).toList()
                   ..sort((a, b) {
@@ -506,192 +493,618 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
               }
             }
 
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Title at the very top
-                  const Text(
-                    'Analytics Dashboard',
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 32),
-                  // Main charts below
-                  ModernLineChart(
-                    title: 'Average Accuracy Trend',
-                    values: trendValues,
-                    xLabels: [
-                      for (final r in accuracyTrend)
-                        (r['date'] is Timestamp)
-                            ? (r['date'] as Timestamp)
-                                  .toDate()
-                                  .toString()
-                                  .substring(5, 10)
-                            : (r['date'] is String)
-                            ? (DateTime.tryParse(
-                                    r['date'],
-                                  )?.toString().substring(5, 10) ??
-                                  '')
-                            : '',
-                    ],
-                    lineColor: Colors.orange,
-                  ),
-                  ModernVerticalBarChart(
-                    title: 'Avg Completion Time per Student',
-                    values: {
-                      for (final entry in recordsByStudent.entries)
-                        entry.key: entry.value.isNotEmpty
-                            ? entry.value
-                                      .map(
-                                        (r) =>
-                                            (r['completionTime'] as num?)
-                                                ?.toDouble() ??
-                                            0.0,
-                                      )
-                                      .reduce((a, b) => a + b) /
-                                  entry.value.length
-                            : 0.0,
-                    },
-                    valueSuffix: 's',
-                    maxValue: 60.0,
-                    xLabels: [
-                      for (final entry in recordsByStudent.entries) entry.key,
-                    ],
-                    barColorStart: Colors.purple,
-                    barColorEnd: Colors.pinkAccent,
-                  ),
-                  StudentBarChart(
-                    title: 'Average Accuracy per Student',
-                    values: {
-                      for (final entry in recordsByStudent.entries)
-                        entry.key: entry.value.isNotEmpty
-                            ? entry.value
-                                      .map(
-                                        (r) =>
-                                            (r['accuracy'] as num?)
-                                                ?.toDouble() ??
-                                            0.0,
-                                      )
-                                      .reduce((a, b) => a + b) /
-                                  entry.value.length
-                            : 0.0,
-                    },
-                    valueSuffix: '%',
-                    maxValue: 100.0,
-                    barColor: Colors.orange,
-                  ),
+            // Calculate additional analytics
+            // Game performance analysis
+            final gamePerformance = <String, Map<String, double>>{};
+            for (final record in allRecords) {
+              final game = record['lastPlayed'] ?? 'Unknown';
+              final accuracy = (record['accuracy'] as num?)?.toDouble() ?? 0.0;
+              final completionTime = (record['completionTime'] as num?)?.toDouble() ?? 0.0;
+              
+              if (!gamePerformance.containsKey(game)) {
+                gamePerformance[game] = {'totalAccuracy': 0, 'totalTime': 0, 'count': 0};
+              }
+              gamePerformance[game]!['totalAccuracy'] = 
+                  (gamePerformance[game]!['totalAccuracy'] ?? 0) + accuracy;
+              gamePerformance[game]!['totalTime'] = 
+                  (gamePerformance[game]!['totalTime'] ?? 0) + completionTime;
+              gamePerformance[game]!['count'] = 
+                  (gamePerformance[game]!['count'] ?? 0) + 1;
+            }
+            
+            // Calculate averages for each game
+            final gameAverages = <String, Map<String, double>>{};
+            gamePerformance.forEach((game, data) {
+              final count = data['count'] ?? 1;
+              gameAverages[game] = {
+                'avgAccuracy': (data['totalAccuracy'] ?? 0) / count,
+                'avgTime': (data['totalTime'] ?? 0) / count,
+              };
+            });
+            
+            // Difficulty analysis
+            final difficultyPerformance = <String, Map<String, double>>{};
+            for (final record in allRecords) {
+              final difficulty = record['difficulty'] ?? 'Unknown';
+              final accuracy = (record['accuracy'] as num?)?.toDouble() ?? 0.0;
+              
+              if (!difficultyPerformance.containsKey(difficulty)) {
+                difficultyPerformance[difficulty] = {'totalAccuracy': 0, 'count': 0};
+              }
+              difficultyPerformance[difficulty]!['totalAccuracy'] = 
+                  (difficultyPerformance[difficulty]!['totalAccuracy'] ?? 0) + accuracy;
+              difficultyPerformance[difficulty]!['count'] = 
+                  (difficultyPerformance[difficulty]!['count'] ?? 0) + 1;
+            }
+            
+            // Overall statistics
+            final totalSessions = allRecords.length;
+            final avgOverallAccuracy = allRecords.isNotEmpty 
+                ? allRecords.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+                    .reduce((a, b) => a + b) / allRecords.length
+                : 0.0;
+            final avgOverallTime = allRecords.isNotEmpty 
+                ? allRecords.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
+                    .reduce((a, b) => a + b) / allRecords.length
+                : 0.0;
+            
+            // Find best performing game
+            String? bestGame;
+            double bestGameAccuracy = 0;
+            gameAverages.forEach((game, data) {
+              if (data['avgAccuracy']! > bestGameAccuracy) {
+                bestGameAccuracy = data['avgAccuracy']!;
+                bestGame = game;
+              }
+            });
+            
+            // Find most challenging game (lowest accuracy)
+            String? challengingGame;
+            double lowestAccuracy = 100;
+            gameAverages.forEach((game, data) {
+              if (data['avgAccuracy']! < lowestAccuracy) {
+                lowestAccuracy = data['avgAccuracy']!;
+                challengingGame = game;
+              }
+            });
 
-                  const SizedBox(height: 32),
-                  // Per-student summary
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 8),
-                      ],
+            return Container(
+              color: Color(0xFFF8F9FA),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Clean Header
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.analytics_outlined,
+                                color: Color(0xFF374151),
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Analytics Dashboard',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Simple Stats Grid
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildMinimalStatCard(
+                                  totalSessions.toString(),
+                                  'Total Sessions',
+                                  Icons.play_circle_outline,
+                                  Color(0xFF3B82F6),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMinimalStatCard(
+                                  '${avgOverallAccuracy.toStringAsFixed(1)}%',
+                                  'Avg Accuracy',
+                                  Icons.track_changes_outlined,
+                                  Color(0xFF10B981),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMinimalStatCard(
+                                  '${avgOverallTime.toStringAsFixed(1)}s',
+                                  'Avg Time',
+                                  Icons.timer_outlined,
+                                  Color(0xFF8B5CF6),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMinimalStatCard(
+                                  recordsByStudent.length.toString(),
+                                  'Students',
+                                  Icons.people_outline,
+                                  Color(0xFFF59E0B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Performance Trends
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.trending_up_outlined,
+                                color: Color(0xFF374151),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Performance Trends',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          MinimalTrendChart(
+                            values: trendValues,
+                            xLabels: [
+                              for (final r in accuracyTrend)
+                                (r['date'] is Timestamp)
+                                    ? (r['date'] as Timestamp)
+                                          .toDate()
+                                          .toString()
+                                          .substring(5, 10)
+                                    : (r['date'] is String)
+                                    ? (DateTime.tryParse(
+                                            r['date'],
+                                          )?.toString().substring(5, 10) ??
+                                            '')
+                                    : '',
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Student Performance
+                    Row(
                       children: [
-                        const Text(
-                          'Highlights',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (mostImprovedName != null)
-                          Card(
-                            color: Colors.green[50],
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.trending_up,
-                                color: Colors.green,
-                              ),
-                              title: Text('Most Improved'),
-                              subtitle: Text(
-                                '$mostImprovedName (+${mostImprovedValue.toStringAsFixed(1)}%)',
-                              ),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE5E7EB)),
                             ),
-                          ),
-                        if (bestStreakName != null)
-                          Card(
-                            color: Colors.orange[50],
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.emoji_events,
-                                color: Colors.orange,
-                              ),
-                              title: Text('Best Streak'),
-                              subtitle: Text(
-                                '$bestStreakName ($bestStreakValue consecutive improvements)',
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Per Student Summary',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 12),
-                        ...recordsByStudent.entries.map((entry) {
-                          final name = entry.key;
-                          final records = entry.value;
-                          final avgAcc = records.isNotEmpty
-                              ? records
-                                        .map(
-                                          (r) =>
-                                              (r['accuracy'] as num?)
-                                                  ?.toDouble() ??
-                                              0.0,
-                                        )
-                                        .reduce((a, b) => a + b) /
-                                    records.length
-                              : 0.0;
-                          final avgComp = records.isNotEmpty
-                              ? records
-                                        .map(
-                                          (r) =>
-                                              (r['completionTime'] as num?)
-                                                  ?.toDouble() ??
-                                              0.0,
-                                        )
-                                        .reduce((a, b) => a + b) /
-                                    records.length
-                              : 0.0;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w500,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.bar_chart_outlined,
+                                      color: Color(0xFF374151),
+                                      size: 18,
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Accuracy',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF111827),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'Accuracy: ${avgAcc.toStringAsFixed(1)}%',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(width: 18),
-                                Text(
-                                  'Time: ${avgComp.toStringAsFixed(1)}s',
-                                  style: const TextStyle(fontSize: 16),
+                                const SizedBox(height: 16),
+                                MinimalBarChart(
+                                  data: {
+                                    for (final entry in recordsByStudent.entries)
+                                      entry.key: entry.value.isNotEmpty
+                                          ? entry.value
+                                                    .map(
+                                                      (r) =>
+                                                          (r['accuracy'] as num?)
+                                                              ?.toDouble() ??
+                                                          0.0,
+                                                    )
+                                                    .reduce((a, b) => a + b) /
+                                                entry.value.length
+                                          : 0.0,
+                                  },
+                                  maxValue: 100.0,
+                                  suffix: '%',
+                                  color: Color(0xFF10B981),
                                 ),
                               ],
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE5E7EB)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.speed_outlined,
+                                      color: Color(0xFF374151),
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Completion Time',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF111827),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                MinimalBarChart(
+                                  data: {
+                                    for (final entry in recordsByStudent.entries)
+                                      entry.key: entry.value.isNotEmpty
+                                          ? entry.value
+                                                    .map(
+                                                      (r) =>
+                                                          (r['completionTime'] as num?)
+                                                              ?.toDouble() ??
+                                                          0.0,
+                                                    )
+                                                    .reduce((a, b) => a + b) /
+                                                entry.value.length
+                                          : 0.0,
+                                  },
+                                  maxValue: 60.0,
+                                  suffix: 's',
+                                  color: Color(0xFF8B5CF6),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Game Performance Analysis
+                    if (gameAverages.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Color(0xFFE5E7EB)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.games_outlined,
+                                  color: Color(0xFF374151),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Game Performance',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            MinimalGameChart(gameData: {
+                              for (final entry in gameAverages.entries)
+                                entry.key: entry.value['accuracy'] ?? 0.0,
+                            }),
+                          ],
+                        ),
+                      ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Key Insights
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.insights_outlined,
+                                color: Color(0xFF374151),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Key Insights',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Insight Cards
+                          Row(
+                            children: [
+                              if (mostImprovedName != null)
+                                Expanded(
+                                  child: _buildMinimalInsightCard(
+                                    'Most Improved',
+                                    mostImprovedName,
+                                    '+${mostImprovedValue.toStringAsFixed(1)}%',
+                                    Icons.trending_up,
+                                    Color(0xFF10B981),
+                                  ),
+                                ),
+                              const SizedBox(width: 12),
+                              if (bestStreakName != null)
+                                Expanded(
+                                  child: _buildMinimalInsightCard(
+                                    'Best Streak',
+                                    bestStreakName,
+                                    '$bestStreakValue sessions',
+                                    Icons.emoji_events,
+                                    Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              const SizedBox(width: 12),
+                              if (bestGame != null)
+                                Expanded(
+                                  child: _buildMinimalInsightCard(
+                                    'Top Game',
+                                    bestGame!,
+                                    '${bestGameAccuracy.toStringAsFixed(1)}%',
+                                    Icons.star,
+                                    Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              const SizedBox(width: 12),
+                              if (challengingGame != null)
+                                Expanded(
+                                  child: _buildMinimalInsightCard(
+                                    'Needs Focus',
+                                    challengingGame!,
+                                    '${lowestAccuracy.toStringAsFixed(1)}%',
+                                    Icons.flag,
+                                    Color(0xFFEF4444),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Student Progress List
+                          Text(
+                            'Student Overview',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          ...recordsByStudent.entries.map((entry) {
+                            final name = entry.key;
+                            final records = entry.value;
+                            final avgAcc = records.isNotEmpty
+                                ? records
+                                          .map(
+                                            (r) =>
+                                                (r['accuracy'] as num?)
+                                                    ?.toDouble() ??
+                                                0.0,
+                                          )
+                                          .reduce((a, b) => a + b) /
+                                      records.length
+                                : 0.0;
+                            final avgComp = records.isNotEmpty
+                                ? records
+                                          .map(
+                                            (r) =>
+                                                (r['completionTime'] as num?)
+                                                    ?.toDouble() ??
+                                                0.0,
+                                          )
+                                          .reduce((a, b) => a + b) /
+                                      records.length
+                                : 0.0;
+                            
+                            // Calculate trend for this student
+                            String trendText = 'Stable';
+                            Color trendColor = Color(0xFF6B7280);
+                            IconData trendIcon = Icons.trending_flat;
+                            if (records.length >= 2) {
+                              final sorted = List.from(records)..sort((a, b) {
+                                final aDate = DateTime.tryParse(a['date'] ?? '') ?? DateTime(1970);
+                                final bDate = DateTime.tryParse(b['date'] ?? '') ?? DateTime(1970);
+                                return aDate.compareTo(bDate);
+                              });
+                              final firstAcc = (sorted.first['accuracy'] as num?)?.toDouble() ?? 0.0;
+                              final lastAcc = (sorted.last['accuracy'] as num?)?.toDouble() ?? 0.0;
+                              if (lastAcc > firstAcc + 5) {
+                                trendText = 'Improving';
+                                trendColor = Color(0xFF10B981);
+                                trendIcon = Icons.trending_up;
+                              } else if (lastAcc < firstAcc - 5) {
+                                trendText = 'Declining';
+                                trendColor = Color(0xFFEF4444);
+                                trendIcon = Icons.trending_down;
+                              }
+                            }
+                            
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Color(0xFFE5E7EB)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF3B82F6),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF111827),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${records.length} sessions',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  // Metrics
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF10B981).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${avgAcc.toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF8B5CF6).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${avgComp.toStringAsFixed(1)}s',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF8B5CF6),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    trendIcon,
+                                    size: 16,
+                                    color: trendColor,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             );
           },
@@ -816,7 +1229,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
   Future<void> _deleteStudent(Map<String, dynamic> student) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final studentId = student['id'] ?? student['fullName'];
+    final studentId = student['id']; // Use the document ID
+    if (studentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete: Student ID not found.')),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -845,7 +1264,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
           .doc(studentId)
           .delete();
       setState(() {
-        students.removeWhere((s) => (s['id'] ?? s['fullName']) == studentId);
+        students.removeWhere((s) => s['id'] == studentId);
       });
       ScaffoldMessenger.of(
         context,
@@ -860,7 +1279,14 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
   void _showRecordsModal(Map<String, dynamic> student) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final studentId = student['id'] ?? student['fullName'];
+    final studentId = student['id']; // Use the document ID
+    if (studentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot load records: Student ID not found.')),
+      );
+      return;
+    }
+    
     // Fetch all records for history
     final recordsSnap = await FirebaseFirestore.instance
         .collection('teachers')
@@ -871,6 +1297,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
         .orderBy('date', descending: true)
         .get();
     final records = recordsSnap.docs.map((d) => d.data()).toList();
+    
     if (records.isEmpty) {
       showDialog(
         context: context,
@@ -892,403 +1319,363 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       );
       return;
     }
+
+    _showCompactRecordsModal(student, records);
+  }
+
+  void _showCompactRecordsModal(Map<String, dynamic> student, List<Map<String, dynamic>> records) {
+    String filterType = 'All'; // All, Game, Date, Focus
+    String? selectedFilter;
     DateTime? selectedDate;
-    void showModalWithDate(DateTime? filterDate) {
-      final filteredRecords = filterDate == null
-          ? records
-          : records.where((r) {
-              final d = DateTime.tryParse(r['date'] ?? '')?.toLocal();
-              return d != null &&
-                  d.year == filterDate.year &&
-                  d.month == filterDate.month &&
-                  d.day == filterDate.day;
-            }).toList();
-      String getDateLabel() {
-        if (filterDate == null) return 'All';
-        final months = [
-          '',
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec',
-        ];
-        return '${months[filterDate.month]} ${filterDate.day}, ${filterDate.year}';
+
+    void showModalWithFilters() {
+      // Calculate summary statistics
+      final avgAccuracy = records.isNotEmpty 
+          ? records.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+              .reduce((a, b) => a + b) / records.length
+          : 0.0;
+      
+      final avgTime = records.isNotEmpty 
+          ? records.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
+              .reduce((a, b) => a + b) / records.length
+          : 0.0;
+
+      final totalGames = records.length;
+      final uniqueGames = records.map((r) => r['lastPlayed'] ?? 'Unknown').toSet().length;
+
+      // Filter records based on selected filter
+      List<Map<String, dynamic>> filteredRecords = records;
+      
+      if (filterType == 'Game' && selectedFilter != null) {
+        filteredRecords = records.where((r) => r['lastPlayed'] == selectedFilter).toList();
+      } else if (filterType == 'Focus' && selectedFilter != null) {
+        filteredRecords = records.where((r) => r['challengeFocus'] == selectedFilter).toList();
+      } else if (filterType == 'Date' && selectedDate != null) {
+        filteredRecords = records.where((r) {
+          final d = DateTime.tryParse(r['date'] ?? '')?.toLocal();
+          return d != null &&
+              d.year == selectedDate!.year &&
+              d.month == selectedDate!.month &&
+              d.day == selectedDate!.day;
+        }).toList();
+      }
+
+      // Group records for better organization
+      Map<String, List<Map<String, dynamic>>> groupedRecords = {};
+      if (filterType == 'All') {
+        // Group by game type
+        for (final record in filteredRecords) {
+          final game = record['lastPlayed'] ?? 'Unknown';
+          groupedRecords.putIfAbsent(game, () => []).add(record);
+        }
+      } else {
+        // Group by date if filtering by specific criteria
+        for (final record in filteredRecords) {
+          final date = DateTime.tryParse(record['date'] ?? '')?.toLocal();
+          final dateKey = date != null 
+              ? '${date.day}/${date.month}/${date.year}'
+              : 'Unknown Date';
+          groupedRecords.putIfAbsent(dateKey, () => []).add(record);
+        }
       }
 
       showDialog(
         context: context,
         builder: (ctx) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 32,
-            vertical: 32,
-          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
           child: Container(
-            width: 520,
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F6FA),
-              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Color(0xFFE5E7EB), width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
-              border: Border.all(color: Colors.blueAccent, width: 2),
             ),
-            child: Stack(
+            child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Header with title and chart button
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      topRight: Radius.circular(18),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "${student['fullName'] ?? 'Student'}'s Records",
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF222B45),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
+                      Expanded(
+                        child: Text(
+                          "${student['fullName'] ?? 'Student'}'s Records",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF111827),
                           ),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(32),
-                              onTap: () {
-                                Navigator.of(ctx).pop();
-                                showChartModal(filteredRecords, records);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 22,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  borderRadius: BorderRadius.circular(32),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blueAccent.withOpacity(
-                                        0.18,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Text(
-                                  'View Chart',
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            showChartModal(filteredRecords, records);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF3B82F6),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Color(0xFFE5E7EB)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bar_chart_outlined, color: Colors.white, size: 18),
+                                SizedBox(width: 6),
+                                Text(
+                                  'View Charts',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 0.2,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          const Text(
-                            'Pick Date:',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: () async {
-                                final picked = await showDatePicker(
-                                  context: ctx,
-                                  initialDate: filterDate ?? DateTime.now(),
-                                  firstDate: DateTime(2020),
-                                  lastDate: DateTime.now().add(
-                                    const Duration(days: 1),
-                                  ),
-                                );
-                                Navigator.of(ctx).pop();
-                                showModalWithDate(picked);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blueAccent.withOpacity(
-                                        0.12,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_today,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      getDateLabel(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (filterDate != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () {
-                                    Navigator.of(ctx).pop();
-                                    showModalWithDate(null);
-                                  },
-                                  child: Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Expanded(
-                        child: filteredRecords.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'No records for this date.',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              )
-                            : ListView.separated(
-                                itemCount: filteredRecords.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 18),
-                                itemBuilder: (context, i) {
-                                  final record = filteredRecords[i];
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(18),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.04),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                      border: Border.all(
-                                        color: Colors.grey[300]!,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 18,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: const [
-                                              Text(
-                                                'Date',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Challenge Focus',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Difficulty',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Accuracy',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Completion Time',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Last Played',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                record['date'] ?? '-',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                record['challengeFocus'] ?? '-',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                record['difficulty'] ?? '-',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                record['accuracy'] != null &&
-                                                        record['accuracy']
-                                                            .toString()
-                                                            .isNotEmpty
-                                                    ? '${record['accuracy']}%'
-                                                    : '-',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                _formatCompletionTime(
-                                                  record['completionTime'],
-                                                ),
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                record['lastPlayed'] ?? '-',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // Floating close button
-                Positioned(
-                  bottom: 18,
-                  right: 18,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(32),
-                      onTap: () => Navigator.of(ctx).pop(),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
+
+                // Summary Statistics
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard('Total Games', totalGames.toString(), Icons.games, Colors.green),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard('Avg Accuracy', '${avgAccuracy.toStringAsFixed(1)}%', Icons.track_changes, Colors.orange),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard('Avg Time', _formatCompletionTime(avgTime), Icons.timer, Colors.blue),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard('Games Types', uniqueGames.toString(), Icons.category, Colors.purple),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Filter Section
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Text('Filter by:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      const SizedBox(width: 12),
+                      _buildFilterChip('All', filterType == 'All', () {
+                        filterType = 'All';
+                        selectedFilter = null;
+                        selectedDate = null;
+                        Navigator.of(ctx).pop();
+                        showModalWithFilters();
+                      }),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Game', filterType == 'Game', () {
+                        filterType = 'Game';
+                        _showFilterOptions(ctx, 'Game', records, (selected) {
+                          selectedFilter = selected;
+                          selectedDate = null;
+                          Navigator.of(ctx).pop();
+                          showModalWithFilters();
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Focus', filterType == 'Focus', () {
+                        filterType = 'Focus';
+                        _showFilterOptions(ctx, 'Focus', records, (selected) {
+                          selectedFilter = selected;
+                          selectedDate = null;
+                          Navigator.of(ctx).pop();
+                          showModalWithFilters();
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Date', filterType == 'Date', () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          filterType = 'Date';
+                          selectedDate = picked;
+                          selectedFilter = null;
+                          Navigator.of(ctx).pop();
+                          showModalWithFilters();
+                        }
+                      }),
+                    ],
+                  ),
+                ),
+
+                // Active Filter Display
+                if (selectedFilter != null || selectedDate != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.blueAccent),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                selectedFilter ?? _formatDateFilter(selectedDate!),
+                                style: const TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () {
+                                  filterType = 'All';
+                                  selectedFilter = null;
+                                  selectedDate = null;
+                                  Navigator.of(ctx).pop();
+                                  showModalWithFilters();
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 28,
+                        const Spacer(),
+                        Text(
+                          '${filteredRecords.length} records',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Records List
+                Expanded(
+                  child: filteredRecords.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_off, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'No records found',
+                                style: TextStyle(fontSize: 18, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          itemCount: groupedRecords.keys.length,
+                          itemBuilder: (context, index) {
+                            final groupKey = groupedRecords.keys.elementAt(index);
+                            final groupRecords = groupedRecords[groupKey]!;
+                            
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Group Header
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          groupKey,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '(${groupRecords.length})',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Compact Records Grid
+                                ...groupRecords.map((record) => _buildCompactRecordCard(record)),
+                                const SizedBox(height: 16),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+
+                // Footer with close button
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Close'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -1298,7 +1685,239 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       );
     }
 
-    showModalWithDate(selectedDate);
+    showModalWithFilters();
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(0xFF3B82F6) : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? Color(0xFF3B82F6) : Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Color(0xFF374151),
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactRecordCard(Map<String, dynamic> record) {
+    final date = DateTime.tryParse(record['date'] ?? '')?.toLocal();
+    final formattedDate = date != null 
+        ? '${date.day}/${date.month}/${date.year}'
+        : 'N/A';
+    final formattedTime = date != null 
+        ? '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
+        : '';
+
+    final accuracy = record['accuracy'] ?? 0;
+    final accuracyColor = accuracy >= 80 ? Colors.green : 
+                         accuracy >= 60 ? Colors.orange : Colors.red;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          // Game & Date
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record['lastPlayed'] ?? 'Unknown Game',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$formattedDate $formattedTime',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Focus & Difficulty
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    record['challengeFocus'] ?? 'N/A',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  record['difficulty'] ?? 'N/A',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Performance
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: accuracyColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${accuracy}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: accuracyColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatCompletionTime(record['completionTime']),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterOptions(BuildContext context, String filterType, List<Map<String, dynamic>> records, Function(String) onSelected) {
+    List<String> options = [];
+    
+    if (filterType == 'Game') {
+      options = records.map((r) => r['lastPlayed']?.toString() ?? 'Unknown').toSet().toList();
+    } else if (filterType == 'Focus') {
+      options = records.map((r) => r['challengeFocus']?.toString() ?? 'Unknown').toSet().toList();
+    }
+    
+    options.sort();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 300,
+          constraints: const BoxConstraints(maxHeight: 400),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Select $filterType',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: options.map((option) => ListTile(
+                      title: Text(option),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        onSelected(option);
+                      },
+                    )).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDateFilter(DateTime date) {
+    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month]} ${date.day}, ${date.year}';
   }
 
   void showChartModal(
@@ -1310,163 +1929,186 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          width: 700,
-          constraints: const BoxConstraints(maxHeight: 600),
-          padding: const EdgeInsets.all(32),
+          width: 500,
+          constraints: const BoxConstraints(maxHeight: 500),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.blueAccent, width: 2),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color(0xFFE5E7EB), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Charts',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              // Header
+              Row(
+                children: [
+                  const Text(
+                    'Performance Charts',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF6B7280), size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
+              
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Average Accuracy Chart
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Average Accuracy',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                      // Compact Stats Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Color(0xFFE5E7EB)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    child: CompactDonutChart(
+                                      percent: filteredRecords.isNotEmpty
+                                          ? (filteredRecords
+                                                        .map(
+                                                          (r) =>
+                                                              (r['accuracy']
+                                                                      as num?)
+                                                                  ?.toDouble() ??
+                                                              0.0,
+                                                        )
+                                                        .reduce((a, b) => a + b) /
+                                                    filteredRecords.length) /
+                                                100.0
+                                          : 0.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Accuracy',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    filteredRecords.isNotEmpty
+                                        ? '${(filteredRecords.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a + b) / filteredRecords.length).toStringAsFixed(1)}%'
+                                        : '--%',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: SizedBox(
-                                width: 160,
-                                height: 160,
-                                child: DonutChart(
-                                  percent: filteredRecords.isNotEmpty
-                                      ? (filteredRecords
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Color(0xFFE5E7EB)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 20,
+                                    child: CompactProgressBar(
+                                      value: filteredRecords.isNotEmpty
+                                          ? (filteredRecords
                                                     .map(
                                                       (r) =>
-                                                          (r['accuracy']
+                                                          (r['completionTime']
                                                                   as num?)
                                                               ?.toDouble() ??
                                                           0.0,
                                                     )
                                                     .reduce((a, b) => a + b) /
-                                                filteredRecords.length) /
-                                            100.0
-                                      : 0.0,
-                                ),
+                                                filteredRecords.length)
+                                          : 0.0,
+                                      maxValue: 60.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Avg Time',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    filteredRecords.isNotEmpty
+                                        ? '${(filteredRecords.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a + b) / filteredRecords.length).toStringAsFixed(1)}s'
+                                        : '--s',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: Text(
-                                filteredRecords.isNotEmpty
-                                    ? '${(filteredRecords.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a + b) / filteredRecords.length).toStringAsFixed(1)}%'
-                                    : '--%',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      // Average Completion Time Chart
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Compact Trend Chart
                       Container(
-                        margin: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          color: Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Color(0xFFE5E7EB)),
                         ),
-                        padding: const EdgeInsets.all(24),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Avg Completion Time',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: SizedBox(
-                                width: 220,
-                                height: 48,
-                                child: BarChart(
-                                  value: filteredRecords.isNotEmpty
-                                      ? (filteredRecords
-                                                .map(
-                                                  (r) =>
-                                                      (r['completionTime']
-                                                              as num?)
-                                                          ?.toDouble() ??
-                                                      0.0,
-                                                )
-                                                .reduce((a, b) => a + b) /
-                                            filteredRecords.length)
-                                      : 0.0,
-                                  maxValue:
-                                      60.0, // Assume 60s as max for scaling
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: Text(
-                                filteredRecords.isNotEmpty
-                                    ? '${(filteredRecords.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a + b) / filteredRecords.length).toStringAsFixed(1)} s'
-                                    : '-- s',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Accuracy Trend Chart
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
+                            Text(
                               'Accuracy Trend',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
+                                color: Color(0xFF111827),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            AspectRatio(
-                              aspectRatio: 2.1, // matches LineChart's default
-                              child: LineChart(
+                            const SizedBox(height: 12),
+                            Container(
+                              height: 80,
+                              child: CompactLineChart(
                                 values: filteredRecords.reversed
                                     .map(
                                       (r) =>
@@ -1480,21 +2122,327 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                           ],
                         ),
                       ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Game Summary
+                      if (filteredRecords.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Color(0xFFE5E7EB)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Session Summary',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Sessions:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${filteredRecords.length}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Best Score:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${filteredRecords.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red, size: 32),
-                  onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMinimalStatCard(String value, String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMinimalInsightCard(String title, String name, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF111827),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightCard(String title, String subtitle, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernStatCard(String value, String label, IconData icon, List<Color> gradientColors) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.3),
+            Colors.white.withOpacity(0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: gradientColors),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInsightCard(String title, String name, String value, IconData icon, List<Color> gradientColors) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2464,7 +3412,7 @@ class StudentProfileModal extends StatelessWidget {
                               ),
                               _InfoRow(
                                 label: 'Age',
-                                value: student['age'] ?? 'Not specified',
+                                value: student['age']?.toString() ?? 'Not specified',
                                 icon: Icons.cake,
                               ),
                               _InfoRow(
@@ -2978,39 +3926,6 @@ class EnhancedTeacherProfile extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Edit Profile Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
-                      ),
-                      onPressed: () {
-                        // TODO: Implement edit profile functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Edit profile feature coming soon!'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.edit, size: 16),
-                      label: const Text(
-                        'Edit',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
                     // Logout Button
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
@@ -3981,4 +4896,1229 @@ class ModernVerticalBarChart extends StatelessWidget {
       ),
     );
   }
+}
+
+class ModernTrendChart extends StatelessWidget {
+  final List<double> values;
+  final List<String> xLabels;
+
+  const ModernTrendChart({
+    required this.values,
+    required this.xLabels,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) {
+      return Container(
+        height: 200,
+        child: const Center(
+          child: Text('No data available', style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    return Container(
+      height: 250,
+      child: CustomPaint(
+        painter: ModernTrendChartPainter(values, xLabels),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class ModernTrendChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> xLabels;
+
+  ModernTrendChartPainter(this.values, this.xLabels);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    final paint = Paint()
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF667eea).withOpacity(0.3),
+          Color(0xFF667eea).withOpacity(0.05),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final minValue = values.reduce((a, b) => a < b ? a : b);
+    final range = maxValue - minValue;
+    final padding = 40.0;
+
+    final path = Path();
+    final gradientPath = Path();
+    
+    for (int i = 0; i < values.length; i++) {
+      final x = padding + (i * (size.width - 2 * padding) / (values.length - 1));
+      final normalizedValue = range > 0 ? (values[i] - minValue) / range : 0.5;
+      final y = size.height - padding - (normalizedValue * (size.height - 2 * padding));
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        gradientPath.moveTo(x, size.height - padding);
+        gradientPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        gradientPath.lineTo(x, y);
+      }
+
+      // Draw points
+      final pointPaint = Paint()
+        ..color = Color(0xFF667eea)
+        ..style = PaintingStyle.fill;
+      
+      canvas.drawCircle(Offset(x, y), 6, pointPaint);
+      
+      // Draw white center
+      final whitePaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(x, y), 3, whitePaint);
+    }
+
+    // Complete gradient path
+    gradientPath.lineTo(size.width - padding, size.height - padding);
+    gradientPath.close();
+
+    // Draw gradient area
+    canvas.drawPath(gradientPath, gradientPaint);
+
+    // Draw line
+    paint.shader = LinearGradient(
+      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(path, paint);
+
+    // Draw labels
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    for (int i = 0; i < xLabels.length && i < values.length; i++) {
+      final x = padding + (i * (size.width - 2 * padding) / (values.length - 1));
+      
+      textPainter.text = TextSpan(
+        text: xLabels[i],
+        style: const TextStyle(
+          color: Colors.grey,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 20));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class ModernStudentChart extends StatelessWidget {
+  final Map<String, double> data;
+  final double maxValue;
+  final String suffix;
+  final Color color;
+
+  const ModernStudentChart({
+    required this.data,
+    required this.maxValue,
+    required this.suffix,
+    required this.color,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return Container(
+        height: 200,
+        child: const Center(
+          child: Text('No data available', style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    final sortedEntries = data.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      height: 300,
+      child: SingleChildScrollView(
+        child: Column(
+          children: sortedEntries.map((entry) {
+            final percentage = (entry.value / maxValue).clamp(0.0, 1.0);
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF2D3142),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: percentage,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [color, color.withOpacity(0.7)],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 50,
+                    child: Text(
+                      '${entry.value.toStringAsFixed(1)}$suffix',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3142),
+                      ),
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class ModernGameChart extends StatelessWidget {
+  final Map<String, Map<String, double>> gameData;
+  
+  const ModernGameChart({
+    required this.gameData,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (gameData.isEmpty) {
+      return Container(
+        height: 200,
+        child: const Center(
+          child: Text('No game data available', style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    final sortedGames = gameData.entries.toList()
+      ..sort((a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!));
+
+    return Column(
+      children: [
+        // Top performers
+        Row(
+          children: [
+            Expanded(
+              child: _buildGameMetricCard(
+                'Best Accuracy',
+                sortedGames.first.key,
+                '${sortedGames.first.value['avgAccuracy']!.toStringAsFixed(1)}%',
+                [Color(0xFF11998e), Color(0xFF38ef7d)],
+                Icons.star_rounded,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildGameMetricCard(
+                'Fastest Time',
+                sortedGames.reduce((a, b) => 
+                  a.value['avgTime']! < b.value['avgTime']! ? a : b
+                ).key,
+                '${sortedGames.reduce((a, b) => 
+                  a.value['avgTime']! < b.value['avgTime']! ? a : b
+                ).value['avgTime']!.toStringAsFixed(1)}s',
+                [Color(0xFF667eea), Color(0xFF764ba2)],
+                Icons.speed_rounded,
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Detailed game breakdown
+        Container(
+          height: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              children: sortedGames.map((gameEntry) {
+                final gameName = gameEntry.key;
+                final accuracy = gameEntry.value['avgAccuracy']!;
+                final time = gameEntry.value['avgTime']!;
+                final accuracyPercent = (accuracy / 100).clamp(0.0, 1.0);
+                final timePercent = (time / 60).clamp(0.0, 1.0);
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        Color(0xFFF8F9FA),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.grey.withOpacity(0.1),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.games_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              gameName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2D3142),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Accuracy metric
+                      Row(
+                        children: [
+                          Icon(Icons.track_changes, color: Color(0xFF11998e), size: 16),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Accuracy:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${accuracy.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF11998e),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: accuracyPercent,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Time metric
+                      Row(
+                        children: [
+                          Icon(Icons.timer_rounded, color: Color(0xFF667eea), size: 16),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Avg Time:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${time.toStringAsFixed(1)}s',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF667eea),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: timePercent,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildGameMetricCard(String title, String gameName, String value, List<Color> gradientColors, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            gameName,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class GamePerformanceChart extends StatelessWidget {
+  final Map<String, Map<String, double>> gameData;
+  
+  const GamePerformanceChart({
+    required this.gameData,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (gameData.isEmpty) {
+      return Container(
+        height: 200,
+        child: const Center(
+          child: Text(
+            'No game data available',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    final sortedGames = gameData.entries.toList()
+      ..sort((a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!));
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildGameMetricCard(
+                'Best Performing Game',
+                sortedGames.first.key,
+                '${sortedGames.first.value['avgAccuracy']!.toStringAsFixed(1)}%',
+                Colors.green,
+                Icons.star,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildGameMetricCard(
+                'Fastest Average Game',
+                sortedGames.reduce((a, b) => 
+                  a.value['avgTime']! < b.value['avgTime']! ? a : b
+                ).key,
+                '${sortedGames.reduce((a, b) => 
+                  a.value['avgTime']! < b.value['avgTime']! ? a : b
+                ).value['avgTime']!.toStringAsFixed(1)}s',
+                Colors.blue,
+                Icons.speed,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Container(
+          height: 300,
+          child: SingleChildScrollView(
+            child: Column(
+              children: sortedGames.map((gameEntry) {
+                final gameName = gameEntry.key;
+                final accuracy = gameEntry.value['avgAccuracy']!;
+                final time = gameEntry.value['avgTime']!;
+                final accuracyPercent = (accuracy / 100).clamp(0.0, 1.0);
+                final timePercent = (time / 60).clamp(0.0, 1.0); // Assuming 60s max time
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        gameName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3142),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Accuracy bar
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 70,
+                            child: Text(
+                              'Accuracy:',
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                FractionallySizedBox(
+                                  widthFactor: accuracyPercent,
+                                  child: Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[400],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${accuracy.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      // Time bar
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 70,
+                            child: Text(
+                              'Avg Time:',
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                FractionallySizedBox(
+                                  widthFactor: timePercent,
+                                  child: Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[400],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${time.toStringAsFixed(1)}s',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildGameMetricCard(String title, String gameName, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            gameName,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3142),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Minimal Chart Widgets
+class MinimalTrendChart extends StatelessWidget {
+  final List<double> values;
+  final List<String> xLabels;
+
+  const MinimalTrendChart({
+    Key? key,
+    required this.values,
+    required this.xLabels,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: MinimalTrendPainter(values: values, xLabels: xLabels),
+      ),
+    );
+  }
+}
+
+class MinimalTrendPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> xLabels;
+
+  MinimalTrendPainter({required this.values, required this.xLabels});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    final paint = Paint()
+      ..color = Color(0xFF3B82F6)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final pointPaint = Paint()
+      ..color = Color(0xFF3B82F6)
+      ..style = PaintingStyle.fill;
+
+    final textPainter = TextPainter(
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final minValue = values.reduce((a, b) => a < b ? a : b);
+    final range = maxValue - minValue;
+
+    final path = Path();
+    for (int i = 0; i < values.length; i++) {
+      final x = (i / (values.length - 1)) * size.width;
+      final y = size.height - 40 - ((values[i] - minValue) / range) * (size.height - 60);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+
+      // Draw points
+      canvas.drawCircle(Offset(x, y), 4, pointPaint);
+
+      // Draw labels
+      if (i < xLabels.length) {
+        textPainter.text = TextSpan(
+          text: xLabels[i],
+          style: TextStyle(color: Color(0xFF6B7280), fontSize: 10),
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 20));
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class MinimalBarChart extends StatelessWidget {
+  final Map<String, double> data;
+  final double maxValue;
+  final String suffix;
+  final Color color;
+
+  const MinimalBarChart({
+    Key? key,
+    required this.data,
+    required this.maxValue,
+    required this.suffix,
+    required this.color,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: MinimalBarPainter(
+          data: data,
+          maxValue: maxValue,
+          suffix: suffix,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class MinimalBarPainter extends CustomPainter {
+  final Map<String, double> data;
+  final double maxValue;
+  final String suffix;
+  final Color color;
+
+  MinimalBarPainter({
+    required this.data,
+    required this.maxValue,
+    required this.suffix,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty) return;
+
+    final entries = data.entries.toList();
+    final barWidth = (size.width - 40) / entries.length;
+
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final barHeight = (entry.value / maxValue) * (size.height - 60);
+      final x = 20 + i * barWidth + barWidth * 0.1;
+      final y = size.height - 40 - barHeight;
+
+      // Draw bar
+      final rect = Rect.fromLTWH(x, y, barWidth * 0.8, barHeight);
+      final paint = Paint()..color = color;
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(4)), paint);
+
+      // Draw value text
+      final valuePainter = TextPainter(
+        text: TextSpan(
+          text: '${entry.value.toStringAsFixed(1)}$suffix',
+          style: TextStyle(color: Color(0xFF374151), fontSize: 10, fontWeight: FontWeight.w600),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+      valuePainter.layout();
+      valuePainter.paint(canvas, Offset(x + barWidth * 0.4 - valuePainter.width / 2, y - 15));
+
+      // Draw label
+      final labelPainter = TextPainter(
+        text: TextSpan(
+          text: entry.key.length > 8 ? '${entry.key.substring(0, 8)}...' : entry.key,
+          style: TextStyle(color: Color(0xFF6B7280), fontSize: 9),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+      labelPainter.layout();
+      labelPainter.paint(canvas, Offset(x + barWidth * 0.4 - labelPainter.width / 2, size.height - 20));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class MinimalGameChart extends StatelessWidget {
+  final Map<String, double> gameData;
+
+  const MinimalGameChart({
+    Key? key,
+    required this.gameData,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 300,
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: MinimalGamePainter(gameData: gameData),
+      ),
+    );
+  }
+}
+
+class MinimalGamePainter extends CustomPainter {
+  final Map<String, double> gameData;
+
+  MinimalGamePainter({required this.gameData});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (gameData.isEmpty) return;
+
+    final entries = gameData.entries.toList();
+    final barHeight = (size.height - 40) / entries.length;
+
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final barWidth = (entry.value / 100) * (size.width - 120);
+      final y = 20 + i * barHeight;
+
+      // Draw bar background
+      final bgRect = Rect.fromLTWH(100, y + barHeight * 0.2, size.width - 120, barHeight * 0.6);
+      final bgPaint = Paint()..color = Color(0xFFF3F4F6);
+      canvas.drawRRect(RRect.fromRectAndRadius(bgRect, Radius.circular(8)), bgPaint);
+
+      // Draw bar
+      final rect = Rect.fromLTWH(100, y + barHeight * 0.2, barWidth, barHeight * 0.6);
+      final paint = Paint()..color = Color(0xFF3B82F6);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(8)), paint);
+
+      // Draw game name
+      final namePainter = TextPainter(
+        text: TextSpan(
+          text: entry.key.length > 12 ? '${entry.key.substring(0, 12)}...' : entry.key,
+          style: TextStyle(color: Color(0xFF111827), fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr,
+      );
+      namePainter.layout();
+      namePainter.paint(canvas, Offset(10, y + barHeight * 0.5 - namePainter.height / 2));
+
+      // Draw percentage
+      final percentPainter = TextPainter(
+        text: TextSpan(
+          text: '${entry.value.toStringAsFixed(1)}%',
+          style: TextStyle(color: Color(0xFF374151), fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr,
+      );
+      percentPainter.layout();
+      percentPainter.paint(canvas, Offset(105 + barWidth + 8, y + barHeight * 0.5 - percentPainter.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Compact Chart Components for Modal
+class CompactDonutChart extends StatelessWidget {
+  final double percent;
+
+  const CompactDonutChart({
+    Key? key,
+    required this.percent,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: CompactDonutPainter(percent: percent),
+    );
+  }
+}
+
+class CompactDonutPainter extends CustomPainter {
+  final double percent;
+
+  CompactDonutPainter({required this.percent});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 6;
+
+    // Background circle
+    final bgPaint = Paint()
+      ..color = Color(0xFFE5E7EB)
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, bgPaint);
+
+    // Progress arc
+    final progressPaint = Paint()
+      ..color = Color(0xFF3B82F6)
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final sweepAngle = 2 * math.pi * percent;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class CompactProgressBar extends StatelessWidget {
+  final double value;
+  final double maxValue;
+
+  const CompactProgressBar({
+    Key? key,
+    required this.value,
+    required this.maxValue,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: CompactProgressPainter(
+        value: value,
+        maxValue: maxValue,
+      ),
+    );
+  }
+}
+
+class CompactProgressPainter extends CustomPainter {
+  final double value;
+  final double maxValue;
+
+  CompactProgressPainter({
+    required this.value,
+    required this.maxValue,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Background bar
+    final bgPaint = Paint()
+      ..color = Color(0xFFE5E7EB)
+      ..style = PaintingStyle.fill;
+
+    final bgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(size.height / 2),
+    );
+    canvas.drawRRect(bgRect, bgPaint);
+
+    // Progress bar
+    final progressPaint = Paint()
+      ..color = Color(0xFF10B981)
+      ..style = PaintingStyle.fill;
+
+    final progressWidth = (value / maxValue) * size.width;
+    final progressRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, progressWidth, size.height),
+      Radius.circular(size.height / 2),
+    );
+    canvas.drawRRect(progressRect, progressPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class CompactLineChart extends StatelessWidget {
+  final List<double> values;
+  final double maxValue;
+
+  const CompactLineChart({
+    Key? key,
+    required this.values,
+    required this.maxValue,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: CompactLinePainter(
+        values: values,
+        maxValue: maxValue,
+      ),
+    );
+  }
+}
+
+class CompactLinePainter extends CustomPainter {
+  final List<double> values;
+  final double maxValue;
+
+  CompactLinePainter({
+    required this.values,
+    required this.maxValue,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty || values.length < 2) return;
+
+    final paint = Paint()
+      ..color = Color(0xFF3B82F6)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final pointPaint = Paint()
+      ..color = Color(0xFF3B82F6)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final padding = 10.0;
+    final chartWidth = size.width - padding * 2;
+    final chartHeight = size.height - padding * 2;
+
+    // Draw grid lines
+    final gridPaint = Paint()
+      ..color = Color(0xFFE5E7EB)
+      ..strokeWidth = 0.5;
+
+    for (int i = 1; i < 4; i++) {
+      final y = padding + (i / 4) * chartHeight;
+      canvas.drawLine(
+        Offset(padding, y),
+        Offset(size.width - padding, y),
+        gridPaint,
+      );
+    }
+
+    // Draw line
+    for (int i = 0; i < values.length; i++) {
+      final x = padding + (i / (values.length - 1)) * chartWidth;
+      final y = padding + (1 - (values[i] / maxValue)) * chartHeight;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+
+      // Draw points (smaller)
+      canvas.drawCircle(Offset(x, y), 2, pointPaint);
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
