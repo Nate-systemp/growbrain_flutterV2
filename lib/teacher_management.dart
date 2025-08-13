@@ -2771,6 +2771,26 @@ class _AddStudentFormState extends State<AddStudentForm> {
   String contactNumber = '';
   bool _saving = false;
 
+  bool _isFormValid() {
+    // Check if form fields are valid
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return false;
+    }
+    
+    // Check if at least one cognitive need is selected
+    if (!attention && !logic && !memory && !verbal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one cognitive need'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+    
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final labelStyle = const TextStyle(
@@ -3003,6 +3023,8 @@ class _AddStudentFormState extends State<AddStudentForm> {
                               fillColor: Colors.white,
                             ),
                             onChanged: (v) => guardianName = v,
+                            validator: (v) =>
+                                v == null || v.isEmpty ? 'Required' : null,
                             style: const TextStyle(
                               fontSize: 20,
                               color: Color(0xFF393C48),
@@ -3090,7 +3112,7 @@ class _AddStudentFormState extends State<AddStudentForm> {
                     onPressed: _saving
                         ? null
                         : () async {
-                            if (_formKey.currentState?.validate() ?? false) {
+                            if (_isFormValid()) {
                               setState(() => _saving = true);
                               await widget.onSave({
                                 'fullName': fullName,
