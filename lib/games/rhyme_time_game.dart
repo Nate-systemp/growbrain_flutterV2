@@ -37,7 +37,8 @@ class RhymeWord {
   });
 }
 
-class _RhymeTimeGameState extends State<RhymeTimeGame> {
+class _RhymeTimeGameState extends State<RhymeTimeGame> 
+    with TickerProviderStateMixin {
   List<RhymeWord> currentWords = [];
   RhymeWord? firstSelectedWord;
   RhymeWord? secondSelectedWord;
@@ -52,7 +53,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
   bool gameStarted = false;
   bool gameActive = false;
   
-  // Rhyme groups organized by difficulty
+  // Animation controllers for enhanced UX
+  late AnimationController _cardAnimationController;
+  late AnimationController _scoreAnimationController;
+  late AnimationController _celebrationController;
+  
+  // Enhanced rhyme groups organized by difficulty
   final Map<String, List<Map<String, String>>> rhymeGroups = {
     'easy': [
       {'cat': 'at', 'hat': 'at', 'bat': 'at', 'mat': 'at'},
@@ -63,39 +69,69 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
       {'red': 'ed', 'bed': 'ed', 'fed': 'ed', 'led': 'ed'},
       {'big': 'ig', 'pig': 'ig', 'fig': 'ig', 'wig': 'ig'},
       {'sit': 'it', 'hit': 'it', 'fit': 'it', 'pit': 'it'},
+      {'cake': 'ake', 'make': 'ake', 'lake': 'ake', 'wake': 'ake'},
+      {'ball': 'all', 'call': 'all', 'fall': 'all', 'wall': 'all'},
+      {'boat': 'oat', 'coat': 'oat', 'goat': 'oat', 'float': 'oat'},
+      {'rain': 'ain', 'pain': 'ain', 'train': 'ain', 'brain': 'ain'},
     ],
     'medium': [
       {'window': 'indo', 'bingo': 'indo'},
-      {'flower': 'ower', 'tower': 'ower', 'power': 'ower'},
-      {'happy': 'appy', 'snappy': 'appy'},
-      {'chicken': 'icken', 'thicken': 'icken'},
-      {'butter': 'utter', 'mutter': 'utter', 'flutter': 'utter'},
-      {'apple': 'apple', 'grapple': 'apple'},
-      {'paper': 'aper', 'caper': 'aper'},
-      {'water': 'ater', 'matter': 'atter'},
+      {'flower': 'ower', 'tower': 'ower', 'power': 'ower', 'shower': 'ower'},
+      {'happy': 'appy', 'snappy': 'appy', 'clappy': 'appy'},
+      {'chicken': 'icken', 'thicken': 'icken', 'quicken': 'icken'},
+      {'butter': 'utter', 'mutter': 'utter', 'flutter': 'utter', 'clutter': 'utter'},
+      {'apple': 'apple', 'grapple': 'apple', 'chapel': 'apple'},
+      {'paper': 'aper', 'caper': 'aper', 'taper': 'aper'},
+      {'water': 'ater', 'matter': 'atter', 'chatter': 'atter'},
+      {'cookie': 'ookie', 'rookie': 'ookie', 'bookie': 'ookie'},
+      {'monkey': 'onkey', 'donkey': 'onkey', 'honkey': 'onkey'},
+      {'purple': 'urple', 'circle': 'ircle', 'hurdle': 'urdle'},
+      {'tiger': 'iger', 'finger': 'inger', 'singer': 'inger'},
     ],
     'hard': [
-      {'enough': 'uff', 'rough': 'uff', 'tough': 'uff'},
-      {'weight': 'ate', 'straight': 'ate', 'create': 'ate'},
-      {'bought': 'ought', 'thought': 'ought', 'caught': 'ought'},
-      {'listen': 'isten', 'glisten': 'isten'},
-      {'ocean': 'tion', 'motion': 'tion', 'potion': 'tion'},
-      {'through': 'ough', 'threw': 'ew'},
-      {'heart': 'art', 'part': 'art', 'start': 'art'},
-      {'break': 'ake', 'cake': 'ake', 'make': 'ake'},
+      {'enough': 'uff', 'rough': 'uff', 'tough': 'uff', 'stuff': 'uff'},
+      {'weight': 'ate', 'straight': 'ate', 'create': 'ate', 'relate': 'ate'},
+      {'bought': 'ought', 'thought': 'ought', 'caught': 'ought', 'fought': 'ought'},
+      {'listen': 'isten', 'glisten': 'isten', 'christen': 'isten'},
+      {'ocean': 'tion', 'motion': 'tion', 'potion': 'tion', 'devotion': 'tion'},
+      {'through': 'ough', 'threw': 'ew', 'knew': 'ew', 'grew': 'ew'},
+      {'heart': 'art', 'part': 'art', 'start': 'art', 'smart': 'art'},
+      {'break': 'ake', 'cake': 'ake', 'make': 'ake', 'mistake': 'ake'},
+      {'beautiful': 'iful', 'wonderful': 'erful', 'powerful': 'erful'},
+      {'elephant': 'ant', 'important': 'ant', 'pleasant': 'ant'},
+      {'celebration': 'ation', 'education': 'ation', 'vacation': 'ation'},
+      {'butterfly': 'fly', 'dragonfly': 'fly', 'firefly': 'fly'},
     ],
   };
   
   Random random = Random();
   
-  // Soft, accessible colors for children with cognitive impairments
-  final Color unselectedColor = Color(0xFFF8F9FA); // Very light gray
-  final Color selectedColor = Color(0xFFFFF176); // Soft yellow
-  final Color matchedColor = Color(0xFF81C784); // Soft green
+  // Attention category theme colors
+  final Color primaryColor = Color(0xFF5B6F4A); // Dark green
+  final Color backgroundColor = Color(0xFFF5F5DC); // Beige/cream
+  final Color accentColor = Color(0xFFFFD740); // Golden yellow
+  final Color unselectedColor = Color(0xFFF5F5DC); // Cream background
+  final Color selectedColor = Color(0xFFFFD740); // Golden yellow for selection
+  final Color matchedColor = Color(0xFF5B6F4A); // Dark green for matches
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize animation controllers
+    _cardAnimationController = AnimationController(
+      duration: Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scoreAnimationController = AnimationController(
+      duration: Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _celebrationController = AnimationController(
+      duration: Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
     _initializeGame();
   }
 
@@ -180,45 +216,109 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Rhyme Time Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Find pairs of rhyming words!',
-              style: TextStyle(color: Color(0xFF2C3E50), fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 12),
-            Text(
-              '• Tap two words that rhyme\n• Find all rhyming pairs to win\n• Words that sound similar rhyme!',
-              style: TextStyle(color: Color(0xFF2C3E50)),
-              textAlign: TextAlign.left,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Pairs to find: $totalPairs',
-              style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold),
-            ),
-            if (timeLeft > 0) ...[
-              SizedBox(height: 8),
+        backgroundColor: backgroundColor,
+        title: Text(
+          'Rhyme Time Instructions', 
+          style: TextStyle(
+            color: primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: primaryColor.withOpacity(0.2)),
+          ),
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.music_note,
+                size: 48,
+                color: primaryColor,
+              ),
+              SizedBox(height: 12),
               Text(
-                'Time limit: ${timeLeft}s',
-                style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+                'Find pairs of rhyming words!',
+                style: TextStyle(
+                  color: primaryColor, 
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '• Tap two words that rhyme\n• Find all rhyming pairs to win\n• Words that sound similar rhyme!\n• Get bonus points for speed!',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+              SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(
+                    children: [
+                      Icon(Icons.flag, color: accentColor, size: 20),
+                      Text(
+                        'Pairs: $totalPairs',
+                        style: TextStyle(
+                          color: primaryColor, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (timeLeft > 0)
+                    Column(
+                      children: [
+                        Icon(Icons.timer, color: Colors.orange, size: 20),
+                        Text(
+                          'Time: ${timeLeft}s',
+                          style: TextStyle(
+                            color: Colors.orange, 
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ],
-          ],
+          ),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               if (timeLeft > 0) {
                 _startTimer();
               }
             },
-            child: Text('Start Playing!', style: TextStyle(color: Color(0xFF81C784))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Text(
+              'Start Playing!',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -286,7 +386,20 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
         firstSelectedWord!.isMatched = true;
         secondSelectedWord!.isMatched = true;
         correctMatches++;
-        score += (timeLeft > 0 ? timeLeft ~/ 10 + 10 : 10); // Bonus for remaining time
+        
+        // Enhanced scoring system
+        int baseScore = 50;
+        int timeBonus = timeLeft > 0 ? (timeLeft ~/ 5) : 0; // More generous time bonus
+        int accuracyBonus = wrongAttempts <= 2 ? 25 : 0; // Accuracy bonus for few mistakes
+        int difficultyBonus = widget.difficulty == 'hard' ? 30 : 
+                             widget.difficulty == 'medium' ? 20 : 10;
+        
+        score += baseScore + timeBonus + accuracyBonus + difficultyBonus;
+      });
+      
+      // Trigger celebration animation
+      _celebrationController.forward().then((_) {
+        _celebrationController.reset();
       });
       
       HapticFeedback.mediumImpact();
@@ -345,6 +458,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
 
   @override
   void dispose() {
+    _cardAnimationController.dispose();
+    _scoreAnimationController.dispose();
+    _celebrationController.dispose();
     gameTimer?.cancel();
     super.dispose();
   }
@@ -352,37 +468,23 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA), // Soft light background
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Rhyme Time - ${widget.difficulty}'),
-        backgroundColor: Color(0xFFCE93D8), // Soft purple
+        title: Text(
+          'Rhyme Time - ${widget.difficulty}',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Score and Timer Display
-            Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Attempts: $wrongAttempts', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
-                    ],
-                  ),
-                  Text('Pairs: $correctMatches/$totalPairs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                  if (timeLeft > 0)
-                    Column(
-                      children: [
-                        Text('Time: ${timeLeft}s', style: TextStyle(fontSize: 16, color: timeLeft <= 10 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+            // Modern Header with Stats
+            _buildHeader(),
+            SizedBox(height: 20),
             
             // Game Area
             Expanded(
@@ -397,39 +499,174 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
     );
   }
 
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            primaryColor,
+            primaryColor.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      margin: EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildStatItem(
+            icon: Icons.star,
+            label: 'Score',
+            value: score.toString(),
+            color: accentColor,
+          ),
+          _buildStatItem(
+            icon: Icons.check_circle,
+            label: 'Pairs',
+            value: '$correctMatches/$totalPairs',
+            color: Colors.white,
+          ),
+          if (timeLeft > 0)
+            _buildStatItem(
+              icon: Icons.timer,
+              label: 'Time',
+              value: '${timeLeft}s',
+              color: timeLeft <= 10 ? Colors.red[300]! : Colors.white,
+            ),
+          _buildStatItem(
+            icon: Icons.error_outline,
+            label: 'Attempts',
+            value: wrongAttempts.toString(),
+            color: Colors.white70,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color.withOpacity(0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStartScreen() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.music_note,
-          size: 80,
-          color: Color(0xFFCE93D8),
+        Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.music_note,
+                size: 80,
+                color: primaryColor,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Rhyme Time Game',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Find words that rhyme!',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Difficulty: ${widget.difficulty}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: primaryColor.withOpacity(0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                'Find $totalPairs rhyming pairs',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
-        SizedBox(height: 20),
-        Text(
-          'Rhyme Time',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Difficulty: ${widget.difficulty}',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Find $totalPairs rhyming pairs',
-          style: TextStyle(fontSize: 18, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
+        SizedBox(height: 32),
         ElevatedButton(
-          onPressed: _startGame,
-          child: Text('Start Game'),
+          onPressed: () {
+            setState(() {
+              gameStarted = true;
+            });
+            _startGame();
+          },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+            elevation: 5,
+          ),
+          child: Text(
+            'Start Game',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -497,34 +734,43 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
     
     return GestureDetector(
       onTap: () => _onWordTapped(word),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: word.isSelected ? Color(0xFF2C3E50) : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: Offset(0, 2),
+      child: AnimatedBuilder(
+        animation: _cardAnimationController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: word.isSelected ? 1.05 : 1.0,
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: word.isSelected ? accentColor : Colors.transparent,
+                  width: word.isSelected ? 3 : 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: word.isSelected ? accentColor.withOpacity(0.3) : Colors.black.withOpacity(0.1),
+                    blurRadius: word.isSelected ? 8 : 4,
+                    offset: Offset(0, word.isSelected ? 4 : 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  word.word,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: word.isMatched ? Colors.white : primaryColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            word.word,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: word.isMatched ? Colors.white : Color(0xFF2C3E50),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -538,25 +784,25 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
         Icon(
           Icons.celebration,
           size: 80,
-          color: Color(0xFF81C784),
+          color: primaryColor,
         ),
         SizedBox(height: 20),
         Text(
           'Fantastic Rhyming!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryColor),
         ),
         SizedBox(height: 20),
         Text(
           'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 24, color: primaryColor),
         ),
         Text(
           'All $totalPairs pairs found!',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: primaryColor),
         ),
         Text(
           'Accuracy: ${accuracyDouble.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: primaryColor),
         ),
         SizedBox(height: 40),
         ElevatedButton(
@@ -568,7 +814,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
           },
           child: Text('Play Again'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -579,8 +825,8 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
           onPressed: () => Navigator.pop(context),
           child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
+            backgroundColor: accentColor,
+            foregroundColor: primaryColor,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -596,21 +842,21 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
         Icon(
           Icons.timer_off,
           size: 80,
-          color: Color(0xFFE57373),
+          color: primaryColor,
         ),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryColor),
         ),
         SizedBox(height: 20),
         Text(
           'Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 24, color: primaryColor),
         ),
         Text(
           'Pairs found: $correctMatches/$totalPairs',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: primaryColor),
         ),
         SizedBox(height: 40),
         ElevatedButton(
@@ -622,7 +868,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
           },
           child: Text('Try Again'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -633,8 +879,8 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> {
           onPressed: () => Navigator.pop(context),
           child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
+            backgroundColor: accentColor,
+            foregroundColor: primaryColor,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),

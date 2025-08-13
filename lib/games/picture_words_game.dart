@@ -39,7 +39,8 @@ class WordPictureItem {
   });
 }
 
-class _PictureWordsGameState extends State<PictureWordsGame> {
+class _PictureWordsGameState extends State<PictureWordsGame> 
+    with TickerProviderStateMixin {
   List<WordPictureItem> gameItems = [];
   List<String> wordList = [];
   List<String> imageList = [];
@@ -48,13 +49,21 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
   int score = 0;
   int correctMatches = 0;
   int wrongAttempts = 0;
-  int totalPairs = 0;
+  int totalPairs = 4;
+  int timeLeft = 0;
+  Timer? gameTimer;
   bool gameStarted = false;
+  bool gameComplete = false;
+  DateTime? startTime;
   bool gameActive = false;
   bool canSelect = true;
   late DateTime gameStartTime;
-  Timer? gameTimer;
-  int timeLeft = 0;
+  
+  // Animation controllers for enhanced UI
+  late AnimationController _cardAnimationController;
+  late AnimationController _scoreAnimationController;
+  late Animation<double> _cardAnimation;
+  late Animation<double> _scoreAnimation;
   
   // Word-image pairs organized by difficulty
   final Map<String, List<Map<String, String>>> wordImagePairs = {
@@ -113,18 +122,48 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
   
   Random random = Random();
   
-  // Soft, accessible colors for children with cognitive impairments
-  final Color backgroundColor = Color(0xFFF8F9FA);
-  final Color wordSectionColor = Color(0xFFE1F5FE); // Light blue
-  final Color imageSectionColor = Color(0xFFF3E5F5); // Light purple
-  final Color selectedColor = Color(0xFFFFF176); // Soft yellow
-  final Color matchedColor = Color(0xFF81C784); // Soft green
+  // Attention category theme colors (matching Find Me game)
+  final Color backgroundColor = Color(0xFFF5F5DC); // Beige background
+  final Color primaryColor = Color(0xFF5B6F4A); // Forest green
+  final Color accentColor = Color(0xFFFFD740); // Golden yellow
+  final Color wordSectionColor = Color(0xFF6B7F5A); // Lighter green
+  final Color imageSectionColor = Color(0xFF7B8F6A); // Medium green
+  final Color selectedColor = Color(0xFFFFD740); // Golden yellow
+  final Color matchedColor = Color(0xFF81C784); // Success green
   final Color cardColor = Color(0xFFFFFFFF); // White
 
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _initializeGame();
+  }
+
+  void _initializeAnimations() {
+    _cardAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scoreAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _cardAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _cardAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _scoreAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(
+      parent: _scoreAnimationController,
+      curve: Curves.elasticOut,
+    ));
   }
 
   void _initializeGame() {
@@ -382,6 +421,8 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
   @override
   void dispose() {
     gameTimer?.cancel();
+    _cardAnimationController.dispose();
+    _scoreAnimationController.dispose();
     super.dispose();
   }
 
@@ -390,82 +431,200 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Picture Words - ${widget.difficulty}'),
-        backgroundColor: Color(0xFFCE93D8), // Soft purple
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        title: Text(
+          'Picture Words - ${widget.difficulty}',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Score and Timer Display
-            Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Attempts: $wrongAttempts', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
-                    ],
-                  ),
-                  Text('Pairs: $correctMatches/$totalPairs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                  if (timeLeft > 0)
-                    Column(
-                      children: [
-                        Text('Time: ${timeLeft}s', style: TextStyle(fontSize: 16, color: timeLeft <= 15 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            
-            // Game Area
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              Expanded(
                 child: gameStarted ? _buildGameArea() : _buildStartScreen(),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            primaryColor,
+            wordSectionColor,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            icon: Icons.score,
+            label: 'Score',
+            value: score.toString(),
+            animation: _scoreAnimation,
+          ),
+          _buildStatItem(
+            icon: Icons.check_circle,
+            label: 'Pairs',
+            value: '$correctMatches/$totalPairs',
+          ),
+          if (timeLeft > 0)
+            _buildStatItem(
+              icon: Icons.timer,
+              label: 'Time',
+              value: '${timeLeft}s',
+              isWarning: timeLeft <= 15,
+            ),
+          _buildStatItem(
+            icon: Icons.error_outline,
+            label: 'Attempts',
+            value: wrongAttempts.toString(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    Animation<double>? animation,
+    bool isWarning = false,
+  }) {
+    Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          color: isWarning ? accentColor : Colors.white,
+          size: 24,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isWarning ? accentColor : Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+
+    if (animation != null) {
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: animation.value,
+            child: content,
+          );
+        },
+      );
+    }
+
+    return content;
   }
 
   Widget _buildStartScreen() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.menu_book,
-          size: 80,
-          color: Color(0xFFCE93D8),
+        Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.menu_book,
+                size: 80,
+                color: Color(0xFF5B6F4A),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Picture Words Game',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5B6F4A),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Match words with pictures!',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
-        SizedBox(height: 20),
-        Text(
-          'Picture Words',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Difficulty: ${widget.difficulty}',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Match $totalPairs word-picture pairs',
-          style: TextStyle(fontSize: 18, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
+        SizedBox(height: 32),
         ElevatedButton(
-          onPressed: _startGame,
-          child: Text('Start Game'),
+          onPressed: () {
+            setState(() {
+              gameStarted = true;
+            });
+            _startGame();
+          },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: Color(0xFF5B6F4A),
             foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+            elevation: 5,
+          ),
+          child: Text(
+            'Start Game',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -488,15 +647,16 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
           padding: EdgeInsets.all(12),
           margin: EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: Color(0xFFE8F5E8),
+            color: Color(0xFFF5F5DC).withOpacity(0.8),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color(0xFF5B6F4A).withOpacity(0.3)),
           ),
           child: Text(
             'Tap a word, then tap its matching picture!',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
+              color: Color(0xFF5B6F4A),
             ),
             textAlign: TextAlign.center,
           ),
@@ -523,7 +683,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
+                            color: Color(0xFFF5F5DC),
                           ),
                         ),
                       ),
@@ -560,7 +720,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
+                            color: Color(0xFFF5F5DC),
                           ),
                         ),
                       ),
@@ -612,7 +772,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
             color: cardBgColor,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? Color(0xFF2C3E50) : Colors.transparent,
+              color: isSelected ? Color(0xFFFFD740) : Colors.transparent,
               width: 2,
             ),
             boxShadow: [
@@ -629,7 +789,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isMatched ? Colors.white : Color(0xFF2C3E50),
+                color: isMatched ? Colors.white : Color(0xFF5B6F4A),
               ),
               textAlign: TextAlign.center,
             ),
@@ -665,7 +825,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
             color: cardBgColor,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? Color(0xFF2C3E50) : Colors.transparent,
+              color: isSelected ? Color(0xFFFFD740) : Colors.transparent,
               width: 2,
             ),
             boxShadow: [
@@ -697,25 +857,25 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
         Icon(
           Icons.celebration,
           size: 80,
-          color: Color(0xFF81C784),
+          color: Color(0xFF5B6F4A),
         ),
         SizedBox(height: 20),
         Text(
           'Excellent Matching!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5B6F4A)),
         ),
         SizedBox(height: 20),
         Text(
           'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 24, color: Color(0xFF5B6F4A)),
         ),
         Text(
           'All $totalPairs pairs matched!',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
         ),
         Text(
           'Accuracy: ${accuracyDouble.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
         ),
         SizedBox(height: 40),
         ElevatedButton(
@@ -727,7 +887,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
           },
           child: Text('Play Again'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: Color(0xFF5B6F4A),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -738,8 +898,8 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
           onPressed: () => Navigator.pop(context),
           child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
+            backgroundColor: Color(0xFFFFD740),
+            foregroundColor: Color(0xFF5B6F4A),
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -755,21 +915,21 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
         Icon(
           Icons.timer_off,
           size: 80,
-          color: Color(0xFFE57373),
+          color: Color(0xFF5B6F4A),
         ),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5B6F4A)),
         ),
         SizedBox(height: 20),
         Text(
           'Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 24, color: Color(0xFF5B6F4A)),
         ),
         Text(
           'Pairs matched: $correctMatches/$totalPairs',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
+          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
         ),
         SizedBox(height: 40),
         ElevatedButton(
@@ -781,7 +941,7 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
           },
           child: Text('Try Again'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: Color(0xFF5B6F4A),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -792,8 +952,8 @@ class _PictureWordsGameState extends State<PictureWordsGame> {
           onPressed: () => Navigator.pop(context),
           child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFCE93D8),
-            foregroundColor: Colors.white,
+            backgroundColor: Color(0xFFFFD740),
+            foregroundColor: Color(0xFF5B6F4A),
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
