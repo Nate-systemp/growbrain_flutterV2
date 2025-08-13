@@ -6,6 +6,7 @@ import 'set_session_screen.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 class TeacherManagementScreen extends StatefulWidget {
   const TeacherManagementScreen({Key? key}) : super(key: key);
@@ -15,9 +16,11 @@ class TeacherManagementScreen extends StatefulWidget {
       _TeacherManagementScreenState();
 }
 
-class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
+class _TeacherManagementScreenState extends State<TeacherManagementScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex =
       2; // 0: Back, 1: Profile, 2: Student List, 3: Add, 4: Analysis
+  int _previousIndex = 2; // Track previous index for animation direction
   List<Map<String, dynamic>> students = [];
   bool _loadingStudents = false;
   Map<String, dynamic>? _viewingStudent;
@@ -26,12 +29,39 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
   String? _profileError;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  late AnimationController _tabAnimationController;
+  late Animation<double> _tabAnimation;
+  Timer? _refreshTimer;
+  DateTime? _lastRefreshTime;
 
   @override
   void initState() {
     super.initState();
+    // Add lifecycle observer for automatic refresh
+    WidgetsBinding.instance.addObserver(this);
+    
+    _tabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _tabAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _tabAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    _tabAnimationController.forward();
+    _previousIndex = _selectedIndex; // Initialize previous index
+    
+    // Initial data fetch
     _fetchStudents();
     _fetchTeacherProfile();
+    _lastRefreshTime = DateTime.now();
+    
+    // Start periodic refresh timer (every 5 minutes)
+    _startPeriodicRefresh();
+    
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim();
@@ -39,21 +69,119 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabAnimationController.dispose();
+    _searchController.dispose();
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Refresh data when app comes back into focus
+    if (state == AppLifecycleState.resumed) {
+      _refreshDataIfNeeded();
+    }
+  }
+
+  void _startPeriodicRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (mounted) {
+        _refreshDataIfNeeded();
+      }
+    });
+  }
+
+  void _refreshDataIfNeeded() {
+    final now = DateTime.now();
+    if (_lastRefreshTime == null || 
+        now.difference(_lastRefreshTime!).inMinutes >= 2) {
+      _refreshAllData();
+      _lastRefreshTime = now;
+    }
+  }
+
+  Future<void> _refreshAllData() async {
+    if (!mounted) return;
+    
+    // Refresh both students and teacher profile
+    final futures = <Future>[];
+    
+    if (_selectedIndex == 1 || _selectedIndex == 2) {
+      futures.add(_fetchTeacherProfile());
+    }
+    
+    if (_selectedIndex == 2 || _selectedIndex == 4) {
+      futures.add(_fetchStudents());
+    }
+    
+    await Future.wait(futures);
+  }
+
+  void _switchTab(int newIndex) {
+    if (newIndex != _selectedIndex) {
+      // Add haptic feedback for better UX
+      HapticFeedback.lightImpact();
+      _tabAnimationController.reset();
+      setState(() {
+        _previousIndex = _selectedIndex;
+        _selectedIndex = newIndex;
+      });
+      _tabAnimationController.forward();
+      
+      // Refresh data when switching to specific tabs
+      _refreshDataOnTabSwitch(newIndex);
+    }
+  }
+
+  void _refreshDataOnTabSwitch(int tabIndex) {
+    switch (tabIndex) {
+      case 1: // Teacher Profile
+        _fetchTeacherProfile();
+        break;
+      case 2: // Student List
+        _fetchStudents();
+        break;
+      case 4: // Analysis (needs student data)
+        _fetchStudents();
+        break;
+    }
+  }
+
   Future<void> _fetchStudents() async {
+    if (!mounted) return;
     setState(() => _loadingStudents = true);
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final snap = await FirebaseFirestore.instance
-        .collection('teachers')
-        .doc(user.uid)
-        .collection('students')
-        .get();
-    students = snap.docs.map((d) {
-      final data = d.data();
-      data['id'] = d.id; // Include the document ID
-      return data;
-    }).toList();
-    setState(() => _loadingStudents = false);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final snap = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .collection('students')
+          .get();
+      students = snap.docs.map((d) {
+        final data = d.data();
+        data['id'] = d.id; // Include the document ID
+        return data;
+      }).toList();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fetch students: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingStudents = false);
+      }
+    }
   }
 
   Future<void> _addStudent(Map<String, dynamic> student) async {
@@ -65,7 +193,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
         .collection('students')
         .add(student);
     await _fetchStudents();
-    setState(() => _selectedIndex = 2);
+    _switchTab(2);
   }
 
   Future<void> _fetchTeacherProfile() async {
@@ -115,54 +243,71 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       // Add Student Form
       content = AddStudentForm(onSave: _addStudent);
     } else if (_selectedIndex == 1) {
-      // Enhanced Teacher Profile
+      // Enhanced Teacher Profile with pull-to-refresh
       if (_loadingProfile) {
         content = const Center(child: CircularProgressIndicator());
       } else if (_profileError != null) {
-        content = Center(
-          child: Text(
-            _profileError!,
-            style: const TextStyle(color: Colors.red, fontSize: 22),
+        content = RefreshIndicator(
+          onRefresh: _fetchTeacherProfile,
+          color: const Color(0xFF484F5C),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(height: MediaQuery.of(context).size.height * 0.4),
+              Center(
+                child: Text(
+                  _profileError!,
+                  style: const TextStyle(color: Colors.red, fontSize: 22),
+                ),
+              ),
+            ],
           ),
         );
       } else {
         final profile = _teacherProfile;
         final name = profile?['name'] ?? 'N/A';
         final email = profile?['email'] ?? 'N/A';
-        content = EnhancedTeacherProfile(
-          name: name,
-          email: email,
-          onLogout: () async {
-            final shouldLogout = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Log out'),
-                content: const Text('Are you sure you want to log out?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
+        content = RefreshIndicator(
+          onRefresh: _fetchTeacherProfile,
+          color: const Color(0xFF484F5C),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: EnhancedTeacherProfile(
+              name: name,
+              email: email,
+              onLogout: () async {
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Log out'),
+                    content: const Text('Are you sure you want to log out?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Log out'),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Log out'),
-                  ),
-                ],
-              ),
-            );
-            if (shouldLogout == true) {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/', (route) => false);
-              }
-            }
-          },
+                );
+                if (shouldLogout == true) {
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/', (route) => false);
+                  }
+                }
+              },
+            ),
+          ),
         );
       }
     } else if (_selectedIndex == 2) {
-      // Student List
+      // Student List with pull-to-refresh
       final validStudents = students
           .where((s) => (s['fullName'] ?? '').toString().trim().isNotEmpty)
           .where(
@@ -211,50 +356,60 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
               ),
             ),
             Expanded(
-              child: _loadingStudents
-                  ? const Center(child: CircularProgressIndicator())
-                  : validStudents.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No students found.',
-                        style: TextStyle(
-                          fontSize: 28,
-                          color: Color(0xFF393C48),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: SizedBox(
-                        width: 600,
-                        child: ListView.builder(
-                          itemCount: validStudents.length,
-                          itemBuilder: (context, index) {
-                            final student = validStudents[index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.circle,
-                                    size: 10,
-                                    color: Color(0xFF484F5C),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Text(
-                                      student['fullName'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Color(0xFF393C48),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+              child: RefreshIndicator(
+                onRefresh: _fetchStudents,
+                color: const Color(0xFF484F5C),
+                child: _loadingStudents
+                    ? const Center(child: CircularProgressIndicator())
+                    : validStudents.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 200),
+                          Center(
+                            child: Text(
+                              'No students found.',
+                              style: TextStyle(
+                                fontSize: 28,
+                                color: Color(0xFF393C48),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Center(
+                        child: SizedBox(
+                          width: 600,
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: validStudents.length,
+                            itemBuilder: (context, index) {
+                              final student = validStudents[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.circle,
+                                      size: 10,
+                                      color: Color(0xFF484F5C),
                                     ),
-                                  ),
-                                  const SizedBox(width: 24),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        student['fullName'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF393C48),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 24),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
@@ -327,17 +482,18 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                                     ),
                                     onPressed: () => _deleteStudent(student),
                                   ),
-                                ],
-                              ),
-                            );
-                          },
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-            ),
-          ],
-        ),
-      );
+                ),
+              ),
+            ],
+          ),
+        );
     } else if (_selectedIndex == 4) {
       // ANALYTICS DASHBOARD FOR ALL STUDENTS
       content = Padding(
@@ -1185,7 +1341,39 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
               child: const Text('Back to games'),
             ),
           ),
-          content,
+          // Animated content area with improved transitions
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            reverseDuration: const Duration(milliseconds: 200),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 0.03), // Subtle vertical slide
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutQuart,
+                  )),
+                  child: ScaleTransition(
+                    scale: Tween<double>(
+                      begin: 0.98, // Very subtle scale
+                      end: 1.0,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    )),
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              key: ValueKey<int>(_selectedIndex),
+              child: content,
+            ),
+          ),
           // Enhanced Bottom navigation bar
           Align(
             alignment: Alignment.bottomCenter,
@@ -1197,25 +1385,25 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                   _NavCircleIconButton(
                     icon: Icons.person,
                     selected: _selectedIndex == 1,
-                    onTap: () => setState(() => _selectedIndex = 1),
+                    onTap: () => _switchTab(1),
                   ),
                   const SizedBox(width: 36),
                   _NavCircleIconButton(
                     icon: Icons.list,
                     selected: _selectedIndex == 2,
-                    onTap: () => setState(() => _selectedIndex = 2),
+                    onTap: () => _switchTab(2),
                   ),
                   const SizedBox(width: 36),
                   _NavCircleIconButton(
                     icon: Icons.add,
                     selected: _selectedIndex == 3,
-                    onTap: () => setState(() => _selectedIndex = 3),
+                    onTap: () => _switchTab(3),
                   ),
                   const SizedBox(width: 36),
                   _NavCircleIconButton(
                     icon: Icons.bar_chart,
                     selected: _selectedIndex == 4,
-                    onTap: () => setState(() => _selectedIndex = 4),
+                    onTap: () => _switchTab(4),
                   ),
                 ],
               ),
@@ -3733,21 +3921,6 @@ class EnhancedTeacherProfile extends StatelessWidget {
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -4513,7 +4686,7 @@ class _NavFlatButton extends StatelessWidget {
   }
 }
 
-class _NavCircleIconButton extends StatelessWidget {
+class _NavCircleIconButton extends StatefulWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
@@ -4525,35 +4698,108 @@ class _NavCircleIconButton extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<_NavCircleIconButton> createState() => _NavCircleIconButtonState();
+}
+
+class _NavCircleIconButtonState extends State<_NavCircleIconButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _glowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_NavCircleIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected != oldWidget.selected) {
+      if (widget.selected) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF484F5C) : Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            if (selected)
-              BoxShadow(
-                color: const Color(0xFF484F5C).withOpacity(0.18),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+      onTapDown: (_) => _animationController.forward(),
+      onTapUp: (_) => _animationController.reverse(),
+      onTapCancel: () => _animationController.reverse(),
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: widget.selected ? const Color(0xFF484F5C) : Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  if (widget.selected)
+                    BoxShadow(
+                      color: const Color(0xFF484F5C).withOpacity(0.18 + (_glowAnimation.value * 0.12)),
+                      blurRadius: 8 + (_glowAnimation.value * 4),
+                      offset: const Offset(0, 2),
+                    ),
+                  // Additional glow effect when selected
+                  if (widget.selected)
+                    BoxShadow(
+                      color: const Color(0xFF484F5C).withOpacity(0.1 * _glowAnimation.value),
+                      blurRadius: 20,
+                      offset: const Offset(0, 0),
+                    ),
+                ],
+                border: Border.all(
+                  color: widget.selected ? const Color(0xFF484F5C) : const Color(0xFFB0B0B0),
+                  width: 2,
+                ),
               ),
-          ],
-          border: Border.all(
-            color: selected ? const Color(0xFF484F5C) : const Color(0xFFB0B0B0),
-            width: 2,
-          ),
-        ),
-        child: Center(
-          child: Icon(
-            icon,
-            size: 30,
-            color: selected ? Colors.white : const Color(0xFF393C48),
-          ),
-        ),
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    widget.icon,
+                    key: ValueKey(widget.selected),
+                    size: 30,
+                    color: widget.selected ? Colors.white : const Color(0xFF393C48),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -142,15 +142,36 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
           .doc(studentId)
           .set({'session': selectedGames.toList()}, SetOptions(merge: true));
       await _loadSession();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Session saved!')));
+      
+      // Show fun and modern success dialog
+      _showModernSuccessDialog();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Failed to save session.')));
     }
     setState(() => _saving = false);
+  }
+
+  void _showModernSuccessDialog() {
+    OverlayEntry? overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (BuildContext context) {
+        return ModernSuccessDialog(
+          studentName: widget.student['fullName'] ?? 'Student',
+          gamesCount: selectedGames.length,
+        );
+      },
+    );
+    
+    // Insert the overlay
+    Overlay.of(context).insert(overlayEntry);
+    
+    // Remove overlay after animation completes
+    Future.delayed(const Duration(milliseconds: 4000), () {
+      overlayEntry?.remove();
+    });
   }
 
   void _showPlayModal() async {
@@ -698,30 +719,15 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
           // Action buttons
           Column(
             children: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    elevation: 2,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      selectedGames.clear();
-                      gameDifficulties.clear();
-                    });
-                  },
-                  child: const Text('Clear All'),
-                ),
+              _StyledButton(
+                label: 'Clear All',
+                color: Colors.red,
+                onTap: () {
+                  setState(() {
+                    selectedGames.clear();
+                    gameDifficulties.clear();
+                  });
+                },
               ),
               const SizedBox(height: 10),
               _YellowButton(
@@ -801,7 +807,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
   }
 }
 
-class _GameCard extends StatelessWidget {
+class _GameCard extends StatefulWidget {
   final String label;
   final IconData icon;
   final Color color;
@@ -819,75 +825,215 @@ class _GameCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<_GameCard> createState() => _GameCardState();
+}
+
+class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    if (!widget.enabled) return;
+    setState(() {
+      _isPressed = true;
+    });
+    _animationController.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    if (!widget.enabled) return;
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+    widget.onTap();
+  }
+
+  void _onTapCancel() {
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        width: 210,
-        height: 210,
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-        decoration: BoxDecoration(
-          color: enabled ? Colors.white : Colors.grey[200],
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: enabled ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.13),
-              blurRadius: 10,
-              offset: const Offset(2, 8),
-            ),
-          ] : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(1, 4),
-            ),
-          ],
-          border: selected ? Border.all(color: color, width: 5) : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon, 
-              size: 80, 
-              color: enabled ? color : Colors.grey[400],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.enabled ? _scaleAnimation.value : 1.0,
+          child: GestureDetector(
+            onTapDown: _onTapDown,
+            onTapUp: _onTapUp,
+            onTapCancel: _onTapCancel,
+            child: Container(
+              width: 210,
+              height: 210,
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
               decoration: BoxDecoration(
-                color: enabled ? const Color(0xFFF7F7F7) : Colors.grey[100],
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(32),
-                ),
+                gradient: widget.enabled 
+                  ? LinearGradient(
+                      colors: _isPressed
+                        ? [Colors.grey[100]!, Colors.white]
+                        : [Colors.white, Colors.grey[50]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : LinearGradient(
+                      colors: [Colors.grey[200]!, Colors.grey[100]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                borderRadius: BorderRadius.circular(36),
+                boxShadow: widget.enabled ? [
+                  BoxShadow(
+                    color: _isPressed 
+                      ? Colors.black.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.15),
+                    blurRadius: _isPressed ? 6 : 12,
+                    offset: _isPressed 
+                      ? const Offset(1, 4)
+                      : const Offset(2, 8),
+                  ),
+                  if (!_isPressed && widget.selected)
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                ] : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 5,
+                    offset: const Offset(1, 4),
+                  ),
+                ],
+                border: widget.selected 
+                  ? Border.all(color: widget.color, width: 4) 
+                  : Border.all(
+                      color: widget.enabled 
+                        ? Colors.grey.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.1), 
+                      width: 2,
+                    ),
               ),
-              child: Stack(
-                alignment: Alignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: enabled ? const Color(0xFF393C48) : Colors.grey[500],
-                      fontFamily: 'Nunito',
-                      letterSpacing: 1.2,
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      gradient: widget.enabled
+                        ? LinearGradient(
+                            colors: [
+                              widget.color.withOpacity(0.1),
+                              widget.color.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : LinearGradient(
+                            colors: [
+                              Colors.grey.withOpacity(0.1),
+                              Colors.grey.withOpacity(0.05),
+                            ],
+                          ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: widget.enabled ? widget.color.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      widget.icon, 
+                      size: 50, 
+                      color: widget.enabled ? widget.color : Colors.grey[400],
                     ),
                   ),
-                  if (!enabled)
-                    Icon(
-                      Icons.lock,
-                      size: 24,
-                      color: Colors.grey[600],
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: widget.enabled 
+                        ? LinearGradient(
+                            colors: [
+                              const Color(0xFFF7F7F7),
+                              const Color(0xFFEFEFEF),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          )
+                        : LinearGradient(
+                            colors: [Colors.grey[100]!, Colors.grey[50]!],
+                          ),
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(32),
+                      ),
+                      border: Border.all(
+                        color: widget.enabled 
+                          ? Colors.grey.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.05),
+                        width: 1,
+                      ),
                     ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          widget.label,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: widget.enabled ? const Color(0xFF393C48) : Colors.grey[500],
+                            fontFamily: 'Nunito',
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        if (!widget.enabled)
+                          Positioned(
+                            right: 8,
+                            child: Icon(
+                              Icons.lock,
+                              size: 20,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -934,35 +1080,261 @@ class _PuzzleSlot extends StatelessWidget {
   }
 }
 
-class _YellowButton extends StatelessWidget {
+class _YellowButton extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
   const _YellowButton({required this.label, required this.onTap, Key? key})
     : super(key: key);
 
   @override
+  State<_YellowButton> createState() => _YellowButtonState();
+}
+
+class _YellowButtonState extends State<_YellowButton> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() {
+      _isPressed = true;
+    });
+    _animationController.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+    widget.onTap();
+  }
+
+  void _onTapCancel() {
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFD740),
-          foregroundColor: Colors.black87,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: GestureDetector(
+            onTapDown: _onTapDown,
+            onTapUp: _onTapUp,
+            onTapCancel: _onTapCancel,
+            child: Container(
+              width: double.infinity,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _isPressed 
+                    ? [const Color(0xFFE6C200), const Color(0xFFFFD740)]
+                    : [const Color(0xFFFFD740), const Color(0xFFFFC107)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: _isPressed 
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFFFFD740).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                border: Border.all(
+                  color: const Color(0xFFE6C200),
+                  width: 2,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    fontFamily: 'Nunito',
+                    color: _isPressed ? Colors.black54 : Colors.black87,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
           ),
-          elevation: 2,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            fontFamily: 'Nunito',
+        );
+      },
+    );
+  }
+}
+
+class _StyledButton extends StatefulWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _StyledButton({
+    required this.label,
+    required this.color,
+    required this.onTap,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<_StyledButton> createState() => _StyledButtonState();
+}
+
+class _StyledButtonState extends State<_StyledButton> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() {
+      _isPressed = true;
+    });
+    _animationController.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+    widget.onTap();
+  }
+
+  void _onTapCancel() {
+    setState(() {
+      _isPressed = false;
+    });
+    _animationController.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: GestureDetector(
+            onTapDown: _onTapDown,
+            onTapUp: _onTapUp,
+            onTapCancel: _onTapCancel,
+            child: Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _isPressed 
+                    ? [widget.color.withOpacity(0.8), widget.color]
+                    : [widget.color, widget.color.withOpacity(0.8)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: _isPressed 
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: widget.color.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                border: Border.all(
+                  color: widget.color.withOpacity(0.7),
+                  width: 2,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontFamily: 'Nunito',
+                    color: _isPressed ? Colors.white70 : Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
           ),
-          shadowColor: Colors.black.withOpacity(0.18),
-        ),
-        onPressed: onTap,
-        child: Text(label),
-      ),
+        );
+      },
     );
   }
 }
@@ -2589,6 +2961,7 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(localSelected.toList()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber[700],
                     foregroundColor: Colors.white,
@@ -2606,13 +2979,123 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                     ),
                     elevation: 4,
                   ),
-                  onPressed: () =>
-                      Navigator.of(context).pop(localSelected.toList()),
-                  child: const Text('Confirm'),
+                  child: const Text('Select'),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Subtle Success Notification Widget
+class ModernSuccessDialog extends StatefulWidget {
+  final String studentName;
+  final int gamesCount;
+
+  const ModernSuccessDialog({
+    Key? key,
+    required this.studentName,
+    required this.gamesCount,
+  }) : super(key: key);
+
+  @override
+  State<ModernSuccessDialog> createState() => _ModernSuccessDialogState();
+}
+
+class _ModernSuccessDialogState extends State<ModernSuccessDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(1.0, 0.0), // Start from right
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutBack,
+    ));
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeIn,
+    ));
+    
+    // Start animation
+    _slideController.forward();
+    
+    // Auto-dismiss after 3 seconds
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted) {
+        _slideController.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 50,
+      right: 16,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.green[200]!,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green[600],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Session saved!',
+                    style: TextStyle(
+                      color: Colors.green[800],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -23,601 +23,340 @@ class SoundMatchGame extends StatefulWidget {
   _SoundMatchGameState createState() => _SoundMatchGameState();
 }
 
-class SoundCard {
-  final int id;
-  final String soundName;
-  final String displayText;
-  final IconData icon;
-  bool isFlipped;
-  bool isMatched;
+class SoundItem {
+  final String name;
+  final String emoji;
+  final String description;
   
-  SoundCard({
-    required this.id,
-    required this.soundName,
-    required this.displayText,
-    required this.icon,
-    this.isFlipped = false,
-    this.isMatched = false,
+  SoundItem({
+    required this.name,
+    required this.emoji,
+    required this.description,
   });
 }
 
 class _SoundMatchGameState extends State<SoundMatchGame> {
-  List<SoundCard> cards = [];
-  SoundCard? firstFlippedCard;
-  SoundCard? secondFlippedCard;
-  bool canTap = true;
-  int score = 0;
-  int attempts = 0;
-  int matchesFound = 0;
-  int totalPairs = 0;
-  late DateTime gameStartTime;
-  Timer? gameTimer;
-  int timeLeft = 0;
-  bool gameStarted = false;
-  bool gameActive = false;
-  
-  // Sound categories with emojis and descriptions
-  final List<Map<String, dynamic>> sounds = [
-    {'name': 'dog', 'text': 'Dog Bark', 'icon': Icons.pets},
-    {'name': 'cat', 'text': 'Cat Meow', 'icon': Icons.pets_outlined},
-    {'name': 'bird', 'text': 'Bird Tweet', 'icon': Icons.flutter_dash},
-    {'name': 'cow', 'text': 'Cow Moo', 'icon': Icons.agriculture},
-    {'name': 'piano', 'text': 'Piano Note', 'icon': Icons.piano},
-    {'name': 'guitar', 'text': 'Guitar Strum', 'icon': Icons.music_note},
-    {'name': 'drum', 'text': 'Drum Beat', 'icon': Icons.album},
-    {'name': 'bell', 'text': 'Bell Ring', 'icon': Icons.notifications},
-    {'name': 'rain', 'text': 'Rain Drop', 'icon': Icons.water_drop},
-    {'name': 'wind', 'text': 'Wind Blow', 'icon': Icons.air},
-    {'name': 'car', 'text': 'Car Horn', 'icon': Icons.directions_car},
-    {'name': 'phone', 'text': 'Phone Ring', 'icon': Icons.phone},
-    {'name': 'clock', 'text': 'Clock Tick', 'icon': Icons.access_time},
-    {'name': 'water', 'text': 'Water Flow', 'icon': Icons.waves},
-    {'name': 'fire', 'text': 'Fire Crackle', 'icon': Icons.local_fire_department},
-    {'name': 'thunder', 'text': 'Thunder Boom', 'icon': Icons.flash_on},
+  int _currentRound = 1;
+  int _score = 0;
+  int _correctAnswers = 0;
+  late SoundItem _currentSound;
+  List<SoundItem> _currentOptions = [];
+  bool _isAnswering = false;
+  DateTime? _gameStartTime;
+
+  final List<SoundItem> _allSounds = [
+    SoundItem(name: 'Dog', emoji: '🐕', description: 'Woof woof!'),
+    SoundItem(name: 'Cat', emoji: '🐱', description: 'Meow meow!'),
+    SoundItem(name: 'Bird', emoji: '🐦', description: 'Tweet tweet!'),
+    SoundItem(name: 'Cow', emoji: '🐄', description: 'Moo moo!'),
+    SoundItem(name: 'Car', emoji: '🚗', description: 'Vroom vroom!'),
+    SoundItem(name: 'Train', emoji: '🚂', description: 'Choo choo!'),
+    SoundItem(name: 'Rain', emoji: '🌧️', description: 'Pitter patter!'),
+    SoundItem(name: 'Thunder', emoji: '⛈️', description: 'Boom boom!'),
+    SoundItem(name: 'Bell', emoji: '🔔', description: 'Ding dong!'),
+    SoundItem(name: 'Drum', emoji: '🥁', description: 'Bang bang!'),
   ];
-  
-  // Soft, accessible colors for children with cognitive impairments
-  final Color cardBackColor = Color(0xFF90CAF9); // Soft blue
-  final Color cardFlippedColor = Color(0xFFFFF176); // Soft yellow
-  final Color matchedColor = Color(0xFF81C784); // Soft green
 
   @override
   void initState() {
     super.initState();
+    // Initialize with first round immediately
     _initializeGame();
   }
 
   void _initializeGame() {
-    // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
-      case 'easy':
-        totalPairs = 4;
-        timeLeft = 0; // No timer for easy
-        break;
-      case 'medium':
-        totalPairs = 6;
-        timeLeft = 180; // 3 minutes
-        break;
-      case 'hard':
-        totalPairs = 8;
-        timeLeft = 120; // 2 minutes
-        break;
-      default:
-        totalPairs = 4;
-        timeLeft = 0;
-    }
+    // Generate first round options immediately
+    _currentSound = _allSounds[Random().nextInt(_allSounds.length)];
     
-    _setupCards();
-  }
-
-  void _setupCards() {
-    cards.clear();
+    List<SoundItem> options = [_currentSound];
+    List<SoundItem> otherSounds = _allSounds.where((s) => s.name != _currentSound.name).toList();
+    otherSounds.shuffle();
+    options.addAll(otherSounds.take(3));
+    options.shuffle();
     
-    // Select random sounds
-    List<Map<String, dynamic>> selectedSounds = List.from(sounds);
-    selectedSounds.shuffle();
-    selectedSounds = selectedSounds.take(totalPairs).toList();
-    
-    int cardId = 0;
-    // Create pairs
-    for (var sound in selectedSounds) {
-      // First card of pair
-      cards.add(SoundCard(
-        id: cardId++,
-        soundName: sound['name'],
-        displayText: sound['text'],
-        icon: sound['icon'],
-      ));
-      // Second card of pair
-      cards.add(SoundCard(
-        id: cardId++,
-        soundName: sound['name'],
-        displayText: sound['text'],
-        icon: sound['icon'],
-      ));
-    }
-    
-    // Shuffle all cards
-    cards.shuffle();
-    setState(() {});
-  }
-
-  void _startGame() {
     setState(() {
-      gameStarted = true;
-      gameActive = true;
-      gameStartTime = DateTime.now();
-      score = 0;
-      attempts = 0;
-      matchesFound = 0;
-      canTap = true;
-      
-      // Reset all cards
-      for (var card in cards) {
-        card.isFlipped = false;
-        card.isMatched = false;
-      }
-      
-      firstFlippedCard = null;
-      secondFlippedCard = null;
+      _currentOptions = options;
+      _currentRound = 1;
+      _score = 0;
+      _correctAnswers = 0;
+      _gameStartTime = DateTime.now();
+    });
+  }
+
+  void _generateNewRound() {
+    if (_currentRound > 5) {
+      _endGame();
+      return;
+    }
+
+    // Select random current sound
+    _currentSound = _allSounds[Random().nextInt(_allSounds.length)];
+    
+    // Create options (including correct answer)
+    List<SoundItem> options = [_currentSound];
+    List<SoundItem> otherSounds = _allSounds.where((s) => s.name != _currentSound.name).toList();
+    otherSounds.shuffle();
+    options.addAll(otherSounds.take(3));
+    options.shuffle();
+    
+    setState(() {
+      _currentOptions = options;
+      _isAnswering = false;
     });
     
-    _showInstructions();
+    // Auto-play sound after a short delay
+    Future.delayed(Duration(milliseconds: 500), _playCurrentSound);
   }
 
-  void _showInstructions() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Sound Match Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Find matching sound pairs!',
-              style: TextStyle(color: Color(0xFF2C3E50), fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 12),
-            Text(
-              '• Tap cards to flip and hear sounds\n• Remember the sounds and find pairs\n• Match all pairs to win!',
-              style: TextStyle(color: Color(0xFF2C3E50)),
-              textAlign: TextAlign.left,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Pairs to find: $totalPairs',
-              style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold),
-            ),
-            if (timeLeft > 0) ...[
-              SizedBox(height: 8),
+  void _playCurrentSound() {
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('🔊 ${_currentSound.description}'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF5B6F4A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _selectOption(SoundItem selectedItem) {
+    if (_isAnswering) return;
+    
+    setState(() {
+      _isAnswering = true;
+    });
+    
+    HapticFeedback.lightImpact();
+    
+    bool isCorrect = selectedItem.name == _currentSound.name;
+    
+    if (isCorrect) {
+      setState(() {
+        _score += 20;
+        _correctAnswers++;
+      });
+      
+      _showFeedback('🎉 Correct! Great job!', Colors.green);
+      
+      Future.delayed(Duration(seconds: 1), () {
+        setState(() {
+          _currentRound++;
+        });
+        _generateNewRound();
+      });
+    } else {
+      _showFeedback('❌ Try again! Listen carefully.', Colors.red);
+      
+      Future.delayed(Duration(seconds: 1), () {
+        setState(() {
+          _isAnswering = false;
+        });
+      });
+    }
+  }
+
+  void _showFeedback(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(fontWeight: FontWeight.bold)),
+        duration: Duration(seconds: 1),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _endGame() {
+    int completionTime = _gameStartTime != null 
+        ? DateTime.now().difference(_gameStartTime!).inSeconds 
+        : 0;
+    int accuracy = _correctAnswers > 0 ? ((_correctAnswers / 5) * 100).round() : 0;
+
+    if (widget.onGameComplete != null) {
+      widget.onGameComplete!(
+        accuracy: accuracy,
+        completionTime: completionTime,
+        challengeFocus: 'Auditory Processing',
+        gameName: 'Sound Match',
+        difficulty: widget.difficulty,
+      );
+    }
+    
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F3F3), // Same as Picture Words - beige/cream
+      appBar: AppBar(
+        title: Text('🔊 Sound Match - ${widget.difficulty.toUpperCase()}'),
+        backgroundColor: Color(0xFF5B6F4A),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: _buildGameContent(),
+      ),
+    );
+  }
+
+  Widget _buildGameContent() {
+    return Column(
+      children: [
+        // Score row - very compact
+        Container(
+          padding: const EdgeInsets.all(4),
+          color: const Color(0xFFF3F3F3),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildInfoCard('🎯 Score', '$_score', const Color(0xFFF3F3F3)),
+              _buildInfoCard('🏁 Round', '$_currentRound/5', const Color(0xFFF3F3F3)),
+              _buildInfoCard('✅ Correct', '$_correctAnswers', const Color(0xFFF3F3F3)),
+            ],
+          ),
+        ),
+        
+        // Current sound instruction - compact
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF5B6F4A),
+            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          ),
+          child: Column(
+            children: [
               Text(
-                'Time limit: ${timeLeft}s',
-                style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+                '👆 Listen and pick the matching picture!',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              ElevatedButton.icon(
+                onPressed: _playCurrentSound,
+                icon: const Icon(Icons.volume_up, size: 16),
+                label: const Text('🔊 Play Sound'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFD740),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (timeLeft > 0) {
-                _startTimer();
-              }
-            },
-            child: Text('Start Playing!', style: TextStyle(color: Color(0xFF81C784))),
+        
+        // Compact 2x2 grid - use Flexible to take only needed space
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: _currentOptions.isEmpty 
+              ? Center(child: Text('No choices loaded!', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)))
+              : GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 3.5, // Balanced aspect ratio
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                  children: _currentOptions.map((item) => _buildCompactSoundOption(item)).toList(),
+                ),
+          ),
+        ),
+        
+        // Small spacer to fill bottom gap without cutting off content
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.black.withOpacity(0.1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _startTimer() {
-    gameTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        timeLeft--;
-      });
-      
-      if (timeLeft <= 0) {
-        timer.cancel();
-        _timeUp();
-      }
-    });
-  }
-
-  void _timeUp() {
-    setState(() {
-      gameActive = false;
-    });
-    _endGame();
-  }
-
-  void _playSound(String soundName, String displayText) {
-    // Simulate sound playing with haptic feedback
-    HapticFeedback.lightImpact();
-    
-    // Show sound feedback
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🔊 $displayText'),
-          duration: Duration(milliseconds: 800),
-          backgroundColor: Color(0xFF90CAF9),
-        ),
-      );
-    }
-  }
-
-  void _onCardTapped(SoundCard card) {
-    if (!canTap || !gameActive || card.isMatched || card.isFlipped) return;
-    
-    setState(() {
-      card.isFlipped = true;
-    });
-    
-    _playSound(card.soundName, card.displayText);
-    
-    if (firstFlippedCard == null) {
-      // First card flipped
-      firstFlippedCard = card;
-    } else if (secondFlippedCard == null && card != firstFlippedCard) {
-      // Second card flipped
-      secondFlippedCard = card;
-      canTap = false;
-      attempts++;
-      
-      // Check for match after a short delay
-      Timer(Duration(milliseconds: 1500), () {
-        _checkForMatch();
-      });
-    }
-  }
-
-  void _checkForMatch() {
-    if (firstFlippedCard!.soundName == secondFlippedCard!.soundName) {
-      // Match found!
-      setState(() {
-        firstFlippedCard!.isMatched = true;
-        secondFlippedCard!.isMatched = true;
-        matchesFound++;
-        score += (timeLeft > 0 ? timeLeft ~/ 10 + 10 : 10); // Bonus for remaining time
-      });
-      
-      HapticFeedback.mediumImpact();
-      
-      if (matchesFound == totalPairs) {
-        gameTimer?.cancel();
-        _endGame();
-      } else {
-        _resetFlippedCards();
-      }
-    } else {
-      // No match - flip cards back
-      HapticFeedback.lightImpact();
-      
-      Timer(Duration(milliseconds: 1000), () {
-        setState(() {
-          firstFlippedCard!.isFlipped = false;
-          secondFlippedCard!.isFlipped = false;
-        });
-        _resetFlippedCards();
-      });
-    }
-  }
-
-  void _resetFlippedCards() {
-    setState(() {
-      firstFlippedCard = null;
-      secondFlippedCard = null;
-      canTap = true;
-    });
-  }
-
-  void _endGame() {
-    setState(() {
-      gameActive = false;
-    });
-    
-    gameTimer?.cancel();
-    
-    // Calculate game statistics
-    double accuracyDouble = attempts > 0 ? (matchesFound / attempts) * 100 : 0;
-    int accuracy = accuracyDouble.round();
-    int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
-    // Call completion callback if provided
-    if (widget.onGameComplete != null) {
-      widget.onGameComplete!(
-        accuracy: accuracy,
-        completionTime: completionTime,
-        challengeFocus: 'Verbal',
-        gameName: 'Sound Match',
-        difficulty: widget.difficulty,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    gameTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA), // Soft light background
-      appBar: AppBar(
-        title: Text('Sound Match - ${widget.difficulty}'),
-        backgroundColor: Color(0xFF90CAF9), // Soft blue
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Score and Timer Display
-            Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Attempts: $attempts', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
-                    ],
-                  ),
-                  Text('Matches: $matchesFound/$totalPairs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                  if (timeLeft > 0)
-                    Column(
-                      children: [
-                        Text('Time: ${timeLeft}s', style: TextStyle(fontSize: 16, color: timeLeft <= 10 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            
-            // Game Area
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStartScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.headphones,
-          size: 80,
-          color: Color(0xFF90CAF9),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Sound Match',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Difficulty: ${widget.difficulty}',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Find $totalPairs matching sound pairs',
-          style: TextStyle(fontSize: 18, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _startGame,
-          child: Text('Start Game'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildCompactSoundOption(SoundItem item) {
+    return GestureDetector(
+      onTap: () => _selectOption(item),
+      child: Container(
+        margin: const EdgeInsets.all(0.5), // Minimal margin
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300, // More gray to look clickable
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(
+            color: _isAnswering && item.name == _currentSound.name 
+                ? Colors.green 
+                : Colors.grey.shade500, // Darker border
+            width: 1,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildGameArea() {
-    if (!gameActive && matchesFound == totalPairs) {
-      return _buildEndScreen();
-    }
-    
-    if (!gameActive && timeLeft <= 0) {
-      return _buildTimeUpScreen();
-    }
-    
-    int crossAxisCount = totalPairs <= 4 ? 3 : 4;
-    
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemCount: cards.length,
-      itemBuilder: (context, index) {
-        return _buildCard(cards[index]);
-      },
-    );
-  }
-
-  Widget _buildCard(SoundCard card) {
-    Color cardColor;
-    if (card.isMatched) {
-      cardColor = matchedColor;
-    } else if (card.isFlipped) {
-      cardColor = cardFlippedColor;
-    } else {
-      cardColor = cardBackColor;
-    }
-    
-    return GestureDetector(
-      onTap: () => _onCardTapped(card),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              card.isFlipped || card.isMatched ? card.icon : Icons.volume_up,
-              size: 40,
-              color: card.isMatched ? Colors.white : Color(0xFF2C3E50),
-            ),
-            SizedBox(height: 8),
+            // Bigger emoji
             Text(
-              card.isFlipped || card.isMatched ? card.displayText : '?',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: card.isMatched ? Colors.white : Color(0xFF2C3E50),
+              item.emoji,
+              style: const TextStyle(fontSize: 20), // Increased from 12 to 20
+            ),
+            const SizedBox(width: 4),
+            // Bigger text next to emoji
+            Flexible(
+              child: Text(
+                item.name,
+                style: const TextStyle(
+                  fontSize: 10, // Increased from 7 to 10
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildEndScreen() {
-    double accuracyDouble = attempts > 0 ? (matchesFound / attempts) * 100 : 0;
-    
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.celebration,
-          size: 80,
-          color: Color(0xFF81C784),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Excellent Memory!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'All $totalPairs pairs found!',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Accuracy: ${accuracyDouble.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Play Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF90CAF9),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimeUpScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.timer_off,
-          size: 80,
-          color: Color(0xFFE57373),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Matches found: $matchesFound/$totalPairs',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Try Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF90CAF9),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ],
     );
   }
 }
