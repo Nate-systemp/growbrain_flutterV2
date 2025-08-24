@@ -59,7 +59,18 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   bool showingAnimation = false;
   bool canSelect = false;
   bool gameCompleted = false;
-  
+  // Theme colors (match Find Me game)
+  // Theme colors (match Find Me game)
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
+  final Color backgroundColor = const Color(0xFFF5F5DC);
+  final Color headerGradientEnd = const Color(0xFF6B7F5A);
+  // Use the same beige background for the surface so the large panel matches the app theme
+  final Color surfaceColor = const Color(0xFFF5F5DC);
+
+  // Track the type of the previously moved shape so we can avoid repeating it
+  ShapeType? previousMovedShapeType;
+
   // Fixed 3 rounds per game
   static const int totalRounds = 3;
 
@@ -166,17 +177,41 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       const Color(0xFF607D8B), // Blue grey
     ];
 
-    final shapeTypes = ShapeType.values;
+    // Choose random shape types for this round, excluding circle
+    final availableTypes = ShapeType.values.where((t) => t != ShapeType.circle).toList();
+    availableTypes.shuffle();
+
     shapes.clear();
+
+    // If we need more shapes than available unique types, repeat the shuffled list as needed.
+    final selectedTypes = <ShapeType>[];
+    while (selectedTypes.length < numberOfShapes) {
+      selectedTypes.addAll(availableTypes);
+    }
+
+    // Truncate to exact number required and shuffle so positions vary.
+    selectedTypes.shuffle();
+    final typesToUse = selectedTypes.take(numberOfShapes).toList();
 
     for (int i = 0; i < numberOfShapes; i++) {
       shapes.add(GameShape(
-        type: shapeTypes[i % shapeTypes.length],
+        type: typesToUse[i],
         color: colors[i % colors.length],
       ));
     }
 
-    movedShapeIndex = math.Random().nextInt(numberOfShapes);
+    // Pick a movedShapeIndex whose shape type is different from last round's moved type
+    final rand = math.Random();
+    int candidate = rand.nextInt(numberOfShapes);
+    const int maxAttempts = 8;
+    int attempts = 0;
+    while (previousMovedShapeType != null && shapes[candidate].type == previousMovedShapeType && attempts < maxAttempts) {
+      candidate = rand.nextInt(numberOfShapes);
+      attempts++;
+    }
+    movedShapeIndex = candidate;
+    previousMovedShapeType = shapes[movedShapeIndex].type;
+
     selectedShapeIndex = null;
     canSelect = false;
     showingAnimation = false;
@@ -214,10 +249,12 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Time\'s Up!'),
-        content: const Text('You ran out of time for this round.'),
+        backgroundColor: primaryColor,
+        title: const Text('Time\'s Up!', style: TextStyle(color: Colors.white)),
+        content: const Text('You ran out of time for this round.', style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: accentColor),
             onPressed: () {
               Navigator.of(context).pop();
               _nextRound();
@@ -288,12 +325,14 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text(correct ? 'Correct!' : 'Wrong!'),
+        backgroundColor: primaryColor,
+        title: Text(correct ? 'Correct!' : 'Wrong!', style: const TextStyle(color: Colors.white)),
         content: Text(correct
             ? 'Well done! You spotted the moving shape.'
-            : 'The spinning shape was a different one.'),
+            : 'The spinning shape was a different one.', style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: accentColor),
             onPressed: () {
               Navigator.of(context).pop();
               _nextRound();
@@ -362,9 +401,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _resetGame();
+              Navigator.of(context).pop(); // Close game and return to session
             },
-            child: const Text('Play Again'),
+            child: const Text('Continue'),
           ),
         ],
       ),
@@ -511,7 +550,16 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5DC), // Beige background
         appBar: AppBar(
-          backgroundColor: const Color(0xFF5B6F4A), // Dark green
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryColor, headerGradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           foregroundColor: Colors.white,
           title: Text(
             'Who Moved? - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
@@ -530,7 +578,11 @@ class _WhoMovedGameState extends State<WhoMovedGame>
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5B6F4A),
+                  gradient: LinearGradient(
+                    colors: [primaryColor, headerGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -575,14 +627,14 @@ class _WhoMovedGameState extends State<WhoMovedGame>
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: surfaceColor,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        spreadRadius: 2,
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+                        color: Colors.black.withOpacity(0.06),
+                        spreadRadius: 1,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),

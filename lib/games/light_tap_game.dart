@@ -51,10 +51,12 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   // App color scheme
   final Color primaryColor = Color(0xFF5B6F4A);
   final Color accentColor = Color(0xFFFFD740);
-  final Color backgroundColor = Color(0xFFF5F5F5);
+  final Color backgroundColor = Color(0xFFF5F5DC);
   final Color surfaceColor = Colors.white;
   final Color errorColor = Color(0xFFE57373);
   final Color successColor = Color(0xFF81C784);
+  // Header gradient end color (matches Find Me)
+  final Color headerGradientEnd = Color(0xFF6B7F5A);
   
   // Light colors for the game
   final List<Color> lightColors = [
@@ -338,7 +340,7 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
       builder: (context) => AlertDialog(
         backgroundColor: surfaceColor,
         title: Text(
-          completed ? 'Congratulations!' : 'Game Over',
+          'Nice Job! ',
           style: TextStyle(
             color: primaryColor,
             fontWeight: FontWeight.bold,
@@ -372,13 +374,13 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _startGame();
+              Navigator.of(context).pop(); // Close game and return to session
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: Text('Play Again'),
+            child: Text('Continue'),
           ),
         ],
       ),
@@ -452,17 +454,21 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
             padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                // Game info
+                // Game info (styled to match Find Me theme)
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: surfaceColor,
+                    gradient: LinearGradient(
+                      colors: [primaryColor, headerGradientEnd],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
                       ),
                     ],
                   ),
@@ -471,57 +477,75 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
                     children: [
                       Column(
                         children: [
+                          Icon(
+                            Icons.flag,
+                            color: accentColor,
+                            size: 20,
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             'Level',
                             style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             '$currentLevel',
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: accentColor,
+                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
                       Column(
                         children: [
+                          Icon(
+                            Icons.score,
+                            color: accentColor,
+                            size: 20,
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             'Score',
                             style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             '$score',
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: accentColor,
+                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
                       Column(
                         children: [
+                          Icon(
+                            Icons.list,
+                            color: accentColor,
+                            size: 20,
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             'Sequence',
                             style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             '${userSequence.length}/${sequenceLength}',
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: accentColor,
+                              color: Colors.white,
                             ),
                           ),
                         ],

@@ -264,7 +264,7 @@ class _FindMeGameState extends State<FindMeGame>
             borderRadius: BorderRadius.circular(20),
           ),
           title: Text(
-            'Game Over!',
+            'Nice Job! 😊',
             style: TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -299,56 +299,29 @@ class _FindMeGameState extends State<FindMeGame>
             ],
           ),
           actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _resetGame();
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD740),
-                      foregroundColor: const Color(0xFF5B6F4A),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Play Again',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+            Container(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Close game and return to session
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFD740),
+                  foregroundColor: const Color(0xFF5B6F4A),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white24,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Exit',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                child: Text(
+                  'Continue',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         );
