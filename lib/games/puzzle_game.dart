@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class PuzzleGame extends StatefulWidget {
   final String difficulty;
@@ -128,6 +130,8 @@ class _PuzzleGameState extends State<PuzzleGame> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Puzzle');
     _initializeGame();
   }
 
@@ -375,6 +379,8 @@ class _PuzzleGameState extends State<PuzzleGame> {
   @override
   void dispose() {
     gameTimer?.cancel();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -383,7 +389,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Puzzle - ${widget.difficulty}'),
+        title: Text('Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
         backgroundColor: Color(0xFFFFCC80), // Soft orange
         foregroundColor: Colors.white,
       ),
@@ -448,7 +454,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
         ),
         SizedBox(height: 20),
         Text(
-          'Difficulty: ${widget.difficulty}',
+          'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
         ),
         SizedBox(height: 20),

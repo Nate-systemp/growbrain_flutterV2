@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'utils/difficulty_utils.dart';
 import 'games/match_cards_game.dart';
 import 'games/tictactoe_game.dart';
 import 'games/fruit_shuffle_game.dart';
@@ -2006,6 +2007,8 @@ class PlaySessionModal extends StatefulWidget {
 }
 
 class _PlaySessionModalState extends State<PlaySessionModal> {
+
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -2101,7 +2104,7 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Text(
-                                              widget.gameDifficulties[g] ?? 'Easy',
+                                              DifficultyUtils.getDifficultyDisplayName(widget.gameDifficulties[g] ?? 'Easy'),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 color: Colors.white,

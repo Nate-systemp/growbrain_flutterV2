@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'intro_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'login_screen.dart';
-import 'register_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'teacher_pin_modal.dart';
 import 'teacher_management.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set preferred orientation to landscape only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  
+  // Hide status bar for fullscreen experience
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  
   print('Before Firebase init');
   await Firebase.initializeApp();
   print('After Firebase init');
@@ -46,7 +56,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const IntroScreen(),
         '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
         '/home': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
       },
     );
@@ -91,57 +100,120 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging out: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Larger cards and buttons for tablet
-    const double cardWidth = 300;
-    const double cardHeight = 260;
-    const double cardSpacing = 60;
-    const double gridSidePadding = 48;
-    const double teacherBtnTop = 36;
-    const double teacherBtnRight = 48;
-    const double backBtnLeft = 36;
-    const double backBtnBottom = 48;
+    // Get screen dimensions for responsive design
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // Responsive values based on screen size
+    final double cardWidth = screenWidth > 1000 ? 300 : screenWidth * 0.28;
+    final double cardHeight = screenHeight > 700 ? 260 : screenHeight * 0.35;
+    final double cardSpacing = screenWidth > 1000 ? 60 : screenWidth * 0.06;
+    final double gridSidePadding = screenWidth * 0.05;
+    
     return Scaffold(
       backgroundColor: const Color(0xFF5B6F4A),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // For Teachers button
-            Positioned(
-              top: teacherBtnTop,
-              right: teacherBtnRight,
+      body: Stack(
+        children: [
+          // Logout button - responsive positioning (left side)
+          Positioned(
+            top: screenHeight * 0.05,
+            left: screenWidth * 0.03,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: screenWidth * 0.25,
+                minWidth: 140,
+              ),
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black87,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(25),
                   ),
                   elevation: 2,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 18,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.02,
+                    vertical: screenHeight * 0.02,
                   ),
-                  textStyle: const TextStyle(
-                    fontSize: 22,
+                  textStyle: TextStyle(
+                    fontSize: screenWidth > 1000 ? 18 : 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _logout,
+                icon: Icon(
+                  Icons.logout, 
+                  size: screenWidth > 1000 ? 24 : 20,
+                ),
+                label: const Text('Logout'),
+              ),
+            ),
+          ),
+          // For Teachers button - responsive positioning
+          Positioned(
+            top: screenHeight * 0.05,
+            right: screenWidth * 0.03,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: screenWidth * 0.25,
+                minWidth: 180,
+              ),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black87,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  elevation: 2,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.02,
+                    vertical: screenHeight * 0.02,
+                  ),
+                  textStyle: TextStyle(
+                    fontSize: screenWidth > 1000 ? 18 : 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 onPressed: _showTeacherPinModal,
-                icon: const Icon(Icons.person_outline, size: 32),
+                icon: Icon(
+                  Icons.person_outline, 
+                  size: screenWidth > 1000 ? 24 : 20,
+                ),
                 label: const Text('For Teachers'),
               ),
             ),
-            // Main grid
+          ),
+          // Main grid
             Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: gridSidePadding,
                 ),
                 child: Table(
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  columnWidths: const {
+                  columnWidths: {
                     0: FixedColumnWidth(cardWidth),
                     1: FixedColumnWidth(cardWidth),
                   },
@@ -149,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     TableRow(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.only(
+                          padding: EdgeInsets.only(
                             right: cardSpacing / 2,
                             bottom: cardSpacing / 2,
                           ),
@@ -162,7 +234,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(
+                          padding: EdgeInsets.only(
                             left: cardSpacing / 2,
                             bottom: cardSpacing / 2,
                           ),
@@ -180,7 +252,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     TableRow(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.only(
+                          padding: EdgeInsets.only(
                             right: cardSpacing / 2,
                             top: cardSpacing / 2,
                           ),
@@ -194,7 +266,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(
+                          padding: EdgeInsets.only(
                             left: cardSpacing / 2,
                             top: cardSpacing / 2,
                           ),
@@ -212,59 +284,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
             ),
-            // LOG OUT button (lower left)
-            Positioned(
-              left: backBtnLeft,
-              bottom: backBtnBottom,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD740),
-                  foregroundColor: Colors.black87,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  elevation: 4,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 22,
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
-                onPressed: () async {
-                  final shouldLogout = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Log out'),
-                      content: const Text('Are you sure you want to log out?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Log out'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (shouldLogout == true) {
-                    await FirebaseAuth.instance.signOut();
-                    if (context.mounted) {
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/', (route) => false);
-                    }
-                  }
-                },
-                child: const Text('LOG OUT'),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

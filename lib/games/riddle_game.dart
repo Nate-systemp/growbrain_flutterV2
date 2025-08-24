@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class RiddleGame extends StatefulWidget {
   final String difficulty;
@@ -205,6 +207,8 @@ class _RiddleGameState extends State<RiddleGame> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Riddle Game');
     _initializeGame();
   }
 
@@ -488,6 +492,8 @@ class _RiddleGameState extends State<RiddleGame> {
   @override
   void dispose() {
     riddleTimer?.cancel();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -496,7 +502,7 @@ class _RiddleGameState extends State<RiddleGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Riddle Game - ${widget.difficulty}'),
+        title: Text('Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
         backgroundColor: Color(0xFFCE93D8), // Soft purple
         foregroundColor: Colors.white,
       ),
@@ -555,7 +561,7 @@ class _RiddleGameState extends State<RiddleGame> {
         ),
         SizedBox(height: 20),
         Text(
-          'Difficulty: ${widget.difficulty}',
+          'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
         ),
         SizedBox(height: 20),

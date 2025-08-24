@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class ObjectHuntGame extends StatefulWidget {
   final String difficulty;
@@ -136,6 +138,8 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Object Hunt');
     _initializeGame();
   }
 
@@ -446,6 +450,8 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   void dispose() {
     gameTimer?.cancel();
     phaseTimer?.cancel();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -454,7 +460,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Object Hunt - ${widget.difficulty}'),
+        title: Text('Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
         backgroundColor: Color(0xFF90CAF9), // Soft blue
         foregroundColor: Colors.white,
       ),
@@ -548,7 +554,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         ),
         SizedBox(height: 20),
         Text(
-          'Difficulty: ${widget.difficulty}',
+          'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
         ),
         SizedBox(height: 20),

@@ -15,7 +15,6 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   Widget build(BuildContext context) {
     try {
-      final width = MediaQuery.of(context).size.width;
       final height = MediaQuery.of(context).size.height;
       return Scaffold(
         backgroundColor: Colors.white,
@@ -100,28 +99,6 @@ class _IntroScreenState extends State<IntroScreen> {
                         ),
                         onPressed: () => _navigateDirect('/login'),
                         child: const Text('LOGIN'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: 320,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF484F5C),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          textStyle: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          shadowColor: Colors.black.withOpacity(0.18),
-                        ),
-                        onPressed: () => _navigateDirect('/register'),
-                        child: const Text('REGISTER'),
                       ),
                     ),
                   ],

@@ -19,7 +19,7 @@ class TeacherManagementScreen extends StatefulWidget {
 class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex =
-      2; // 0: Back, 1: Profile, 2: Student List, 3: Add, 4: Analysis
+      2; // 0: Back, 1: Profile, 2: Student List, 3: Analysis
   int _previousIndex = 2; // Track previous index for animation direction
   List<Map<String, dynamic>> students = [];
   bool _loadingStudents = false;
@@ -184,18 +184,6 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     }
   }
 
-  Future<void> _addStudent(Map<String, dynamic> student) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    await FirebaseFirestore.instance
-        .collection('teachers')
-        .doc(user.uid)
-        .collection('students')
-        .add(student);
-    await _fetchStudents();
-    _switchTab(2);
-  }
-
   Future<void> _fetchTeacherProfile() async {
     setState(() {
       _loadingProfile = true;
@@ -227,8 +215,6 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         return 'STUDENT LIST';
       case 1:
         return 'TEACHER PROFILE';
-      case 3:
-        return 'ADD STUDENT';
       case 4:
         return 'ANALYSIS';
       default:
@@ -239,10 +225,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   @override
   Widget build(BuildContext context) {
     Widget content;
-    if (_selectedIndex == 3) {
-      // Add Student Form
-      content = AddStudentForm(onSave: _addStudent);
-    } else if (_selectedIndex == 1) {
+    if (_selectedIndex == 1) {
       // Enhanced Teacher Profile with pull-to-refresh
       if (_loadingProfile) {
         content = const Center(child: CircularProgressIndicator());
@@ -430,7 +413,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     onPressed: () {
                                       setState(() => _viewingStudent = student);
                                     },
-                                    child: const Text('View'),
+                                    child: const Text('View Profile'),
                                   ),
                                   const SizedBox(width: 12),
                                   ElevatedButton(
@@ -462,25 +445,27 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     child: const Text('Set Session'),
                                   ),
                                   const SizedBox(width: 12),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.pie_chart,
-                                      size: 28,
-                                      color: Color(0xFF393C48),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: const Color(0xFF393C48),
+                                      elevation: 1,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
-                                    tooltip: 'View Records',
                                     onPressed: () {
                                       _showRecordsModal(student);
                                     },
-                                  ),
-                                  const SizedBox(width: 12),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      size: 28,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _deleteStudent(student),
+                                    child: const Text('Records'),
                                   ),
                                   ],
                                 ),
@@ -1395,12 +1380,6 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                   ),
                   const SizedBox(width: 36),
                   _NavCircleIconButton(
-                    icon: Icons.add,
-                    selected: _selectedIndex == 3,
-                    onTap: () => _switchTab(3),
-                  ),
-                  const SizedBox(width: 36),
-                  _NavCircleIconButton(
                     icon: Icons.bar_chart,
                     selected: _selectedIndex == 4,
                     onTap: () => _switchTab(4),
@@ -1412,56 +1391,6 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         ],
       ),
     );
-  }
-
-  Future<void> _deleteStudent(Map<String, dynamic> student) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final studentId = student['id']; // Use the document ID
-    if (studentId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot delete: Student ID not found.')),
-      );
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Student'),
-        content: Text(
-          'Are you sure you want to delete ${student['fullName'] ?? 'this student'}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection('teachers')
-          .doc(user.uid)
-          .collection('students')
-          .doc(studentId)
-          .delete();
-      setState(() {
-        students.removeWhere((s) => s['id'] == studentId);
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Student deleted.')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete student.')),
-      );
-    }
   }
 
   void _showRecordsModal(Map<String, dynamic> student) async {
@@ -2771,26 +2700,6 @@ class _AddStudentFormState extends State<AddStudentForm> {
   String contactNumber = '';
   bool _saving = false;
 
-  bool _isFormValid() {
-    // Check if form fields are valid
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return false;
-    }
-    
-    // Check if at least one cognitive need is selected
-    if (!attention && !logic && !memory && !verbal) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one cognitive need'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-    
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
     final labelStyle = const TextStyle(
@@ -3023,8 +2932,6 @@ class _AddStudentFormState extends State<AddStudentForm> {
                               fillColor: Colors.white,
                             ),
                             onChanged: (v) => guardianName = v,
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Required' : null,
                             style: const TextStyle(
                               fontSize: 20,
                               color: Color(0xFF393C48),
@@ -3112,7 +3019,7 @@ class _AddStudentFormState extends State<AddStudentForm> {
                     onPressed: _saving
                         ? null
                         : () async {
-                            if (_isFormValid()) {
+                            if (_formKey.currentState?.validate() ?? false) {
                               setState(() => _saving = true);
                               await widget.onSave({
                                 'fullName': fullName,

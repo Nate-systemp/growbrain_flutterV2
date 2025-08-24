@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class LightTapGame extends StatefulWidget {
   final String difficulty;
@@ -71,6 +75,8 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Light Tap');
     _initializeGame();
   }
   
@@ -79,6 +85,8 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     for (var controller in animationControllers) {
       controller.dispose();
     }
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
   
@@ -395,128 +403,160 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     }
   }
 
+  void _handleBackButton(BuildContext context) {
+    _showTeacherPinDialog(context);
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop(); // Close dialog
+            // Exit session and go to home screen after PIN verification
+            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(dialogContext).pop(); // Just close dialog, stay in game
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Light Tap - ${widget.difficulty}',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          title: Text(
+            'Light Tap - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: primaryColor,
+          iconTheme: IconThemeData(color: Colors.white),
+          elevation: 0,
+          automaticallyImplyLeading: false, // This removes the back button
         ),
-        backgroundColor: primaryColor,
-        iconTheme: IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Game info
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          'Level',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Game info
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          Text(
+                            'Level',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '$currentLevel',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: accentColor,
+                          Text(
+                            '$currentLevel',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          'Score',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            'Score',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '$score',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: accentColor,
+                          Text(
+                            '$score',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          'Sequence',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            'Sequence',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '${userSequence.length}/${sequenceLength}',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: accentColor,
+                          Text(
+                            '${userSequence.length}/${sequenceLength}',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Status text
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _getStatusText(),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Game grid
-              Expanded(
-                child: gameStarted ? _buildGameGrid() : _buildStartScreen(),
-              ),
-            ],
+                
+                SizedBox(height: 24),
+                
+                // Status text
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _getStatusText(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: 24),
+                
+                // Game grid
+                Expanded(
+                  child: gameStarted ? _buildGameGrid() : _buildStartScreen(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -682,6 +722,227 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
           ),
         );
       },
+    );
+  }
+}
+
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({
+    required this.onPinVerified,
+    this.onCancel,
+  });
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  String? _error;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verifyPin() async {
+    final pin = _pinController.text.trim();
+    
+    if (pin.length != 6 || !RegExp(r'^[0-9]{6}').hasMatch(pin)) {
+      setState(() {
+        _error = 'PIN must be 6 digits';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _error = 'Not logged in.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .get();
+      
+      final savedPin = doc.data()?['pin'];
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please contact your administrator.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // PIN is correct
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to verify PIN. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.security,
+                  color: const Color(0xFF5B6F4A),
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Teacher PIN Required',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF5B6F4A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Enter your 6-digit PIN to exit the session and access teacher features.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 24,
+                letterSpacing: 8,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '••••••',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  letterSpacing: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: const Color(0xFF5B6F4A)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: const Color(0xFF5B6F4A), width: 2),
+                ),
+                errorText: _error,
+                errorStyle: const TextStyle(fontSize: 14),
+              ),
+              onSubmitted: (_) => _verifyPin(),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      if (widget.onCancel != null) {
+                        widget.onCancel!();
+                      } else {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyPin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B6F4A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Verify',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

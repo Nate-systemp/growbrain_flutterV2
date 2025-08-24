@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class PictureWordsGame extends StatefulWidget {
   final String difficulty;
@@ -135,6 +137,8 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Picture Words');
     _initializeAnimations();
     _initializeGame();
   }
@@ -423,6 +427,8 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     gameTimer?.cancel();
     _cardAnimationController.dispose();
     _scoreAnimationController.dispose();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -434,7 +440,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         title: Text(
-          'Picture Words - ${widget.difficulty}',
+          'Picture Words - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,

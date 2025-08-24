@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 enum ShapeType { circle, square, triangle, diamond, pentagon, hexagon, star, oval }
 
@@ -122,6 +126,10 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   void initState() {
     super.initState();
     gameStartTime = DateTime.now();
+    
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Who Moved?');
+    
     _spinController = AnimationController(
       duration: spinDuration, // Will be updated per round
       vsync: this,
@@ -141,6 +149,8 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   @override
   void dispose() {
     _spinController.dispose();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -466,25 +476,56 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     );
   }
 
+  void _handleBackButton(BuildContext context) {
+    _showTeacherPinDialog(context);
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop(); // Close dialog
+            // Exit session and go to home screen after PIN verification
+            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(dialogContext).pop(); // Just close dialog, stay in game
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5DC), // Beige background
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF5B6F4A), // Dark green
-        foregroundColor: Colors.white,
-        title: Text(
-          'Who Moved? - ${widget.difficulty}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5DC), // Beige background
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF5B6F4A), // Dark green
+          foregroundColor: Colors.white,
+          title: Text(
+            'Who Moved? - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false, // This removes the back button
         ),
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
               // Header with score, round, and timer
               Container(
                 padding: const EdgeInsets.all(16.0),
@@ -644,8 +685,230 @@ class _WhoMovedGameState extends State<WhoMovedGame>
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({
+    required this.onPinVerified,
+    this.onCancel,
+  });
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  String? _error;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verifyPin() async {
+    final pin = _pinController.text.trim();
+    
+    if (pin.length != 6 || !RegExp(r'^[0-9]{6}').hasMatch(pin)) {
+      setState(() {
+        _error = 'PIN must be 6 digits';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _error = 'Not logged in.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .get();
+      
+      final savedPin = doc.data()?['pin'];
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please contact your administrator.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // PIN is correct
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to verify PIN. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.security,
+                  color: const Color(0xFF5B6F4A),
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Teacher PIN Required',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF5B6F4A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Enter your 6-digit PIN to exit the session and access teacher features.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 24,
+                letterSpacing: 8,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '••••••',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  letterSpacing: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: const Color(0xFF5B6F4A)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: const Color(0xFF5B6F4A), width: 2),
+                ),
+                errorText: _error,
+                errorStyle: const TextStyle(fontSize: 14),
+              ),
+              onSubmitted: (_) => _verifyPin(),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      if (widget.onCancel != null) {
+                        widget.onCancel!();
+                      } else {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyPin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B6F4A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Verify',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

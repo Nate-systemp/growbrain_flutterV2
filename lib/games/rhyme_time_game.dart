@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class RhymeTimeGame extends StatefulWidget {
   final String difficulty;
@@ -117,6 +119,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   @override
   void initState() {
     super.initState();
+    
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Rhyme Time');
     
     // Initialize animation controllers
     _cardAnimationController = AnimationController(
@@ -462,6 +467,8 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     _scoreAnimationController.dispose();
     _celebrationController.dispose();
     gameTimer?.cancel();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
@@ -471,7 +478,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Rhyme Time - ${widget.difficulty}',
+          'Rhyme Time - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
@@ -627,7 +634,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
               ),
               SizedBox(height: 12),
               Text(
-                'Difficulty: ${widget.difficulty}',
+                'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
                 style: TextStyle(
                   fontSize: 14,
                   color: primaryColor.withOpacity(0.7),

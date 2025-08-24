@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class SoundMatchGame extends StatefulWidget {
   final String difficulty;
@@ -60,8 +62,17 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Sound Match');
     // Initialize with first round immediately
     _initializeGame();
+  }
+
+  @override
+  void dispose() {
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
+    super.dispose();
   }
 
   void _initializeGame() {
@@ -193,7 +204,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3), // Same as Picture Words - beige/cream
       appBar: AppBar(
-        title: Text('🔊 Sound Match - ${widget.difficulty.toUpperCase()}'),
+        title: Text('🔊 Sound Match - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
         backgroundColor: Color(0xFF5B6F4A),
         foregroundColor: Colors.white,
         elevation: 0,

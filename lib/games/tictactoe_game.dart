@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/background_music_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 enum TicTacToeDifficulty { easy, medium, hard }
 
@@ -47,6 +49,8 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('TicTacToe');
     // Convert string difficulty to enum
     switch (widget.difficulty.toLowerCase()) {
       case 'easy':
@@ -62,6 +66,13 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
         difficulty = TicTacToeDifficulty.easy;
     }
     _loadRecords();
+  }
+
+  @override
+  void dispose() {
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
+    super.dispose();
   }
 
   void _loadRecords() async {
@@ -340,7 +351,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Difficulty: ${difficulty.name.toUpperCase()}',
+              'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 12),

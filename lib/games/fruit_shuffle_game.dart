@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
+import '../utils/background_music_manager.dart';
 
 class FruitShuffleGame extends StatefulWidget {
   final String difficulty;
@@ -69,6 +70,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
   @override
   void initState() {
     super.initState();
+    // Start background music for this game
+    BackgroundMusicManager().startGameMusic('Fruit Shuffle');
     difficulty = widget.difficulty;
     stopwatch = Stopwatch();
     _setupDifficulty();
@@ -308,6 +311,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
   void dispose() {
     stopwatch.stop();
     shuffleTimer?.cancel();
+    // Stop background music when leaving the game
+    BackgroundMusicManager().stopMusic();
     super.dispose();
   }
 
