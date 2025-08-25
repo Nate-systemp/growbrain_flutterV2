@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/sound_effects_manager.dart';
 
 class FindMeGame extends StatefulWidget {
   final String difficulty;
@@ -36,6 +37,7 @@ class _FindMeGameState extends State<FindMeGame>
   List<GameObject> gameObjects = [];
   GameObject? targetObject;
   int score = 0;
+  int correctAnswers = 0;
   int timeLeft = 60;
   Timer? gameTimer;
   Timer? showTimer;
@@ -187,7 +189,11 @@ class _FindMeGameState extends State<FindMeGame>
   void _correctAnswer() {
     setState(() {
       score += 10;
+  correctAnswers++;
     });
+
+    // Play success sound effect
+    SoundEffectsManager().playSuccess();
 
     _scoreAnimationController.forward().then((_) {
       _scoreAnimationController.reverse();
@@ -200,6 +206,9 @@ class _FindMeGameState extends State<FindMeGame>
     setState(() {
       timeLeft = (timeLeft - 5).clamp(0, 60);
     });
+
+    // Play wrong sound effect
+    SoundEffectsManager().playWrong();
 
     // Show feedback animation
     _cardAnimationController.reverse().then((_) {
@@ -238,7 +247,12 @@ class _FindMeGameState extends State<FindMeGame>
 
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
-      final accuracy = gameObjects.isNotEmpty ? ((score / gameObjects.length) * 100).round() : 0;
+      // Accuracy should be correct answers / total rounds (maxRounds)
+      int accuracy = 0;
+      if (maxRounds > 0) {
+        accuracy = ((correctAnswers / maxRounds) * 100).round();
+      }
+      accuracy = accuracy.clamp(0, 100);
       final timeTaken = 60 - timeLeft;
       
       widget.onGameComplete!(
@@ -408,12 +422,41 @@ class _FindMeGameState extends State<FindMeGame>
               children: [
                 _buildHeader(),
                 const SizedBox(height: 20),
-                if (isShowingTarget) _buildTargetDisplay(),
-                if (!isShowingTarget && gameStarted && !gameEnded) 
-                  _buildInstructions(),
+                // Show instructions at the top only after the target has been
+                // shown and then hidden so it prompts the player to tap the
+                // object they just saw.
+                if (gameStarted && !gameEnded && !isShowingTarget)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: _buildInstructions(),
+                      ),
+                    ),
+                  ),
+                // Reserve a fixed area at the top for the target display so the
+                // choice tiles don't shift when the target appears/disappears.
+                SizedBox(
+                  // Use a dynamic height that fits most screens and avoids overflow.
+                  // Keep the height bounded so it doesn't take too much vertical space.
+                  height: min(160.0, MediaQuery.of(context).size.height * 0.22),
+                  child: Center(
+                    child: isShowingTarget ? _buildTargetDisplay() : const SizedBox.shrink(),
+                  ),
+                ),
                 const SizedBox(height: 20),
-                Expanded(child: _buildGameGrid()),
-                if (!gameStarted) _buildStartButton(),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      _buildGameGrid(),
+                      if (!gameStarted)
+                        Center(
+                          child: _buildStartCubeButton(),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -580,7 +623,7 @@ class _FindMeGameState extends State<FindMeGame>
 
   Widget _buildInstructions() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF5B6F4A).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -593,15 +636,15 @@ class _FindMeGameState extends State<FindMeGame>
           Icon(
             Icons.search,
             color: const Color(0xFF5B6F4A),
-            size: 24,
+            size: 20,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Tap the ${targetObject?.name ?? "object"} you just saw!',
               style: TextStyle(
                 color: const Color(0xFF5B6F4A),
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -644,7 +687,7 @@ class _FindMeGameState extends State<FindMeGame>
         return LayoutBuilder(
           builder: (context, constraints) {
             // Calculate compact card size that fits all items on screen
-            double spacing = 6.0; // Reduced spacing for more compact layout
+            double spacing = 8.0; // Slightly increased spacing for larger tiles
             double availableWidth = constraints.maxWidth - (spacing * (crossAxisCount + 1));
             double availableHeight = constraints.maxHeight - (spacing * (rowCount + 1));
             
@@ -652,8 +695,8 @@ class _FindMeGameState extends State<FindMeGame>
             double cardHeight = availableHeight / rowCount;
             double cardSize = min(cardWidth, cardHeight);
             
-            // Make cards more compact - reduce maximum size
-            cardSize = min(cardSize, 80.0); // Reduced from 100px to 80px
+            // Increase maximum card size so tiles are larger on most screens
+            cardSize = min(cardSize, 110.0); // Increased max size for larger choices
             
             return Center(
               child: Container(
@@ -735,39 +778,45 @@ class _FindMeGameState extends State<FindMeGame>
     );
   }
 
-  Widget _buildStartButton() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      child: ElevatedButton(
-        onPressed: _startGame,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF5B6F4A),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 4,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.play_arrow,
-              size: 28,
+  Widget _buildStartCubeButton() {
+    // Square cube with play icon and a small label below
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _startGame,
+          child: Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5B6F4A),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              'Start Game',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            child: const Center(
+              child: Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 44,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          'Start Game',
+          style: TextStyle(
+            color: const Color(0xFF5B6F4A),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

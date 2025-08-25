@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/sound_effects_manager.dart';
 
 class LightTapGame extends StatefulWidget {
   final String difficulty;
@@ -234,6 +235,9 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
             isWaitingForInput = false;
           });
           
+          // Play success sound effect
+          SoundEffectsManager().playSuccess();
+          
           // Show success feedback
           _showFeedback(true);
           
@@ -250,6 +254,9 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
           wrongTaps++;
           isWaitingForInput = false;
         });
+        
+        // Play wrong sound effect
+        SoundEffectsManager().playWrong();
         
         _showFeedback(false);
         
@@ -317,7 +324,14 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     });
     
     final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    final accuracy = wrongTaps == 0 ? 100 : ((correctSequences / (correctSequences + wrongTaps)) * 100).round();
+    // Compute accuracy as correct / total attempts (correct + wrong). If no attempts, accuracy = 0.
+    final totalAttempts = correctSequences + wrongTaps;
+    int accuracy = 0;
+    if (totalAttempts > 0) {
+      accuracy = ((correctSequences / totalAttempts) * 100).round();
+    }
+    // Clamp to 0..100 just in case
+  accuracy = accuracy.clamp(0, 100);
     
     // Call completion callback
     if (widget.onGameComplete != null) {

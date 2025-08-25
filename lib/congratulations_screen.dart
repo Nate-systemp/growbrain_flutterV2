@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'teacher_management.dart';
+import 'utils/sound_effects_manager.dart';
 
 class CongratulationsScreen extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -17,165 +18,320 @@ class CongratulationsScreen extends StatefulWidget {
   State<CongratulationsScreen> createState() => _CongratulationsScreenState();
 }
 
-class _CongratulationsScreenState extends State<CongratulationsScreen> {
+class _CongratulationsScreenState extends State<CongratulationsScreen> 
+    with TickerProviderStateMixin {
+  late AnimationController _bounceController;
+  late AnimationController _sparkleController;
+  late Animation<double> _bounceAnimation;
+  late Animation<double> _sparkleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Play congratulations sound effect
+    SoundEffectsManager().playCongratulations();
+    
+    // Initialize animations
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _sparkleController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    
+    _bounceAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.elasticOut,
+    ));
+    
+    _sparkleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _sparkleController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Start animations
+    _bounceController.forward();
+    _sparkleController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    _sparkleController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF5B6F4A),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.celebration,
-                        size: 80,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Congratulations!',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF87CEEB), // Sky blue
+              const Color(0xFF98FB98), // Pale green
+              const Color(0xFFFFE4B5), // Moccasin
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  
+                  // Animated celebration header
+                  AnimatedBuilder(
+                    animation: _bounceAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _bounceAnimation.value,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Sparkly celebration icons
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _sparkleAnimation,
+                                    builder: (context, child) {
+                                      return Transform.rotate(
+                                        angle: _sparkleAnimation.value * 6.28,
+                                        child: const Text('🎉', style: TextStyle(fontSize: 32)),
+                                      );
+                                    },
+                                  ),
+                                  const Text('🏆', style: TextStyle(fontSize: 48)),
+                                  AnimatedBuilder(
+                                    animation: _sparkleAnimation,
+                                    builder: (context, child) {
+                                      return Transform.rotate(
+                                        angle: -_sparkleAnimation.value * 6.28,
+                                        child: const Text('✨', style: TextStyle(fontSize: 32)),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Big smiley face
+                              const Text('😊', style: TextStyle(fontSize: 64)),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Congratulations text
+                              const Text(
+                                'AMAZING JOB!',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4CAF50),
+                                  letterSpacing: 2,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              
+                              const SizedBox(height: 8),
+                              
+                              Text(
+                                'You completed all games! 🎮',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Student name with fun styling
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFFFFD740),
+                                      const Color(0xFFFFC107),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: Text(
+                                  '${widget.student['fullName'] ?? 'Super Star'}!',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Session Completed',
-                        style: TextStyle(fontSize: 20, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Great job, ${widget.student['fullName'] ?? 'Student'}!',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange,
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // Session Summary
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Session Summary',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSummaryCards(),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Game Records
-                if (widget.sessionRecords.isNotEmpty)
+                  // Compact session summary with fun colors
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Game Records',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            const Text('📊', style: TextStyle(fontSize: 24)),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Your Results',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF5B6F4A),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
-                        ...widget.sessionRecords.map(
-                          (record) => _buildRecordCard(record),
-                        ),
+                        _buildCompactSummaryCards(),
                       ],
                     ),
                   ),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
-                // Back to Home Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD740),
-                      foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                  // Compact game records
+                  if (widget.sessionRecords.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
-                      elevation: 4,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      textStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                        fontFamily: 'Nunito',
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Text('🎮', style: TextStyle(fontSize: 24)),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Games Played',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5B6F4A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildCompactGameRecords(),
+                        ],
                       ),
-                      shadowColor: Colors.black.withOpacity(0.2),
                     ),
-                    onPressed: () {
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/home', (route) => false);
-                    },
-                    child: const Text('Back to Home'),
+
+                  const SizedBox(height: 32),
+
+                  // Fun back to home button
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF4CAF50),
+                          const Color(0xFF8BC34A),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('🏠', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Back to Home',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
@@ -183,94 +339,214 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildCompactSummaryCards() {
     if (widget.sessionRecords.isEmpty) {
-      return const Text(
-        'No records available for this session.',
-        style: TextStyle(fontSize: 16, color: Colors.grey),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            const Text('🤔', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            const Text(
+              'No games played yet!',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
       );
     }
 
-    final avgAccuracy =
-        widget.sessionRecords
-            .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
-            .reduce((a, b) => a + b) /
-        widget.sessionRecords.length;
+    final avgAccuracy = widget.sessionRecords
+        .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+        .reduce((a, b) => a + b) / widget.sessionRecords.length;
 
-    final avgCompletionTime =
-        widget.sessionRecords
-            .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
-            .reduce((a, b) => a + b) /
-        widget.sessionRecords.length;
+    final avgCompletionTime = widget.sessionRecords
+        .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
+        .reduce((a, b) => a + b) / widget.sessionRecords.length;
 
     final totalGames = widget.sessionRecords.length;
 
     return Row(
       children: [
         Expanded(
-          child: _buildSummaryCard(
-            'Average Accuracy',
-            '${avgAccuracy.toStringAsFixed(1)}%',
-            Icons.trending_up,
-            Colors.green,
+          child: _buildCompactSummaryCard(
+            '${avgAccuracy.toStringAsFixed(0)}%',
+            'Accuracy',
+            '🎯',
+            const Color(0xFF4CAF50),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
-          child: _buildSummaryCard(
+          child: _buildCompactSummaryCard(
+            '${avgCompletionTime.toStringAsFixed(0)}s',
             'Avg Time',
-            '${avgCompletionTime.toStringAsFixed(1)}s',
-            Icons.timer,
-            Colors.blue,
+            '⏱️',
+            const Color(0xFF2196F3),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
-          child: _buildSummaryCard(
-            'Games Played',
+          child: _buildCompactSummaryCard(
             '$totalGames',
-            Icons.games,
-            Colors.purple,
+            'Games',
+            '🎮',
+            const Color(0xFF9C27B0),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildCompactSummaryCard(String value, String title, String emoji, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCompactGameRecords() {
+    return Column(
+      children: widget.sessionRecords.take(3).map((record) => _buildCompactRecordCard(record)).toList(),
+    );
+  }
+
+  Widget _buildCompactRecordCard(Map<String, dynamic> record) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFFFD740),
+                  const Color(0xFFFFC107),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                _getGameEmoji(record['game'] ?? ''),
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record['game'] ?? 'Unknown Game',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5B6F4A),
+                  ),
+                ),
+                Text(
+                  '${record['difficulty'] ?? 'Unknown'} • ${record['completionTime'] ?? 0}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${record['accuracy'] ?? 0}%',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4CAF50),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getGameEmoji(String gameName) {
+    switch (gameName.toLowerCase()) {
+      case 'match cards':
+        return '🃏';
+      case 'tictactoe':
+        return '⭕';
+      case 'puzzle':
+        return '🧩';
+      case 'riddle game':
+        return '🤔';
+      case 'word grid':
+        return '📝';
+      case 'scrabble':
+        return '🔤';
+      case 'anagram':
+        return '🔀';
+      case 'who moved?':
+        return '👀';
+      case 'light tap':
+        return '💡';
+      case 'find me':
+        return '🔍';
+      case 'fruit shuffle':
+        return '🍎';
+      case 'object hunt':
+        return '🕵️';
+      default:
+        return '🎮';
+    }
   }
 
   Widget _buildRecordCard(Map<String, dynamic> record) {

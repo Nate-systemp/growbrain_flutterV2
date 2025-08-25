@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/sound_effects_manager.dart';
 
 enum ShapeType { circle, square, triangle, diamond, pentagon, hexagon, star, oval }
 
@@ -314,8 +315,12 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     if (index == movedShapeIndex) {
       score += 10;
       correctAnswers++;
+      // Play success sound effect
+      SoundEffectsManager().playSuccess();
       _showResult(true);
     } else {
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
       _showResult(false);
     }
   }
@@ -373,7 +378,13 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     // Call the completion callback if provided
     if (widget.onGameComplete != null) {
       final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-      final accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
+      int accuracy = 0;
+      if (roundsPlayed > 0) {
+        // Ensure correctAnswers isn't greater than roundsPlayed (defensive)
+        final safeCorrect = math.min(correctAnswers, roundsPlayed);
+        accuracy = ((safeCorrect / roundsPlayed) * 100).round();
+      }
+      accuracy = accuracy.clamp(0, 100);
       
       widget.onGameComplete!(
         accuracy: accuracy,

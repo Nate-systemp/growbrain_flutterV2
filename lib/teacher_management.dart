@@ -1982,54 +1982,430 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   }
 
   void _showFilterOptions(BuildContext context, String filterType, List<Map<String, dynamic>> records, Function(String) onSelected) {
-    List<String> options = [];
-    
-    if (filterType == 'Game') {
-      options = records.map((r) => r['lastPlayed']?.toString() ?? 'Unknown').toSet().toList();
-    } else if (filterType == 'Focus') {
-      options = records.map((r) => r['challengeFocus']?.toString() ?? 'Unknown').toSet().toList();
-    }
-    
-    options.sort();
+  List<String> options = [];
+  
+  if (filterType == 'Game') {
+  options = records.map((r) => r['lastPlayed']?.toString() ?? 'Unknown').toSet().toList();
+  } else if (filterType == 'Focus') {
+  options = records.map((r) => r['challengeFocus']?.toString() ?? 'Unknown').toSet().toList();
+  }
+  
+  options.sort();
+  
+  showDialog(
+  context: context,
+  barrierDismissible: true,
+  builder: (ctx) => Dialog(
+  backgroundColor: Colors.transparent,
+  insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+  child: Container(
+  width: 400,
+  constraints: const BoxConstraints(maxHeight: 500),
+  decoration: BoxDecoration(
+  gradient: const LinearGradient(
+  colors: [Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  ),
+  borderRadius: BorderRadius.circular(24),
+  boxShadow: [
+  BoxShadow(
+  color: Colors.black.withOpacity(0.15),
+  blurRadius: 20,
+  offset: const Offset(0, 10),
+  ),
+  ],
+  ),
+  child: Stack(
+  children: [
+  // Main content
+  Padding(
+  padding: const EdgeInsets.all(32),
+  child: Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+  // Header with icon and title
+  Row(
+  children: [
+  Container(
+  width: 48,
+  height: 48,
+  decoration: BoxDecoration(
+  color: const Color(0xFF3B82F6),
+  shape: BoxShape.circle,
+  boxShadow: [
+  BoxShadow(
+  color: Colors.black.withOpacity(0.1),
+  blurRadius: 8,
+  offset: const Offset(0, 4),
+  ),
+  ],
+  ),
+  child: Icon(
+  filterType == 'Game' ? Icons.games : Icons.psychology,
+  color: Colors.white,
+  size: 24,
+  ),
+  ),
+  const SizedBox(width: 16),
+  Expanded(
+  child: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+  Text(
+  'Select $filterType',
+  style: const TextStyle(
+  fontSize: 20,
+  fontWeight: FontWeight.bold,
+  color: Color(0xFF111827),
+  ),
+  ),
+  Text(
+  'Choose from ${options.length} available options',
+  style: TextStyle(
+  fontSize: 14,
+  color: Colors.grey[600],
+  ),
+  ),
+  ],
+  ),
+  ),
+  ],
+  ),
+  
+  const SizedBox(height: 24),
+  
+  // Options list with scroll indicators
+  Flexible(
+  child: Container(
+  decoration: BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  border: Border.all(color: const Color(0xFFE5E7EB)),
+  ),
+  child: Stack(
+  children: [
+  // Scrollable content
+  Scrollbar(
+  thumbVisibility: true,
+  thickness: 4,
+  radius: const Radius.circular(2),
+  child: SingleChildScrollView(
+  physics: const BouncingScrollPhysics(),
+  child: Column(
+  children: [
+  // Top scroll indicator
+  if (options.length > 4)
+  Container(
+  width: double.infinity,
+  padding: const EdgeInsets.symmetric(vertical: 8),
+  decoration: BoxDecoration(
+  color: Colors.grey[50],
+  borderRadius: const BorderRadius.only(
+  topLeft: Radius.circular(16),
+  topRight: Radius.circular(16),
+  ),
+  border: const Border(
+  bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+  ),
+  ),
+  child: Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+  Icon(
+  Icons.keyboard_arrow_up,
+  color: Colors.grey[400],
+  size: 20,
+  ),
+  const SizedBox(width: 4),
+  Text(
+  'Scroll to see more options',
+  style: TextStyle(
+  fontSize: 12,
+  color: Colors.grey[600],
+  fontWeight: FontWeight.w500,
+  ),
+  ),
+  const SizedBox(width: 4),
+  Icon(
+  Icons.keyboard_arrow_down,
+  color: Colors.grey[400],
+  size: 20,
+  ),
+  ],
+  ),
+  ),
+  
+  // Options
+  ...options.asMap().entries.map((entry) {
+  final index = entry.key;
+  final option = entry.value;
+  final isLast = index == options.length - 1;
+  final isFirst = index == 0;
+  
+  return Container(
+  decoration: BoxDecoration(
+  border: isLast ? null : const Border(
+  bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+  ),
+  ),
+  child: Material(
+  color: Colors.transparent,
+  child: InkWell(
+  borderRadius: BorderRadius.vertical(
+  top: (isFirst && options.length <= 4) ? const Radius.circular(16) : Radius.zero,
+  bottom: isLast ? const Radius.circular(16) : Radius.zero,
+  ),
+  onTap: () {
+  Navigator.of(ctx).pop();
+  onSelected(option);
+  },
+  child: Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  child: Row(
+  children: [
+  Container(
+  width: 32,
+  height: 32,
+  decoration: BoxDecoration(
+  color: const Color(0xFF3B82F6).withOpacity(0.1),
+  borderRadius: BorderRadius.circular(8),
+  ),
+  child: Icon(
+  _getFilterOptionIcon(filterType, option),
+  color: const Color(0xFF3B82F6),
+  size: 18,
+  ),
+  ),
+  const SizedBox(width: 12),
+  Expanded(
+  child: Text(
+  option,
+  style: const TextStyle(
+  fontSize: 16,
+  fontWeight: FontWeight.w500,
+  color: Color(0xFF111827),
+  ),
+  ),
+  ),
+  const Icon(
+  Icons.arrow_forward_ios,
+  color: Color(0xFF9CA3AF),
+  size: 16,
+  ),
+  ],
+  ),
+  ),
+  ),
+  ),
+  );
+  }).toList(),
+  
+  // Bottom scroll indicator
+  if (options.length > 4)
+  Container(
+  width: double.infinity,
+  padding: const EdgeInsets.symmetric(vertical: 8),
+  decoration: BoxDecoration(
+  color: Colors.grey[50],
+  borderRadius: const BorderRadius.only(
+  bottomLeft: Radius.circular(16),
+  bottomRight: Radius.circular(16),
+  ),
+  ),
+  child: Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+  Icon(
+  Icons.swipe_vertical,
+  color: Colors.grey[400],
+  size: 16,
+  ),
+  const SizedBox(width: 6),
+  Text(
+  'Swipe to scroll',
+  style: TextStyle(
+  fontSize: 11,
+  color: Colors.grey[500],
+  fontWeight: FontWeight.w500,
+  ),
+  ),
+  ],
+  ),
+  ),
+  ],
+  ),
+  ),
+  ),
+  
+  // Fade indicators for scroll
+  if (options.length > 4) ...[
+  // Top fade
+  Positioned(
+  top: 0,
+  left: 0,
+  right: 0,
+  child: Container(
+  height: 20,
+  decoration: BoxDecoration(
+  gradient: LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [
+  Colors.white.withOpacity(0.9),
+  Colors.white.withOpacity(0.0),
+  ],
+  ),
+  borderRadius: const BorderRadius.only(
+  topLeft: Radius.circular(16),
+  topRight: Radius.circular(16),
+  ),
+  ),
+  ),
+  ),
+  
+  // Bottom fade
+  Positioned(
+  bottom: 0,
+  left: 0,
+  right: 0,
+  child: Container(
+  height: 20,
+  decoration: BoxDecoration(
+  gradient: LinearGradient(
+  begin: Alignment.bottomCenter,
+  end: Alignment.topCenter,
+  colors: [
+  Colors.white.withOpacity(0.9),
+  Colors.white.withOpacity(0.0),
+  ],
+  ),
+  borderRadius: const BorderRadius.only(
+  bottomLeft: Radius.circular(16),
+  bottomRight: Radius.circular(16),
+  ),
+  ),
+  ),
+  ),
+  ],
+  ],
+  ),
+  ),
+  ),
+  
+  const SizedBox(height: 24),
+  
+  // Cancel button
+  SizedBox(
+  width: double.infinity,
+  child: TextButton(
+  onPressed: () => Navigator.of(ctx).pop(),
+  style: TextButton.styleFrom(
+  backgroundColor: Colors.white,
+  foregroundColor: const Color(0xFF6B7280),
+  padding: const EdgeInsets.symmetric(vertical: 16),
+  shape: RoundedRectangleBorder(
+  borderRadius: BorderRadius.circular(12),
+  side: const BorderSide(color: Color(0xFFE5E7EB)),
+  ),
+  ),
+  child: const Text(
+  'Cancel',
+  style: TextStyle(
+  fontSize: 16,
+  fontWeight: FontWeight.w600,
+  ),
+  ),
+  ),
+  ),
+  ],
+  ),
+  ),
+  
+  // Close button
+  Positioned(
+  top: 16,
+  right: 16,
+  child: Material(
+  color: Colors.transparent,
+  child: InkWell(
+  borderRadius: BorderRadius.circular(20),
+  onTap: () => Navigator.of(ctx).pop(),
+  child: Container(
+  width: 40,
+  height: 40,
+  decoration: BoxDecoration(
+  color: Colors.white.withOpacity(0.9),
+  shape: BoxShape.circle,
+  boxShadow: [
+  BoxShadow(
+  color: Colors.black.withOpacity(0.1),
+  blurRadius: 4,
+  offset: const Offset(0, 2),
+  ),
+  ],
+  ),
+  child: const Icon(
+  Icons.close,
+  color: Color(0xFF6B7280),
+  size: 20,
+  ),
+  ),
+  ),
+  ),
+  ),
+  ],
+  ),
+  ),
+  ),
+  );
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        child: Container(
-          width: 300,
-          constraints: const BoxConstraints(maxHeight: 400),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select $filterType',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: options.map((option) => ListTile(
-                      title: Text(option),
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        onSelected(option);
-                      },
-                    )).toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getFilterOptionIcon(String filterType, String option) {
+    if (filterType == 'Game') {
+      switch (option.toLowerCase()) {
+        case 'find me':
+          return Icons.search;
+        case 'light tap':
+          return Icons.touch_app;
+        case 'who moved?':
+          return Icons.visibility;
+        case 'match cards':
+          return Icons.style;
+        case 'tictactoe':
+          return Icons.grid_3x3;
+        case 'puzzle':
+          return Icons.extension;
+        case 'riddle game':
+          return Icons.question_mark;
+        case 'word grid':
+          return Icons.grid_4x4;
+        case 'scrabble':
+          return Icons.grid_on;
+        case 'anagram':
+          return Icons.shuffle;
+        case 'fruit shuffle':
+          return Icons.apple;
+        case 'object hunt':
+          return Icons.search_off;
+        default:
+          return Icons.games;
+      }
+    } else if (filterType == 'Focus') {
+      switch (option.toLowerCase()) {
+        case 'attention':
+          return Icons.visibility;
+        case 'memory':
+          return Icons.psychology;
+        case 'logic':
+          return Icons.lightbulb;
+        case 'verbal':
+          return Icons.record_voice_over;
+        default:
+          return Icons.category;
+      }
+    }
+    return Icons.filter_list;
   }
 
   String _formatDateFilter(DateTime date) {
