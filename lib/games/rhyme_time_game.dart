@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
 
@@ -13,13 +15,11 @@ class RhymeTimeGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
-  const RhymeTimeGame({
-    Key? key,
-    required this.difficulty,
-    this.onGameComplete,
-  }) : super(key: key);
+  const RhymeTimeGame({Key? key, required this.difficulty, this.onGameComplete})
+    : super(key: key);
 
   @override
   _RhymeTimeGameState createState() => _RhymeTimeGameState();
@@ -30,7 +30,7 @@ class RhymeWord {
   final String rhymeGroup;
   bool isSelected;
   bool isMatched;
-  
+
   RhymeWord({
     required this.word,
     required this.rhymeGroup,
@@ -39,7 +39,7 @@ class RhymeWord {
   });
 }
 
-class _RhymeTimeGameState extends State<RhymeTimeGame> 
+class _RhymeTimeGameState extends State<RhymeTimeGame>
     with TickerProviderStateMixin {
   List<RhymeWord> currentWords = [];
   RhymeWord? firstSelectedWord;
@@ -54,12 +54,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   int timeLeft = 0;
   bool gameStarted = false;
   bool gameActive = false;
-  
+
   // Animation controllers for enhanced UX
   late AnimationController _cardAnimationController;
   late AnimationController _scoreAnimationController;
   late AnimationController _celebrationController;
-  
+
   // Enhanced rhyme groups organized by difficulty
   final Map<String, List<Map<String, String>>> rhymeGroups = {
     'easy': [
@@ -81,7 +81,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       {'flower': 'ower', 'tower': 'ower', 'power': 'ower', 'shower': 'ower'},
       {'happy': 'appy', 'snappy': 'appy', 'clappy': 'appy'},
       {'chicken': 'icken', 'thicken': 'icken', 'quicken': 'icken'},
-      {'butter': 'utter', 'mutter': 'utter', 'flutter': 'utter', 'clutter': 'utter'},
+      {
+        'butter': 'utter',
+        'mutter': 'utter',
+        'flutter': 'utter',
+        'clutter': 'utter',
+      },
       {'apple': 'apple', 'grapple': 'apple', 'chapel': 'apple'},
       {'paper': 'aper', 'caper': 'aper', 'taper': 'aper'},
       {'water': 'ater', 'matter': 'atter', 'chatter': 'atter'},
@@ -93,7 +98,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     'hard': [
       {'enough': 'uff', 'rough': 'uff', 'tough': 'uff', 'stuff': 'uff'},
       {'weight': 'ate', 'straight': 'ate', 'create': 'ate', 'relate': 'ate'},
-      {'bought': 'ought', 'thought': 'ought', 'caught': 'ought', 'fought': 'ought'},
+      {
+        'bought': 'ought',
+        'thought': 'ought',
+        'caught': 'ought',
+        'fought': 'ought',
+      },
       {'listen': 'isten', 'glisten': 'isten', 'christen': 'isten'},
       {'ocean': 'tion', 'motion': 'tion', 'potion': 'tion', 'devotion': 'tion'},
       {'through': 'ough', 'threw': 'ew', 'knew': 'ew', 'grew': 'ew'},
@@ -105,9 +115,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       {'butterfly': 'fly', 'dragonfly': 'fly', 'firefly': 'fly'},
     ],
   };
-  
+
   Random random = Random();
-  
+
   // Attention category theme colors
   final Color primaryColor = Color(0xFF5B6F4A); // Dark green
   final Color backgroundColor = Color(0xFFF5F5DC); // Beige/cream
@@ -119,10 +129,10 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   @override
   void initState() {
     super.initState();
-    
+
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Rhyme Time');
-    
+
     // Initialize animation controllers
     _cardAnimationController = AnimationController(
       duration: Duration(milliseconds: 300),
@@ -136,7 +146,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       duration: Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _initializeGame();
   }
 
@@ -159,35 +169,35 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         totalPairs = 3;
         timeLeft = 0;
     }
-    
+
     _setupWords();
   }
 
   void _setupWords() {
     currentWords.clear();
-    
+
     String difficultyKey = widget.difficulty.toLowerCase();
-    List<Map<String, String>> availableGroups = rhymeGroups[difficultyKey] ?? rhymeGroups['easy']!;
-    
+    List<Map<String, String>> availableGroups =
+        rhymeGroups[difficultyKey] ?? rhymeGroups['easy']!;
+
     // Select random rhyme groups
     List<Map<String, String>> selectedGroups = List.from(availableGroups);
     selectedGroups.shuffle();
     selectedGroups = selectedGroups.take(totalPairs).toList();
-    
+
     // Add words from each group
     for (var group in selectedGroups) {
       String rhymePattern = group.values.first;
       List<String> wordsInGroup = group.keys.toList();
-      
+
       // Take 2 words from each group to make a pair
       for (int i = 0; i < 2 && i < wordsInGroup.length; i++) {
-        currentWords.add(RhymeWord(
-          word: wordsInGroup[i],
-          rhymeGroup: rhymePattern,
-        ));
+        currentWords.add(
+          RhymeWord(word: wordsInGroup[i], rhymeGroup: rhymePattern),
+        );
       }
     }
-    
+
     // Shuffle all words
     currentWords.shuffle();
     setState(() {});
@@ -202,17 +212,17 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       correctMatches = 0;
       wrongAttempts = 0;
       canSelect = true;
-      
+
       // Reset all words
       for (var word in currentWords) {
         word.isSelected = false;
         word.isMatched = false;
       }
-      
+
       firstSelectedWord = null;
       secondSelectedWord = null;
     });
-    
+
     _showInstructions();
   }
 
@@ -223,11 +233,8 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       builder: (context) => AlertDialog(
         backgroundColor: backgroundColor,
         title: Text(
-          'Rhyme Time Instructions', 
-          style: TextStyle(
-            color: primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
+          'Rhyme Time Instructions',
+          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: Container(
           decoration: BoxDecoration(
@@ -238,16 +245,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.music_note,
-                size: 48,
-                color: primaryColor,
-              ),
+              Icon(Icons.music_note, size: 48, color: primaryColor),
               SizedBox(height: 12),
               Text(
                 'Find pairs of rhyming words!',
                 style: TextStyle(
-                  color: primaryColor, 
+                  color: primaryColor,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -262,10 +265,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                 ),
                 child: Text(
                   '• Tap two words that rhyme\n• Find all rhyming pairs to win\n• Words that sound similar rhyme!\n• Get bonus points for speed!',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: primaryColor, fontSize: 14),
                   textAlign: TextAlign.left,
                 ),
               ),
@@ -279,7 +279,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                       Text(
                         'Pairs: $totalPairs',
                         style: TextStyle(
-                          color: primaryColor, 
+                          color: primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -293,7 +293,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                         Text(
                           'Time: ${timeLeft}s',
                           style: TextStyle(
-                            color: Colors.orange, 
+                            color: Colors.orange,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -335,7 +335,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       setState(() {
         timeLeft--;
       });
-      
+
       if (timeLeft <= 0) {
         timer.cancel();
         _timeUp();
@@ -352,9 +352,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
 
   void _onWordTapped(RhymeWord word) {
     if (!canSelect || !gameActive || word.isMatched) return;
-    
+
     HapticFeedback.lightImpact();
-    
+
     if (firstSelectedWord == null) {
       // First word selected
       setState(() {
@@ -374,9 +374,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         word.isSelected = true;
         canSelect = false;
       });
-      
+
       wrongAttempts++;
-      
+
       // Check for rhyme after a short delay
       Timer(Duration(milliseconds: 800), () {
         _checkForRhyme();
@@ -391,24 +391,31 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         firstSelectedWord!.isMatched = true;
         secondSelectedWord!.isMatched = true;
         correctMatches++;
-        
+
         // Enhanced scoring system
         int baseScore = 50;
-        int timeBonus = timeLeft > 0 ? (timeLeft ~/ 5) : 0; // More generous time bonus
-        int accuracyBonus = wrongAttempts <= 2 ? 25 : 0; // Accuracy bonus for few mistakes
-        int difficultyBonus = widget.difficulty == 'hard' ? 30 : 
-                             widget.difficulty == 'medium' ? 20 : 10;
-        
+        int timeBonus = timeLeft > 0
+            ? (timeLeft ~/ 5)
+            : 0; // More generous time bonus
+        int accuracyBonus = wrongAttempts <= 2
+            ? 25
+            : 0; // Accuracy bonus for few mistakes
+        int difficultyBonus = widget.difficulty == 'hard'
+            ? 30
+            : widget.difficulty == 'medium'
+            ? 20
+            : 10;
+
         score += baseScore + timeBonus + accuracyBonus + difficultyBonus;
       });
-      
+
       // Trigger celebration animation
       _celebrationController.forward().then((_) {
         _celebrationController.reset();
       });
-      
+
       HapticFeedback.mediumImpact();
-      
+
       if (correctMatches == totalPairs) {
         gameTimer?.cancel();
         _endGame();
@@ -418,7 +425,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     } else {
       // No rhyme - reset selection
       HapticFeedback.lightImpact();
-      
+
       Timer(Duration(milliseconds: 500), () {
         setState(() {
           firstSelectedWord!.isSelected = false;
@@ -441,14 +448,16 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     setState(() {
       gameActive = false;
     });
-    
+
     gameTimer?.cancel();
-    
+
     // Calculate game statistics
-    double accuracyDouble = wrongAttempts > 0 ? (correctMatches / wrongAttempts) * 100 : 100;
+    double accuracyDouble = wrongAttempts > 0
+        ? (correctMatches / wrongAttempts) * 100
+        : 100;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -459,6 +468,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         difficulty: widget.difficulty,
       );
     }
+
+    // Auto-advance without showing end screen
+    Navigator.pop(context);
   }
 
   @override
@@ -472,122 +484,122 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     super.dispose();
   }
 
+  void _handleBackButton(BuildContext context) {
+    _showTeacherPinDialog(context);
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop(); // Close dialog
+            // Exit session and go to home screen after PIN verification
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(
+              dialogContext,
+            ).pop(); // Just close dialog, stay in game
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Rhyme Time - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Modern Header with Stats
-            _buildHeader(),
-            SizedBox(height: 20),
-            
-            // Game Area
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(
+          0xFFFDFBEF,
+        ), // Light creamy yellow background
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header bar - Dark olive green style
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A), // Dark olive green header
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Score: $score',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        const Text(
+                          'Rhyme Time - Starter',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Round: $correctMatches/$totalPairs',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A5A3A), // Slightly darker green
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        timeLeft > 0 ? '${timeLeft}s' : 'Get Ready...',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            primaryColor,
-            primaryColor.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 4),
+              // Game area
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildStatItem(
-            icon: Icons.star,
-            label: 'Score',
-            value: score.toString(),
-            color: accentColor,
-          ),
-          _buildStatItem(
-            icon: Icons.check_circle,
-            label: 'Pairs',
-            value: '$correctMatches/$totalPairs',
-            color: Colors.white,
-          ),
-          if (timeLeft > 0)
-            _buildStatItem(
-              icon: Icons.timer,
-              label: 'Time',
-              value: '${timeLeft}s',
-              color: timeLeft <= 10 ? Colors.red[300]! : Colors.white,
-            ),
-          _buildStatItem(
-            icon: Icons.error_outline,
-            label: 'Attempts',
-            value: wrongAttempts.toString(),
-            color: Colors.white70,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 20),
-        SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color.withOpacity(0.8),
-          ),
-        ),
-      ],
     );
   }
 
@@ -602,7 +614,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.2),
                 blurRadius: 10,
                 offset: Offset(0, 5),
               ),
@@ -610,10 +622,13 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.music_note,
-                size: 80,
-                color: primaryColor,
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A), // Dark olive green background
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.music_note, size: 60, color: Colors.white),
               ),
               SizedBox(height: 16),
               Text(
@@ -621,32 +636,13 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: primaryColor,
+                  color: const Color(0xFF5B6F4A), // Dark olive green text
                 ),
               ),
               SizedBox(height: 8),
               Text(
                 'Find words that rhyme!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: primaryColor.withOpacity(0.7),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                'Find $totalPairs rhyming pairs',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -660,7 +656,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             _startGame();
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: const Color(0xFF5B6F4A), // Dark olive green button
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
             shape: RoundedRectangleBorder(
@@ -670,10 +666,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
           ),
           child: Text(
             'Start Game',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -684,40 +677,33 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     if (!gameActive && correctMatches == totalPairs) {
       return _buildEndScreen();
     }
-    
+
     if (!gameActive && timeLeft <= 0) {
       return _buildTimeUpScreen();
     }
-    
+
     return Column(
       children: [
-        // Instructions for current round
-        Container(
-          padding: EdgeInsets.all(16),
-          margin: EdgeInsets.only(bottom: 20),
-          decoration: BoxDecoration(
-            color: Color(0xFFE1F5FE),
-            borderRadius: BorderRadius.circular(12),
+        // Instructions
+        Text(
+          'Tap two words that rhyme together!',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-          child: Text(
-            'Tap two words that rhyme together!',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-            ),
-            textAlign: TextAlign.center,
-          ),
+          textAlign: TextAlign.center,
         ),
-        
+        SizedBox(height: 30),
+
         // Words Grid
         Expanded(
           child: GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               childAspectRatio: 2.0,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
             ),
             itemCount: currentWords.length,
             itemBuilder: (context, index) {
@@ -732,13 +718,13 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   Widget _buildWordCard(RhymeWord word) {
     Color cardColor;
     if (word.isMatched) {
-      cardColor = matchedColor;
+      cardColor = const Color(0xFF8FBC8F); // Light green for matched
     } else if (word.isSelected) {
-      cardColor = selectedColor;
+      cardColor = const Color(0xFFFFD700); // Bright yellow for selected
     } else {
-      cardColor = unselectedColor;
+      cardColor = const Color(0xFF5B6F4A); // Dark olive green for normal
     }
-    
+
     return GestureDetector(
       onTap: () => _onWordTapped(word),
       child: AnimatedBuilder(
@@ -752,15 +738,11 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: word.isSelected ? accentColor : Colors.transparent,
-                  width: word.isSelected ? 3 : 2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: word.isSelected ? accentColor.withOpacity(0.3) : Colors.black.withOpacity(0.1),
-                    blurRadius: word.isSelected ? 8 : 4,
-                    offset: Offset(0, word.isSelected ? 4 : 2),
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -768,9 +750,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                 child: Text(
                   word.word,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: word.isMatched ? Colors.white : primaryColor,
+                    color: Colors.white,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -783,20 +765,22 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   }
 
   Widget _buildEndScreen() {
-    double accuracyDouble = wrongAttempts > 0 ? (correctMatches / wrongAttempts) * 100 : 100;
-    
+    double accuracyDouble = wrongAttempts > 0
+        ? (correctMatches / wrongAttempts) * 100
+        : 100;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.celebration,
-          size: 80,
-          color: primaryColor,
-        ),
+        Icon(Icons.celebration, size: 80, color: primaryColor),
         SizedBox(height: 20),
         Text(
           'Fantastic Rhyming!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryColor),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -824,18 +808,24 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: accentColor,
             foregroundColor: primaryColor,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -846,15 +836,15 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.timer_off,
-          size: 80,
-          color: primaryColor,
-        ),
+        Icon(Icons.timer_off, size: 80, color: primaryColor),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryColor),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -878,21 +868,261 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: accentColor,
             foregroundColor: primaryColor,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _verifyPin() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final pin = _pinController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      setState(() {
+        _error = 'Not logged in.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .get();
+      final savedPin = doc.data()?['pin'];
+
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please create one.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to check PIN.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 300, // Fixed width to prevent stretching
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Green header bar with shield icon and title
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12), // Reduced from 16
+              decoration: const BoxDecoration(
+                color: Color(0xFF5B6F4A),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.shield,
+                    color: Colors.white,
+                    size: 20,
+                  ), // Reduced from 24
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Teacher PIN Required',
+                    style: TextStyle(
+                      fontSize: 16, // Reduced from 18
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content area
+            Padding(
+              padding: const EdgeInsets.all(16), // Reduced from 20
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter your 6-digit PIN to exit the session and access teacher features.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ), // Reduced from 14
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  TextField(
+                    controller: _pinController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    obscureText: true,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18, // Reduced from 20
+                      letterSpacing: 6,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '••••••',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        letterSpacing: 6,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: const Color(0xFF5B6F4A),
+                          width: 2,
+                        ),
+                      ),
+                      errorText: _error,
+                      errorStyle: const TextStyle(
+                        fontSize: 11,
+                      ), // Reduced from 12
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, // Reduced from 16
+                        vertical: 10, // Reduced from 12
+                      ),
+                    ),
+                    onSubmitted: (_) => _verifyPin(),
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            if (widget.onCancel != null) {
+                              widget.onCancel!();
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ), // Reduced from 14
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _verifyPin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B6F4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 14, // Reduced from 16
+                                  width: 14, // Reduced from 16
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Verify',
+                                  style: TextStyle(
+                                    fontSize: 13, // Reduced from 14
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

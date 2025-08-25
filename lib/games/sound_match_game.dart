@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../teacher_pin_modal.dart';
 
 class SoundMatchGame extends StatefulWidget {
   final String difficulty;
@@ -13,7 +16,8 @@ class SoundMatchGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
   const SoundMatchGame({
     Key? key,
@@ -29,7 +33,7 @@ class SoundItem {
   final String name;
   final String emoji;
   final String description;
-  
+
   SoundItem({
     required this.name,
     required this.emoji,
@@ -78,13 +82,15 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   void _initializeGame() {
     // Generate first round options immediately
     _currentSound = _allSounds[Random().nextInt(_allSounds.length)];
-    
+
     List<SoundItem> options = [_currentSound];
-    List<SoundItem> otherSounds = _allSounds.where((s) => s.name != _currentSound.name).toList();
+    List<SoundItem> otherSounds = _allSounds
+        .where((s) => s.name != _currentSound.name)
+        .toList();
     otherSounds.shuffle();
     options.addAll(otherSounds.take(3));
     options.shuffle();
-    
+
     setState(() {
       _currentOptions = options;
       _currentRound = 1;
@@ -102,19 +108,21 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
 
     // Select random current sound
     _currentSound = _allSounds[Random().nextInt(_allSounds.length)];
-    
+
     // Create options (including correct answer)
     List<SoundItem> options = [_currentSound];
-    List<SoundItem> otherSounds = _allSounds.where((s) => s.name != _currentSound.name).toList();
+    List<SoundItem> otherSounds = _allSounds
+        .where((s) => s.name != _currentSound.name)
+        .toList();
     otherSounds.shuffle();
     options.addAll(otherSounds.take(3));
     options.shuffle();
-    
+
     setState(() {
       _currentOptions = options;
       _isAnswering = false;
     });
-    
+
     // Auto-play sound after a short delay
     Future.delayed(Duration(milliseconds: 500), _playCurrentSound);
   }
@@ -134,23 +142,23 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
 
   void _selectOption(SoundItem selectedItem) {
     if (_isAnswering) return;
-    
+
     setState(() {
       _isAnswering = true;
     });
-    
+
     HapticFeedback.lightImpact();
-    
+
     bool isCorrect = selectedItem.name == _currentSound.name;
-    
+
     if (isCorrect) {
       setState(() {
         _score += 20;
         _correctAnswers++;
       });
-      
+
       _showFeedback('🎉 Correct! Great job!', Colors.green);
-      
+
       Future.delayed(Duration(seconds: 1), () {
         setState(() {
           _currentRound++;
@@ -159,7 +167,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       });
     } else {
       _showFeedback('❌ Try again! Listen carefully.', Colors.red);
-      
+
       Future.delayed(Duration(seconds: 1), () {
         setState(() {
           _isAnswering = false;
@@ -181,10 +189,12 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   }
 
   void _endGame() {
-    int completionTime = _gameStartTime != null 
-        ? DateTime.now().difference(_gameStartTime!).inSeconds 
+    int completionTime = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
         : 0;
-    int accuracy = _correctAnswers > 0 ? ((_correctAnswers / 5) * 100).round() : 0;
+    int accuracy = _correctAnswers > 0
+        ? ((_correctAnswers / 5) * 100).round()
+        : 0;
 
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -195,22 +205,52 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
         difficulty: widget.difficulty,
       );
     }
-    
+
+    // Auto-advance without showing end screen
     Navigator.pop(context);
+  }
+
+  void _handleBackButton(BuildContext context) {
+    _showTeacherPinDialog(context);
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop(); // Close dialog
+            // Exit session and go to home screen after PIN verification
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(
+              dialogContext,
+            ).pop(); // Just close dialog, stay in game
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3), // Same as Picture Words - beige/cream
-      appBar: AppBar(
-        title: Text('🔊 Sound Match - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
-        backgroundColor: Color(0xFF5B6F4A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: _buildGameContent(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(
+          0xFFFDFBEF,
+        ), // Light creamy yellow background
+        body: SafeArea(child: _buildGameContent()),
       ),
     );
   }
@@ -218,151 +258,413 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   Widget _buildGameContent() {
     return Column(
       children: [
-        // Score row - very compact
+        // Header bar - Dark olive green style
         Container(
-          padding: const EdgeInsets.all(4),
-          color: const Color(0xFFF3F3F3),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildInfoCard('🎯 Score', '$_score', const Color(0xFFF3F3F3)),
-              _buildInfoCard('🏁 Round', '$_currentRound/5', const Color(0xFFF3F3F3)),
-              _buildInfoCard('✅ Correct', '$_correctAnswers', const Color(0xFFF3F3F3)),
-            ],
-          ),
-        ),
-        
-        // Current sound instruction - compact
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF5B6F4A),
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+            color: const Color(0xFF5B6F4A), // Dark olive green header
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
           ),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '👆 Listen and pick the matching picture!',
+                'Score: $_score',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
-              ElevatedButton.icon(
-                onPressed: _playCurrentSound,
-                icon: const Icon(Icons.volume_up, size: 16),
-                label: const Text('🔊 Play Sound'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD740),
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              Column(
+                children: [
+                  const Text(
+                    'Sound Match - Starter',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'Round: $_currentRound/5',
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4A5A3A), // Slightly darker green
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Get Ready...',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        
-        // Compact 2x2 grid - use Flexible to take only needed space
-        Flexible(
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300, width: 1),
-            ),
-            child: _currentOptions.isEmpty 
-              ? Center(child: Text('No choices loaded!', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)))
-              : GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  childAspectRatio: 3.5, // Balanced aspect ratio
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
-                  children: _currentOptions.map((item) => _buildCompactSoundOption(item)).toList(),
+
+        // Game area - Light creamy yellow background
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                // Instruction text
+                Text(
+                  'Listen and pick the matching picture!',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 8),
+
+                // Play sound button
+                ElevatedButton.icon(
+                  onPressed: _playCurrentSound,
+                  icon: const Icon(
+                    Icons.volume_up,
+                    size: 16,
+                    color: Colors.black,
+                  ),
+                  label: const Text(
+                    '🔊 Play Sound',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD700), // Bright yellow
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Options grid - Fixed size to prevent scrolling
+                Expanded(
+                  child: _currentOptions.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No choices loaded!',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : GridView.count(
+                          physics:
+                              NeverScrollableScrollPhysics(), // Disable scrolling
+                          crossAxisCount: 2,
+                          childAspectRatio: 2.2, // More compact ratio
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 6,
+                          children: _currentOptions
+                              .map((item) => _buildSoundOption(item))
+                              .toList(),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
-        
-        // Small spacer to fill bottom gap without cutting off content
-        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildInfoCard(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildSoundOption(SoundItem item) {
+    bool isCorrect = _isAnswering && item.name == _currentSound.name;
 
-  Widget _buildCompactSoundOption(SoundItem item) {
+    Color shapeColor;
+    if (isCorrect) {
+      shapeColor = const Color(0xFF8FBC8F); // Light green for correct
+    } else {
+      shapeColor = const Color(0xFF5B6F4A); // Dark olive green for normal
+    }
+
     return GestureDetector(
       onTap: () => _selectOption(item),
       child: Container(
-        margin: const EdgeInsets.all(0.5), // Minimal margin
         decoration: BoxDecoration(
-          color: Colors.grey.shade300, // More gray to look clickable
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(
-            color: _isAnswering && item.name == _currentSound.name 
-                ? Colors.green 
-                : Colors.grey.shade500, // Darker border
-            width: 1,
-          ),
+          color: shapeColor,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Bigger emoji
+            Text(item.emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 4),
             Text(
-              item.emoji,
-              style: const TextStyle(fontSize: 20), // Increased from 12 to 20
+              item.name,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: 4),
-            // Bigger text next to emoji
-            Flexible(
-              child: Text(
-                item.name,
-                style: const TextStyle(
-                  fontSize: 10, // Increased from 7 to 10
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _verifyPin() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final pin = _pinController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      setState(() {
+        _error = 'Not logged in.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .get();
+      final savedPin = doc.data()?['pin'];
+
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please create one.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to check PIN.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 300, // Fixed width to prevent stretching
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Green header bar with shield icon and title
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12), // Reduced from 16
+              decoration: const BoxDecoration(
+                color: Color(0xFF5B6F4A),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.shield,
+                    color: Colors.white,
+                    size: 20,
+                  ), // Reduced from 24
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Teacher PIN Required',
+                    style: TextStyle(
+                      fontSize: 16, // Reduced from 18
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content area
+            Padding(
+              padding: const EdgeInsets.all(16), // Reduced from 20
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter your 6-digit PIN to exit the session and access teacher features.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ), // Reduced from 14
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  TextField(
+                    controller: _pinController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    obscureText: true,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18, // Reduced from 20
+                      letterSpacing: 6,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '••••••',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        letterSpacing: 6,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: const Color(0xFF5B6F4A),
+                          width: 2,
+                        ),
+                      ),
+                      errorText: _error,
+                      errorStyle: const TextStyle(
+                        fontSize: 11,
+                      ), // Reduced from 12
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, // Reduced from 16
+                        vertical: 10, // Reduced from 12
+                      ),
+                    ),
+                    onSubmitted: (_) => _verifyPin(),
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            if (widget.onCancel != null) {
+                              widget.onCancel!();
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ), // Reduced from 14
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _verifyPin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B6F4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 14, // Reduced from 16
+                                  width: 14, // Reduced from 16
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Verify',
+                                  style: TextStyle(
+                                    fontSize: 13, // Reduced from 14
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

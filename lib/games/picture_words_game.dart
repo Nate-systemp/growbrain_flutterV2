@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../teacher_pin_modal.dart';
 
 class PictureWordsGame extends StatefulWidget {
   final String difficulty;
@@ -13,7 +16,8 @@ class PictureWordsGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
   const PictureWordsGame({
     Key? key,
@@ -31,7 +35,7 @@ class WordPictureItem {
   final int id;
   bool isMatched;
   bool isSelected;
-  
+
   WordPictureItem({
     required this.word,
     required this.imagePath,
@@ -41,7 +45,7 @@ class WordPictureItem {
   });
 }
 
-class _PictureWordsGameState extends State<PictureWordsGame> 
+class _PictureWordsGameState extends State<PictureWordsGame>
     with TickerProviderStateMixin {
   List<WordPictureItem> gameItems = [];
   List<String> wordList = [];
@@ -60,13 +64,13 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   bool gameActive = false;
   bool canSelect = true;
   late DateTime gameStartTime;
-  
+
   // Animation controllers for enhanced UI
   late AnimationController _cardAnimationController;
   late AnimationController _scoreAnimationController;
   late Animation<double> _cardAnimation;
   late Animation<double> _scoreAnimation;
-  
+
   // Word-image pairs organized by difficulty
   final Map<String, List<Map<String, String>>> wordImagePairs = {
     'easy': [
@@ -121,9 +125,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       {'word': 'submarine', 'image': '🚇'},
     ],
   };
-  
+
   Random random = Random();
-  
+
   // Attention category theme colors (matching Find Me game)
   final Color backgroundColor = Color(0xFFF5F5DC); // Beige background
   final Color primaryColor = Color(0xFF5B6F4A); // Forest green
@@ -153,21 +157,19 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       vsync: this,
     );
 
-    _cardAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(
-      parent: _cardAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _cardAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _cardAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
-    _scoreAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.3,
-    ).animate(CurvedAnimation(
-      parent: _scoreAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _scoreAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(
+        parent: _scoreAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
   }
 
   void _initializeGame() {
@@ -189,7 +191,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
         totalPairs = 4;
         timeLeft = 0;
     }
-    
+
     _setupGame();
   }
 
@@ -197,31 +199,30 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     gameItems.clear();
     wordList.clear();
     imageList.clear();
-    
+
     String difficultyKey = widget.difficulty.toLowerCase();
-    List<Map<String, String>> availablePairs = wordImagePairs[difficultyKey] ?? wordImagePairs['easy']!;
-    
+    List<Map<String, String>> availablePairs =
+        wordImagePairs[difficultyKey] ?? wordImagePairs['easy']!;
+
     // Select random pairs
     List<Map<String, String>> selectedPairs = List.from(availablePairs);
     selectedPairs.shuffle();
     selectedPairs = selectedPairs.take(totalPairs).toList();
-    
+
     // Create game items and separate lists
     for (int i = 0; i < selectedPairs.length; i++) {
       var pair = selectedPairs[i];
-      gameItems.add(WordPictureItem(
-        word: pair['word']!,
-        imagePath: pair['image']!,
-        id: i,
-      ));
+      gameItems.add(
+        WordPictureItem(word: pair['word']!, imagePath: pair['image']!, id: i),
+      );
       wordList.add(pair['word']!);
       imageList.add(pair['image']!);
     }
-    
+
     // Shuffle the separate lists
     wordList.shuffle();
     imageList.shuffle();
-    
+
     setState(() {});
   }
 
@@ -236,14 +237,14 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       canSelect = true;
       selectedWordIndex = null;
       selectedImageIndex = null;
-      
+
       // Reset all items
       for (var item in gameItems) {
         item.isMatched = false;
         item.isSelected = false;
       }
     });
-    
+
     _showInstructions();
   }
 
@@ -253,7 +254,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Picture Words Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
+        title: Text(
+          'Picture Words Instructions',
+          style: TextStyle(color: Color(0xFF2C3E50)),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -272,7 +276,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
               SizedBox(height: 8),
               Text(
                 'Time limit: ${timeLeft}s',
-                style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFFE57373),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ],
@@ -285,7 +292,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                 _startTimer();
               }
             },
-            child: Text('Start Playing!', style: TextStyle(color: Color(0xFF81C784))),
+            child: Text(
+              'Start Playing!',
+              style: TextStyle(color: Color(0xFF81C784)),
+            ),
           ),
         ],
       ),
@@ -297,7 +307,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       setState(() {
         timeLeft--;
       });
-      
+
       if (timeLeft <= 0) {
         timer.cancel();
         _timeUp();
@@ -314,41 +324,45 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
   void _onWordTapped(int index) {
     if (!canSelect || !gameActive) return;
-    
+
     String word = wordList[index];
-    WordPictureItem? item = gameItems.firstWhere((item) => item.word == word && !item.isMatched);
-    
+    WordPictureItem? item = gameItems.firstWhere(
+      (item) => item.word == word && !item.isMatched,
+    );
+
     if (item.isMatched) return;
-    
+
     HapticFeedback.lightImpact();
-    
+
     setState(() {
       // Clear previous word selection
       if (selectedWordIndex != null) {
         selectedWordIndex = null;
       }
-      
+
       selectedWordIndex = index;
     });
   }
 
   void _onImageTapped(int index) {
     if (!canSelect || !gameActive || selectedWordIndex == null) return;
-    
+
     String image = imageList[index];
-    WordPictureItem? item = gameItems.firstWhere((item) => item.imagePath == image && !item.isMatched);
-    
+    WordPictureItem? item = gameItems.firstWhere(
+      (item) => item.imagePath == image && !item.isMatched,
+    );
+
     if (item.isMatched) return;
-    
+
     HapticFeedback.lightImpact();
-    
+
     setState(() {
       selectedImageIndex = index;
       canSelect = false;
     });
-    
+
     wrongAttempts++;
-    
+
     // Check for match after a short delay
     Timer(Duration(milliseconds: 800), () {
       _checkForMatch();
@@ -358,22 +372,28 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   void _checkForMatch() {
     String selectedWord = wordList[selectedWordIndex!];
     String selectedImage = imageList[selectedImageIndex!];
-    
+
     // Find the items
-    WordPictureItem? wordItem = gameItems.firstWhere((item) => item.word == selectedWord);
-    WordPictureItem? imageItem = gameItems.firstWhere((item) => item.imagePath == selectedImage);
-    
+    WordPictureItem? wordItem = gameItems.firstWhere(
+      (item) => item.word == selectedWord,
+    );
+    WordPictureItem? imageItem = gameItems.firstWhere(
+      (item) => item.imagePath == selectedImage,
+    );
+
     if (wordItem.id == imageItem.id) {
       // Match found!
       setState(() {
         wordItem.isMatched = true;
         imageItem.isMatched = true;
         correctMatches++;
-        score += (timeLeft > 0 ? timeLeft ~/ 10 + 15 : 15); // Bonus for remaining time
+        score += (timeLeft > 0
+            ? timeLeft ~/ 10 + 15
+            : 15); // Bonus for remaining time
       });
-      
+
       HapticFeedback.mediumImpact();
-      
+
       if (correctMatches == totalPairs) {
         gameTimer?.cancel();
         _endGame();
@@ -383,7 +403,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     } else {
       // No match - reset selection
       HapticFeedback.lightImpact();
-      
+
       Timer(Duration(milliseconds: 500), () {
         _resetSelection();
       });
@@ -402,14 +422,16 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     setState(() {
       gameActive = false;
     });
-    
+
     gameTimer?.cancel();
-    
+
     // Calculate game statistics
-    double accuracyDouble = wrongAttempts > 0 ? (correctMatches / wrongAttempts) * 100 : 100;
+    double accuracyDouble = wrongAttempts > 0
+        ? (correctMatches / wrongAttempts) * 100
+        : 100;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -420,6 +442,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
         difficulty: widget.difficulty,
       );
     }
+
+    // Auto-advance without showing end screen
+    Navigator.pop(context);
   }
 
   @override
@@ -432,136 +457,123 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     super.dispose();
   }
 
+  void _handleBackButton(BuildContext context) {
+    _showTeacherPinDialog(context);
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop(); // Close dialog
+            // Exit session and go to home screen after PIN verification
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(
+              dialogContext,
+            ).pop(); // Just close dialog, stay in game
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        title: Text(
-          'Picture Words - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(
+          0xFFFDFBEF,
+        ), // Light creamy yellow background
+        body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
+              // Header bar - Dark olive green style
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A), // Dark olive green header
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Score: $score',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        const Text(
+                          'Picture Words - Starter',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Round: $correctMatches/$totalPairs',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A5A3A), // Slightly darker green
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        timeLeft > 0 ? '${timeLeft}s' : 'Get Ready...',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Game area
               Expanded(
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                ),
               ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            primaryColor,
-            wordSectionColor,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            icon: Icons.score,
-            label: 'Score',
-            value: score.toString(),
-            animation: _scoreAnimation,
-          ),
-          _buildStatItem(
-            icon: Icons.check_circle,
-            label: 'Pairs',
-            value: '$correctMatches/$totalPairs',
-          ),
-          if (timeLeft > 0)
-            _buildStatItem(
-              icon: Icons.timer,
-              label: 'Time',
-              value: '${timeLeft}s',
-              isWarning: timeLeft <= 15,
-            ),
-          _buildStatItem(
-            icon: Icons.error_outline,
-            label: 'Attempts',
-            value: wrongAttempts.toString(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    Animation<double>? animation,
-    bool isWarning = false,
-  }) {
-    Widget content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isWarning ? accentColor : Colors.white,
-          size: 24,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: isWarning ? accentColor : Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
-          ),
-        ),
-      ],
-    );
-
-    if (animation != null) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: animation.value,
-            child: content,
-          );
-        },
-      );
-    }
-
-    return content;
   }
 
   Widget _buildStartScreen() {
@@ -575,7 +587,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.2),
                 blurRadius: 10,
                 offset: Offset(0, 5),
               ),
@@ -583,10 +595,13 @@ class _PictureWordsGameState extends State<PictureWordsGame>
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.menu_book,
-                size: 80,
-                color: Color(0xFF5B6F4A),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A), // Dark olive green background
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.menu_book, size: 60, color: Colors.white),
               ),
               SizedBox(height: 16),
               Text(
@@ -594,16 +609,13 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5B6F4A),
+                  color: const Color(0xFF5B6F4A), // Dark olive green text
                 ),
               ),
               SizedBox(height: 8),
               Text(
                 'Match words with pictures!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -617,7 +629,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             _startGame();
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF5B6F4A),
+            backgroundColor: const Color(0xFF5B6F4A), // Dark olive green button
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
             shape: RoundedRectangleBorder(
@@ -627,10 +639,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
           ),
           child: Text(
             'Start Game',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -641,33 +650,25 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     if (!gameActive && correctMatches == totalPairs) {
       return _buildEndScreen();
     }
-    
+
     if (!gameActive && timeLeft <= 0) {
       return _buildTimeUpScreen();
     }
-    
+
     return Column(
       children: [
         // Instructions
-        Container(
-          padding: EdgeInsets.all(12),
-          margin: EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: Color(0xFFF5F5DC).withOpacity(0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Color(0xFF5B6F4A).withOpacity(0.3)),
+        Text(
+          'Tap a word, then tap its matching picture!',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-          child: Text(
-            'Tap a word, then tap its matching picture!',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5B6F4A),
-            ),
-            textAlign: TextAlign.center,
-          ),
+          textAlign: TextAlign.center,
         ),
-        
+        SizedBox(height: 30),
+
         // Game Layout - Two Sections
         Expanded(
           child: Row(
@@ -675,27 +676,68 @@ class _PictureWordsGameState extends State<PictureWordsGame>
               // Left Section - Words
               Expanded(
                 child: Container(
-                  margin: EdgeInsets.only(right: 8),
+                  margin: EdgeInsets.only(right: 6),
                   decoration: BoxDecoration(
-                    color: wordSectionColor,
+                    color: const Color(
+                      0xFF5B6F4A,
+                    ), // Dark olive green background
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
+                      // Improved WORDS header
                       Container(
-                        padding: EdgeInsets.all(12),
-                        child: Text(
-                          'WORDS',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFF5F5DC),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFD4AF37,
+                          ), // Muted gold instead of bright yellow
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(11),
+                            topRight: Radius.circular(11),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 3,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.menu_book,
+                              size: 16,
+                              color: Colors.black87,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'WORDS',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(8),
+                          padding: EdgeInsets.all(6),
                           child: Column(
                             children: [
                               for (int i = 0; i < wordList.length; i++)
@@ -708,31 +750,66 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                   ),
                 ),
               ),
-              
+
               // Right Section - Images
               Expanded(
                 child: Container(
-                  margin: EdgeInsets.only(left: 8),
+                  margin: EdgeInsets.only(left: 6),
                   decoration: BoxDecoration(
-                    color: imageSectionColor,
+                    color: const Color(
+                      0xFF5B6F4A,
+                    ), // Dark olive green background
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
+                      // Improved PICTURES header
                       Container(
-                        padding: EdgeInsets.all(12),
-                        child: Text(
-                          'PICTURES',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFF5F5DC),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8FBC8F), // Light green header
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(11),
+                            topRight: Radius.circular(11),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 3,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.image, size: 16, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              'PICTURES',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(8),
+                          padding: EdgeInsets.all(6),
                           child: Column(
                             children: [
                               for (int i = 0; i < imageList.length; i++)
@@ -755,19 +832,21 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   Widget _buildWordCard(int index) {
     String word = wordList[index];
     WordPictureItem? item = gameItems.firstWhere((item) => item.word == word);
-    
+
     bool isSelected = selectedWordIndex == index;
     bool isMatched = item.isMatched;
-    
+
     Color cardBgColor;
     if (isMatched) {
-      cardBgColor = matchedColor;
+      cardBgColor = const Color(0xFF8FBC8F); // Light green for matched
     } else if (isSelected) {
-      cardBgColor = selectedColor;
+      cardBgColor = const Color(
+        0xFFD4AF37,
+      ); // Muted gold for selected instead of bright yellow
     } else {
-      cardBgColor = cardColor;
+      cardBgColor = Colors.white; // White for unselected
     }
-    
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4),
       child: GestureDetector(
@@ -776,16 +855,12 @@ class _PictureWordsGameState extends State<PictureWordsGame>
           duration: Duration(milliseconds: 300),
           decoration: BoxDecoration(
             color: cardBgColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? Color(0xFFFFD740) : Colors.transparent,
-              width: 2,
-            ),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 2,
-                offset: Offset(0, 1),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 4,
+                offset: Offset(0, 2),
               ),
             ],
           ),
@@ -795,7 +870,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isMatched ? Colors.white : Color(0xFF5B6F4A),
+                color: isMatched || isSelected
+                    ? Colors.white
+                    : const Color(0xFF5B6F4A), // Dark olive green text
               ),
               textAlign: TextAlign.center,
             ),
@@ -807,46 +884,125 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
   Widget _buildImageCard(int index) {
     String image = imageList[index];
-    WordPictureItem? item = gameItems.firstWhere((item) => item.imagePath == image);
-    
+    WordPictureItem? item = gameItems.firstWhere(
+      (item) => item.imagePath == image,
+    );
+
     bool isSelected = selectedImageIndex == index;
     bool isMatched = item.isMatched;
-    
+
     Color cardBgColor;
+    Color borderColor;
+    double elevation;
+
     if (isMatched) {
-      cardBgColor = matchedColor;
+      cardBgColor = const Color(0xFF8FBC8F); // Light green for matched
+      borderColor = const Color(
+        0xFFD4AF37,
+      ); // Muted gold border instead of bright yellow
+      elevation = 8;
     } else if (isSelected) {
-      cardBgColor = selectedColor;
+      cardBgColor = const Color(
+        0xFFD4AF37,
+      ); // Muted gold for selected instead of bright yellow
+      borderColor = const Color(0xFF5B6F4A); // Dark olive green border
+      elevation = 6;
     } else {
-      cardBgColor = cardColor;
+      cardBgColor = Colors.white; // White for unselected
+      borderColor = const Color(0xFF5B6F4A); // Dark olive green border
+      elevation = 3;
     }
-    
+
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       child: GestureDetector(
         onTap: () => _onImageTapped(index),
         child: AnimatedContainer(
           duration: Duration(milliseconds: 300),
           decoration: BoxDecoration(
             color: cardBgColor,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? Color(0xFFFFD740) : Colors.transparent,
-              width: 2,
+              color: borderColor,
+              width: isSelected || isMatched ? 2.5 : 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 2,
-                offset: Offset(0, 1),
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: elevation,
+                offset: Offset(0, elevation / 2),
+                spreadRadius: isSelected || isMatched ? 1 : 0,
               ),
+              if (isSelected || isMatched)
+                BoxShadow(
+                  color:
+                      (isMatched
+                              ? const Color(0xFF8FBC8F)
+                              : const Color(
+                                  0xFFD4AF37,
+                                )) // Muted gold instead of bright yellow
+                          .withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                  spreadRadius: 2,
+                ),
             ],
           ),
-          child: Center(
-            child: Text(
-              image,
-              style: TextStyle(fontSize: 24),
-              textAlign: TextAlign.center,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: isMatched || isSelected
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [cardBgColor, cardBgColor.withOpacity(0.8)],
+                    )
+                  : null,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Enhanced emoji display
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isMatched || isSelected
+                          ? Colors.white.withOpacity(0.2)
+                          : const Color(0xFFF8F9FA),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      image,
+                      style: TextStyle(
+                        fontSize: 32,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.2),
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (isSelected || isMatched) ...[
+                    SizedBox(height: 4),
+                    Icon(
+                      isMatched ? Icons.check_circle : Icons.touch_app,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -855,20 +1011,22 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   }
 
   Widget _buildEndScreen() {
-    double accuracyDouble = wrongAttempts > 0 ? (correctMatches / wrongAttempts) * 100 : 100;
-    
+    double accuracyDouble = wrongAttempts > 0
+        ? (correctMatches / wrongAttempts) * 100
+        : 100;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.celebration,
-          size: 80,
-          color: Color(0xFF5B6F4A),
-        ),
+        Icon(Icons.celebration, size: 80, color: Color(0xFF5B6F4A)),
         SizedBox(height: 20),
         Text(
           'Excellent Matching!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5B6F4A)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5B6F4A),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -896,18 +1054,24 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             backgroundColor: Color(0xFF5B6F4A),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFFFD740),
             foregroundColor: Color(0xFF5B6F4A),
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -918,15 +1082,15 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.timer_off,
-          size: 80,
-          color: Color(0xFF5B6F4A),
-        ),
+        Icon(Icons.timer_off, size: 80, color: Color(0xFF5B6F4A)),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5B6F4A)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5B6F4A),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -950,21 +1114,261 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             backgroundColor: Color(0xFF5B6F4A),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFFFD740),
             foregroundColor: Color(0xFF5B6F4A),
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _verifyPin() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final pin = _pinController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      setState(() {
+        _error = 'Not logged in.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .get();
+      final savedPin = doc.data()?['pin'];
+
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please create one.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to check PIN.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 300, // Fixed width to prevent stretching
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Green header bar with shield icon and title
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12), // Reduced from 16
+              decoration: const BoxDecoration(
+                color: Color(0xFF5B6F4A),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.shield,
+                    color: Colors.white,
+                    size: 20,
+                  ), // Reduced from 24
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Teacher PIN Required',
+                    style: TextStyle(
+                      fontSize: 16, // Reduced from 18
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content area
+            Padding(
+              padding: const EdgeInsets.all(16), // Reduced from 20
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter your 6-digit PIN to exit the session and access teacher features.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ), // Reduced from 14
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  TextField(
+                    controller: _pinController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    obscureText: true,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18, // Reduced from 20
+                      letterSpacing: 6,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '••••••',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        letterSpacing: 6,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: const Color(0xFF5B6F4A),
+                          width: 2,
+                        ),
+                      ),
+                      errorText: _error,
+                      errorStyle: const TextStyle(
+                        fontSize: 11,
+                      ), // Reduced from 12
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, // Reduced from 16
+                        vertical: 10, // Reduced from 12
+                      ),
+                    ),
+                    onSubmitted: (_) => _verifyPin(),
+                  ),
+                  const SizedBox(height: 16), // Reduced from 20
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            if (widget.onCancel != null) {
+                              widget.onCancel!();
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ), // Reduced from 14
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _verifyPin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B6F4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ), // Reduced from 12
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 14, // Reduced from 16
+                                  width: 14, // Reduced from 16
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Verify',
+                                  style: TextStyle(
+                                    fontSize: 13, // Reduced from 14
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
