@@ -6,6 +6,7 @@ import 'login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'teacher_pin_modal.dart';
 import 'teacher_management.dart';
+import 'category_games_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -229,6 +230,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             icon: Icons.lightbulb_outline,
                             iconColor: Colors.amber,
                             label: 'Attention',
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CategoryGamesScreen(category: 'Attention'),
+                              ));
+                            },
                             width: cardWidth,
                             height: cardHeight,
                           ),
@@ -243,6 +249,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             iconColor: Colors.redAccent,
                             label: 'Verbal',
                             customIcon: true,
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CategoryGamesScreen(category: 'Verbal'),
+                              ));
+                            },
                             width: cardWidth,
                             height: cardHeight,
                           ),
@@ -261,6 +272,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             iconColor: Colors.redAccent,
                             label: 'Memory',
                             customIcon: true,
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CategoryGamesScreen(category: 'Memory'),
+                              ));
+                            },
                             width: cardWidth,
                             height: cardHeight,
                           ),
@@ -274,6 +290,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             icon: Icons.psychology,
                             iconColor: Colors.deepOrangeAccent,
                             label: 'Logic',
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CategoryGamesScreen(category: 'Logic'),
+                              ));
+                            },
                             width: cardWidth,
                             height: cardHeight,
                           ),
@@ -297,6 +318,7 @@ class _HomeCard extends StatelessWidget {
   final bool customIcon;
   final double width;
   final double height;
+  final VoidCallback? onTap;
 
   const _HomeCard({
     required this.icon,
@@ -305,97 +327,101 @@ class _HomeCard extends StatelessWidget {
     this.customIcon = false,
     required this.width,
     required this.height,
+  this.onTap,
     Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      margin: const EdgeInsets.all(0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F3),
-        borderRadius: BorderRadius.circular(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(2, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Center(
-              child: customIcon && label == 'Verbal'
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'A',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                            fontSize: 60,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'B',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                            fontSize: 60,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'C',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber,
-                            fontSize: 60,
-                          ),
-                        ),
-                      ],
-                    )
-                  : customIcon && label == 'Memory'
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.style, color: Colors.redAccent, size: 60),
-                        const SizedBox(width: 4),
-                        Icon(Icons.style, color: Colors.green, size: 60),
-                      ],
-                    )
-                  : Icon(icon, color: iconColor, size: 90),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        height: height,
+        margin: const EdgeInsets.all(0),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F3F3),
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 18,
+              offset: const Offset(2, 12),
             ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 22),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Center(
+                child: customIcon && label == 'Verbal'
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text(
+                            'A',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                              fontSize: 60,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'B',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                              fontSize: 60,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'C',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                              fontSize: 60,
+                            ),
+                          ),
+                        ],
+                      )
+                    : customIcon && label == 'Memory'
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.style, color: Colors.redAccent, size: 60),
+                              const SizedBox(width: 4),
+                              Icon(Icons.style, color: Colors.green, size: 60),
+                            ],
+                          )
+                        : Icon(icon, color: iconColor, size: 90),
               ),
             ),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 38,
-                color: Color(0xFF444444),
-                letterSpacing: 1.2,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 22),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(40),
+                  bottomRight: Radius.circular(40),
+                ),
+              ),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 38,
+                  color: Color(0xFF444444),
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

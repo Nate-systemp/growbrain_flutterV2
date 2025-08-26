@@ -23,6 +23,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   int _previousIndex = 2; // Track previous index for animation direction
   List<Map<String, dynamic>> students = [];
   bool _loadingStudents = false;
+  int _studentsCount = 0;
+  int _sessionsCount = 0;
+  int _gamesCount = 0;
   Map<String, dynamic>? _viewingStudent;
   Map<String, dynamic>? _teacherProfile;
   bool _loadingProfile = false;
@@ -168,6 +171,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         data['id'] = d.id; // Include the document ID
         return data;
       }).toList();
+  // Update students count and derived stats
+  _studentsCount = students.length;
+  // Recompute sessions and games counts when students list changes
+  unawaited(_computeProfileCounts());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -207,6 +214,31 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     setState(() {
       _loadingProfile = false;
     });
+    // Ensure counts are up to date when profile is fetched
+    unawaited(_computeProfileCounts());
+  }
+
+  // Compute total sessions (records) and unique games for the current teacher
+  Future<void> _computeProfileCounts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final allRecords = await _fetchAllStudentRecords();
+      final games = <String>{};
+      for (final r in allRecords) {
+        final game = (r['game'] ?? r['lastPlayed'] ?? r['lastPlayed'])?.toString() ?? '';
+        if (game.isNotEmpty) games.add(game);
+      }
+      if (mounted) {
+        setState(() {
+          _sessionsCount = allRecords.length;
+          _gamesCount = games.length;
+          // _studentsCount is managed by _fetchStudents
+        });
+      }
+    } catch (e) {
+      // ignore compute errors silently; UI will keep previous values
+    }
   }
 
   String get _sectionLabel {
@@ -258,6 +290,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
             child: EnhancedTeacherProfile(
               name: name,
               email: email,
+              studentsCount: _studentsCount,
+              sessionsCount: _sessionsCount,
+              gamesCount: _gamesCount,
               onLogout: () async {
                 final shouldLogout = await showDialog<bool>(
                   context: context,
@@ -4201,11 +4236,17 @@ class _InfoRow extends StatelessWidget {
 class EnhancedTeacherProfile extends StatelessWidget {
   final String name;
   final String email;
+  final int studentsCount;
+  final int sessionsCount;
+  final int gamesCount;
   final VoidCallback onLogout;
 
   const EnhancedTeacherProfile({
     required this.name,
     required this.email,
+    required this.studentsCount,
+    required this.sessionsCount,
+    required this.gamesCount,
     required this.onLogout,
     Key? key,
   }) : super(key: key);
@@ -4367,13 +4408,13 @@ class EnhancedTeacherProfile extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Statistics Cards
+    // Statistics Cards
                 Row(
                   children: [
                     Expanded(
                       child: _StatCard(
-                        title: 'Students',
-                        value: '12',
+      title: 'Students',
+      value: studentsCount.toString(),
                         icon: Icons.people,
                         color: Colors.orange,
                       ),
@@ -4382,7 +4423,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     Expanded(
                       child: _StatCard(
                         title: 'Sessions',
-                        value: '8',
+      value: sessionsCount.toString(),
                         icon: Icons.play_circle,
                         color: Colors.purple,
                       ),
@@ -4391,7 +4432,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     Expanded(
                       child: _StatCard(
                         title: 'Games',
-                        value: '156',
+      value: gamesCount.toString(),
                         icon: Icons.emoji_events,
                         color: Colors.teal,
                       ),

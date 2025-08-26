@@ -31,8 +31,10 @@ class _FindMeGameState extends State<FindMeGame>
     with TickerProviderStateMixin {
   late AnimationController _cardAnimationController;
   late AnimationController _scoreAnimationController;
+  late AnimationController _tapAnimationController;
   late Animation<double> _cardAnimation;
   late Animation<double> _scoreAnimation;
+  late Animation<double> _tapAnimation;
 
   List<GameObject> gameObjects = [];
   GameObject? targetObject;
@@ -46,6 +48,7 @@ class _FindMeGameState extends State<FindMeGame>
   bool isShowingTarget = false;
   int round = 1;
   static const int maxRounds = 5;
+  int tappedIndex = -1;
 
   @override
   void initState() {
@@ -65,6 +68,10 @@ class _FindMeGameState extends State<FindMeGame>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
+    _tapAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
 
     _cardAnimation = Tween<double>(
       begin: 0.0,
@@ -81,6 +88,14 @@ class _FindMeGameState extends State<FindMeGame>
       parent: _scoreAnimationController,
       curve: Curves.elasticOut,
     ));
+
+    _tapAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.85,
+    ).animate(CurvedAnimation(
+      parent: _tapAnimationController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   void _initializeGame() {
@@ -89,7 +104,8 @@ class _FindMeGameState extends State<FindMeGame>
   }
 
   void _generateGameObjects() {
-    final List<Map<String, dynamic>> objectData = [
+    final List<Map<String, dynamic>> allObjectData = [
+      // Basic Objects (16)
       {'icon': Icons.sports_soccer, 'name': 'Ball'},
       {'icon': Icons.car_rental, 'name': 'Car'},
       {'icon': Icons.home, 'name': 'House'},
@@ -106,29 +122,100 @@ class _FindMeGameState extends State<FindMeGame>
       {'icon': Icons.book, 'name': 'Book'},
       {'icon': Icons.emoji_food_beverage, 'name': 'Cup'},
       {'icon': Icons.face, 'name': 'Face'},
+      
+      // Additional Diverse Icons (20)
+      {'icon': Icons.apple, 'name': 'Apple'},
+      {'icon': Icons.beach_access, 'name': 'Beach'},
+      {'icon': Icons.camera_alt, 'name': 'Camera'},
+      {'icon': Icons.diamond, 'name': 'Diamond'},
+      {'icon': Icons.flash_on, 'name': 'Lightning'},
+      {'icon': Icons.park, 'name': 'Tree'},
+      {'icon': Icons.sports_esports, 'name': 'Game'},
+      {'icon': Icons.headphones, 'name': 'Headphones'},
+      {'icon': Icons.ice_skating, 'name': 'Ice Skate'},
+      {'icon': Icons.vpn_key, 'name': 'Key'},
+      {'icon': Icons.lightbulb, 'name': 'Bulb'},
+      {'icon': Icons.map, 'name': 'Map'},
+      {'icon': Icons.nightlight, 'name': 'Moon'},
+      {'icon': Icons.palette, 'name': 'Paint'},
+      {'icon': Icons.rocket_launch, 'name': 'Rocket'},
+      {'icon': Icons.sailing, 'name': 'Boat'},
+      {'icon': Icons.train, 'name': 'Train'},
+      {'icon': Icons.watch, 'name': 'Watch'},
+      {'icon': Icons.yard, 'name': 'Garden'},
+      {'icon': Icons.zoom_in, 'name': 'Magnify'},
+      
+      // Complex Icons (20)
+      {'icon': Icons.anchor, 'name': 'Anchor'},
+      {'icon': Icons.balance, 'name': 'Scale'},
+      {'icon': Icons.castle, 'name': 'Castle'},
+      {'icon': Icons.directions_bike, 'name': 'Bike'},
+      {'icon': Icons.eco, 'name': 'Leaf'},
+      {'icon': Icons.fingerprint, 'name': 'Print'},
+      {'icon': Icons.gavel, 'name': 'Hammer'},
+      {'icon': Icons.hiking, 'name': 'Hiker'},
+      {'icon': Icons.icecream, 'name': 'Ice Cream'},
+      {'icon': Icons.keyboard, 'name': 'Keyboard'},
+      {'icon': Icons.landscape, 'name': 'Mountain'},
+      {'icon': Icons.medical_services, 'name': 'Medical'},
+      {'icon': Icons.nature_people, 'name': 'Nature'},
+      {'icon': Icons.outdoor_grill, 'name': 'Grill'},
+      {'icon': Icons.piano, 'name': 'Piano'},
+      {'icon': Icons.quiz, 'name': 'Quiz'},
+      {'icon': Icons.restaurant, 'name': 'Food'},
+      {'icon': Icons.sports_tennis, 'name': 'Tennis'},
+      {'icon': Icons.theater_comedy, 'name': 'Comedy'},
+      {'icon': Icons.umbrella_outlined, 'name': 'Parasol'},
+      
+      // Advanced Icons (14)
+      {'icon': Icons.apartment, 'name': 'Building'},
+      {'icon': Icons.brush, 'name': 'Brush'},
+      {'icon': Icons.celebration, 'name': 'Party'},
+      {'icon': Icons.dashboard, 'name': 'Dashboard'},
+      {'icon': Icons.extension, 'name': 'Puzzle'},
+      {'icon': Icons.flight_takeoff, 'name': 'Flight'},
+      {'icon': Icons.gesture, 'name': 'Gesture'},
+      {'icon': Icons.handyman, 'name': 'Tools'},
+      {'icon': Icons.inventory, 'name': 'Box'},
+      {'icon': Icons.join_inner, 'name': 'Connect'},
+      {'icon': Icons.kitchen, 'name': 'Kitchen'},
+      {'icon': Icons.language, 'name': 'Globe'},
+      {'icon': Icons.memory, 'name': 'Chip'},
+      {'icon': Icons.navigation, 'name': 'Compass'},
     ];
 
     gameObjects.clear();
-    final selectedObjects = List.from(objectData);
-    selectedObjects.shuffle();
-
-    // Object count based on difficulty
-    int objectCount;
+    tappedIndex = -1; // Reset tapped index
+    
+    // Progressive difficulty: increase objects as rounds progress
+    int baseObjectCount;
     switch (widget.difficulty.toLowerCase()) {
       case 'easy':
-        objectCount = 4;
+        baseObjectCount = 4;
         break;
       case 'medium':
-        objectCount = 6;
+        baseObjectCount = 6;
         break;
       case 'hard':
-        objectCount = 9;
+        baseObjectCount = 9;
         break;
       default:
-        objectCount = 6;
+        baseObjectCount = 6;
     }
     
-    for (int i = 0; i < objectCount; i++) {
+    // Add extra objects in later rounds
+    int extraObjects = 0;
+    if (round >= 3) extraObjects = 1;
+    if (round >= 4) extraObjects = 2;
+    if (round >= 5) extraObjects = 3;
+    
+    int totalObjects = baseObjectCount + extraObjects;
+    
+    // Shuffle and select objects
+    final selectedObjects = List.from(allObjectData);
+    selectedObjects.shuffle();
+    
+    for (int i = 0; i < totalObjects && i < selectedObjects.length; i++) {
       final object = selectedObjects[i];
       gameObjects.add(GameObject(
         id: i,
@@ -155,8 +242,12 @@ class _FindMeGameState extends State<FindMeGame>
 
     _cardAnimationController.forward();
 
-    // Show target for 3 seconds
-    showTimer = Timer(const Duration(seconds: 3), () {
+    // Progressive difficulty: decrease target display time
+    int displayTime = 3;
+    if (round >= 3) displayTime = 2;
+    if (round >= 5) displayTime = 1;
+
+    showTimer = Timer(Duration(seconds: displayTime), () {
       setState(() {
         isShowingTarget = false;
       });
@@ -176,20 +267,32 @@ class _FindMeGameState extends State<FindMeGame>
     });
   }
 
-  void _onObjectTapped(GameObject object) {
+  void _onObjectTapped(GameObject object, int index) {
     if (!gameStarted || gameEnded || isShowingTarget) return;
 
-    if (object.isTarget) {
-      _correctAnswer();
-    } else {
-      _wrongAnswer();
-    }
+    // Trigger tap animation
+    setState(() {
+      tappedIndex = index;
+    });
+    
+    _tapAnimationController.forward().then((_) {
+      _tapAnimationController.reverse();
+    });
+
+    // Small delay for visual feedback
+    Timer(const Duration(milliseconds: 100), () {
+      if (object.isTarget) {
+        _correctAnswer();
+      } else {
+        _wrongAnswer();
+      }
+    });
   }
 
   void _correctAnswer() {
     setState(() {
       score += 10;
-  correctAnswers++;
+      correctAnswers++;
     });
 
     // Play success sound effect
@@ -225,13 +328,18 @@ class _FindMeGameState extends State<FindMeGame>
     setState(() {
       round++;
       isShowingTarget = true;
+      tappedIndex = -1; // Reset tapped index for new round
     });
 
     _generateGameObjects();
     _selectTarget();
 
-    // Show new target for 2 seconds (decreasing time)
-    showTimer = Timer(Duration(seconds: 3 - (round ~/ 3)), () {
+    // Progressive difficulty: decrease target display time
+    int displayTime = 3;
+    if (round >= 3) displayTime = 2;
+    if (round >= 5) displayTime = 1;
+
+    showTimer = Timer(Duration(seconds: displayTime), () {
       setState(() {
         isShowingTarget = false;
       });
@@ -353,9 +461,11 @@ class _FindMeGameState extends State<FindMeGame>
       gameStarted = false;
       gameEnded = false;
       isShowingTarget = false;
+      tappedIndex = -1;
     });
     _cardAnimationController.reset();
     _scoreAnimationController.reset();
+    _tapAnimationController.reset();
     _initializeGame();
   }
 
@@ -388,6 +498,7 @@ class _FindMeGameState extends State<FindMeGame>
     showTimer?.cancel();
     _cardAnimationController.dispose();
     _scoreAnimationController.dispose();
+    _tapAnimationController.dispose();
     // Stop background music when leaving the game
     BackgroundMusicManager().stopMusic();
     super.dispose();
@@ -423,8 +534,8 @@ class _FindMeGameState extends State<FindMeGame>
                 _buildHeader(),
                 const SizedBox(height: 20),
                 // Show instructions at the top only after the target has been
-                // shown and then hidden so it prompts the player to tap the
-                // object they just saw.
+                // shown and removed, so the message appears when the choices
+                // are visible (prevents overlap while the target is displayed).
                 if (gameStarted && !gameEnded && !isShowingTarget)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -663,31 +774,29 @@ class _FindMeGameState extends State<FindMeGame>
       );
     }
 
-    // Determine grid layout based on difficulty
-    int crossAxisCount;
-    switch (widget.difficulty.toLowerCase()) {
-      case 'easy':
-        crossAxisCount = 2; // 2x2 for 4 objects
-        break;
-      case 'medium':
-        crossAxisCount = 3; // 2x3 for 6 objects  
-        break;
-      case 'hard':
-        crossAxisCount = 3; // 3x3 for 9 objects
-        break;
-      default:
-        crossAxisCount = 3;
-    }
-    
-    int rowCount = (gameObjects.length / crossAxisCount).ceil();
-
     return AnimatedBuilder(
       animation: _cardAnimation,
       builder: (context, child) {
         return LayoutBuilder(
           builder: (context, constraints) {
-            // Calculate compact card size that fits all items on screen
-            double spacing = 8.0; // Slightly increased spacing for larger tiles
+            // Dynamic grid layout based on object count
+            int crossAxisCount;
+            if (gameObjects.length <= 4) {
+              crossAxisCount = 2; // 2x2
+            } else if (gameObjects.length <= 6) {
+              crossAxisCount = 3; // 2x3 or 3x2
+            } else if (gameObjects.length <= 9) {
+              crossAxisCount = 3; // 3x3
+            } else if (gameObjects.length <= 12) {
+              crossAxisCount = 4; // 3x4 or 4x3
+            } else {
+              crossAxisCount = 4; // 4x4+
+            }
+            
+            int rowCount = (gameObjects.length / crossAxisCount).ceil();
+
+            // Calculate optimal card size
+            double spacing = 8.0;
             double availableWidth = constraints.maxWidth - (spacing * (crossAxisCount + 1));
             double availableHeight = constraints.maxHeight - (spacing * (rowCount + 1));
             
@@ -695,9 +804,20 @@ class _FindMeGameState extends State<FindMeGame>
             double cardHeight = availableHeight / rowCount;
             double cardSize = min(cardWidth, cardHeight);
             
-            // Increase maximum card size so tiles are larger on most screens
-            cardSize = min(cardSize, 110.0); // Increased max size for larger choices
+            // Set maximum card sizes based on object count for better readability
+            if (gameObjects.length <= 4) {
+              cardSize = min(cardSize, 120.0);
+            } else if (gameObjects.length <= 6) {
+              cardSize = min(cardSize, 110.0);
+            } else if (gameObjects.length <= 9) {
+              cardSize = min(cardSize, 100.0);
+            } else {
+              cardSize = min(cardSize, 90.0);
+            }
             
+            // Ensure minimum readable size
+            cardSize = max(cardSize, 70.0);
+
             return Center(
               child: Container(
                 padding: EdgeInsets.all(spacing),
@@ -705,13 +825,16 @@ class _FindMeGameState extends State<FindMeGame>
                   spacing: spacing,
                   runSpacing: spacing,
                   alignment: WrapAlignment.center,
-                  children: gameObjects.map((object) {
+                  children: gameObjects.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    GameObject object = entry.value;
+                    
                     return Transform.scale(
                       scale: _cardAnimation.value,
                       child: SizedBox(
                         width: cardSize,
                         height: cardSize,
-                        child: _buildCompactGameCard(object, cardSize),
+                        child: _buildGameCard(object, index, cardSize),
                       ),
                     );
                   }).toList(),
@@ -724,57 +847,73 @@ class _FindMeGameState extends State<FindMeGame>
     );
   }
 
-  Widget _buildCompactGameCard(GameObject object, double cardSize) {
-    return GestureDetector(
-      onTap: () => _onObjectTapped(object),
-      child: Container(
-        width: cardSize,
-        height: cardSize,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white,
-              const Color(0xFFF8F8F8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF5B6F4A).withValues(alpha: 0.2),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              object.icon,
-              size: cardSize * 0.35, // Dynamic icon size based on card size
-              color: const Color(0xFF5B6F4A),
-            ),
-            SizedBox(height: cardSize * 0.08),
-            Text(
-              object.name,
-              style: TextStyle(
-                color: const Color(0xFF5B6F4A),
-                fontSize: cardSize * 0.12, // Dynamic font size
-                fontWeight: FontWeight.w600,
+  Widget _buildGameCard(GameObject object, int index, double cardSize) {
+    bool isTapped = tappedIndex == index;
+    
+    return AnimatedBuilder(
+      animation: _tapAnimation,
+      builder: (context, child) {
+        return GestureDetector(
+          onTap: () => _onObjectTapped(object, index),
+          child: Transform.scale(
+            scale: isTapped ? _tapAnimation.value : 1.0,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 100),
+              width: cardSize,
+              height: cardSize,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isTapped ? [
+                    const Color(0xFFFFD740).withValues(alpha: 0.3),
+                    const Color(0xFFFFD740).withValues(alpha: 0.1),
+                  ] : [
+                    Colors.white,
+                    const Color(0xFFF8F8F8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isTapped 
+                    ? const Color(0xFFFFD740)
+                    : const Color(0xFF5B6F4A).withValues(alpha: 0.2),
+                  width: isTapped ? 3.0 : 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isTapped ? 0.15 : 0.06),
+                    blurRadius: isTapped ? 8 : 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    object.icon,
+                    size: cardSize * 0.35,
+                    color: const Color(0xFF5B6F4A),
+                  ),
+                  SizedBox(height: cardSize * 0.08),
+                  Text(
+                    object.name,
+                    style: TextStyle(
+                      color: const Color(0xFF5B6F4A),
+                      fontSize: cardSize * 0.12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1055,3 +1194,5 @@ class GameObject {
     this.isTarget = false,
   });
 }
+
+
