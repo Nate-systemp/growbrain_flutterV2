@@ -123,18 +123,21 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     lightStates = List.generate(gridSize, (index) => false);
     
     // Initialize animations
-    animationControllers = List.generate(gridSize, (index) => 
-      AnimationController(
-        duration: Duration(milliseconds: 200),
-        vsync: this,
-      )
-    );
-    
-    scaleAnimations = animationControllers.map((controller) =>
-      Tween<double>(begin: 1.0, end: 1.2).animate(
-        CurvedAnimation(parent: controller, curve: Curves.elasticOut)
-      )
-    ).toList();
+    // ...existing code...
+// In _initializeGame()
+animationControllers = List.generate(gridSize, (index) =>
+  AnimationController(
+    duration: Duration(milliseconds: 320), // smoother, slightly longer
+    vsync: this,
+  )
+);
+
+scaleAnimations = animationControllers.map((controller) =>
+  Tween<double>(begin: 1.0, end: 1.2).animate(
+    CurvedAnimation(parent: controller, curve: Curves.easeInOut) // smoother curve
+  )
+).toList();
+// ...existing code...
   }
   
   void _startGame() {
@@ -214,67 +217,78 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   }
   
   void _onLightTap(int index) {
-    if (!isWaitingForInput || isShowingSequence) return;
-    
-    // Animate the tapped light
-    animationControllers[index].forward().then((_) {
-      animationControllers[index].reverse();
-    });
-    
-    userSequence.add(index);
-    
-    // Check if the tap is correct
-    if (userSequence.length <= sequence.length) {
-      final currentIndex = userSequence.length - 1;
-      
-      if (userSequence[currentIndex] == sequence[currentIndex]) {
-        // Correct tap
+  if (!isWaitingForInput || isShowingSequence) return;
+
+  // Light up immediately on tap
+  setState(() {
+    lightStates[index] = true;
+  });
+
+  animationControllers[index].forward().then((_) {
+    animationControllers[index].reverse().then((_) {
+      // Turn off light after animation
+      if (mounted) {
         setState(() {
-          score += 10;
+          lightStates[index] = false;
         });
-        
-        // Check if sequence is complete
-        if (userSequence.length == sequence.length) {
-          setState(() {
-            correctSequences++;
-            currentLevel++;
-            isWaitingForInput = false;
-          });
-          
-          // Play success sound effect
-          SoundEffectsManager().playSuccess();
-          
-          // Show success feedback
-          _showFeedback(true);
-          
-          // Move to next level after delay
-          Future.delayed(Duration(milliseconds: 1500), () {
-            if (mounted) {
-              _nextLevel();
-            }
-          });
-        }
-      } else {
-        // Wrong tap
+      }
+    });
+  });
+
+  userSequence.add(index);
+
+  // Check if the tap is correct
+  if (userSequence.length <= sequence.length) {
+    final currentIndex = userSequence.length - 1;
+
+    if (userSequence[currentIndex] == sequence[currentIndex]) {
+      // Correct tap
+      setState(() {
+        score += 10;
+      });
+
+      // Check if sequence is complete
+      if (userSequence.length == sequence.length) {
         setState(() {
-          wrongTaps++;
+          correctSequences++;
+          currentLevel++;
           isWaitingForInput = false;
         });
-        
-        // Play wrong sound effect
-        SoundEffectsManager().playWrong();
-        
-        _showFeedback(false);
-        
-        // End game or retry based on difficulty
+
+        // Play success sound effect
+        SoundEffectsManager().playSuccess();
+
+        // Show success feedback
+        _showFeedback(true);
+
+        // Move to next level after delay
         Future.delayed(Duration(milliseconds: 1500), () {
           if (mounted) {
-            _endGame(false);
+            _nextLevel();
           }
         });
       }
+    } else {
+      // Wrong tap
+      setState(() {
+        wrongTaps++;
+        isWaitingForInput = false;
+      });
+
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
+
+      _showFeedback(false);
+
+      // End game or retry based on difficulty
+      Future.delayed(Duration(milliseconds: 1500), () {
+        if (mounted) {
+          _endGame(false);
+        }
+      });
     }
   }
+}
   
   void _showFeedback(bool isCorrect) {
     showDialog(

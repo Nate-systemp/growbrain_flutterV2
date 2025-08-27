@@ -504,77 +504,72 @@ class _FindMeGameState extends State<FindMeGame>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _handleBackButton(context);
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5DC),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF5B6F4A),
-          foregroundColor: Colors.white,
-          title: Text(
-            'Find Me! - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          elevation: 0,
-          centerTitle: true,
-          automaticallyImplyLeading: false, // This removes the back button
+ @override
+Widget build(BuildContext context) {
+  return PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, result) {
+      if (!didPop) {
+        _handleBackButton(context);
+      }
+    },
+    child: Scaffold(
+      backgroundColor: const Color(0xFFF5F5DC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF5B6F4A),
+        foregroundColor: Colors.white,
+        title: Text(
+          'Find Me! - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 20),
-                // Show instructions at the top only after the target has been
-                // shown and removed, so the message appears when the choices
-                // are visible (prevents overlap while the target is displayed).
-                if (gameStarted && !gameEnded && !isShowingTarget)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: _buildInstructions(),
-                      ),
-                    ),
-                  ),
-                // Reserve a fixed area at the top for the target display so the
-                // choice tiles don't shift when the target appears/disappears.
-                SizedBox(
-                  // Use a dynamic height that fits most screens and avoids overflow.
-                  // Keep the height bounded so it doesn't take too much vertical space.
-                  height: min(160.0, MediaQuery.of(context).size.height * 0.22),
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              if (gameStarted && !gameEnded && isShowingTarget)
+                Expanded(
                   child: Center(
-                    child: isShowingTarget ? _buildTargetDisplay() : const SizedBox.shrink(),
+                    child: _buildTargetDisplay(),
                   ),
                 ),
-                const SizedBox(height: 20),
+              if (gameStarted && !gameEnded && !isShowingTarget)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: _buildInstructions(),
+                    ),
+                  ),
+                ),
+              if (gameStarted && !gameEnded && !isShowingTarget)
                 Expanded(
                   child: Stack(
                     children: [
                       _buildGameGrid(),
-                      if (!gameStarted)
-                        Center(
-                          child: _buildStartCubeButton(),
-                        ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              if (!gameStarted)
+                Expanded(
+                  child: Center(
+                    child: _buildStartCubeButton(),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return Container(
