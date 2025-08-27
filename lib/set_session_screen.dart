@@ -256,6 +256,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
           builder: (context) => LightTapGame(
             difficulty: difficulty,
             onGameComplete: _handleGameCompletion,
+            requirePinOnExit: true,
           ),
         ),
       );

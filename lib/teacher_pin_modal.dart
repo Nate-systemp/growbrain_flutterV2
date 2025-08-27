@@ -12,9 +12,7 @@ class TeacherPinModal extends StatefulWidget {
 
 class _TeacherPinModalState extends State<TeacherPinModal> {
   final TextEditingController _pinController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   bool _obscure = true;
-  bool _obscurePassword = true;
   bool _isCreate = false;
   String? _error;
   bool _checking = false;
@@ -68,7 +66,6 @@ class _TeacherPinModalState extends State<TeacherPinModal> {
       _error = null;
     });
     final pin = _pinController.text.trim();
-    final password = _passwordController.text.trim();
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() {
@@ -78,12 +75,11 @@ class _TeacherPinModalState extends State<TeacherPinModal> {
       return;
     }
     try {
-      // Optionally, check password here if needed
       await FirebaseFirestore.instance
           .collection('teachers')
           .doc(user.uid)
           .update({'pin': pin});
-      widget.onSubmit(pin, true, password);
+      widget.onSubmit(pin, true); // No password required
     } catch (e) {
       setState(() {
         _error = 'Failed to save PIN.';
@@ -99,12 +95,7 @@ class _TeacherPinModalState extends State<TeacherPinModal> {
       return;
     }
     if (_isCreate) {
-      final password = _passwordController.text.trim();
-      if (password.isEmpty) {
-        setState(() => _error = 'Password is required');
-        return;
-      }
-      _createPin();
+      _createPin(); // No password validation
     } else {
       _submitPin();
     }
@@ -184,34 +175,7 @@ class _TeacherPinModalState extends State<TeacherPinModal> {
                 ),
               ),
               if (_isCreate)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Center(
-                    child: SizedBox(
-                      width: 260,
-                      child: TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          hintText: 'Enter your password',
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                SizedBox.shrink(), // Remove password field for demo
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -272,4 +236,3 @@ class _TeacherPinModalState extends State<TeacherPinModal> {
     );
   }
 }
- 

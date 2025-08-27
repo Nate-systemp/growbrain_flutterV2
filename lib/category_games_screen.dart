@@ -37,7 +37,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         'name': 'Light Tap',
         'icon': Icons.lightbulb_outline,
         'color': Colors.amber,
-        'game': LightTapGame(difficulty: 'Easy'),
+  'game': LightTapGame(difficulty: 'Easy', requirePinOnExit: false),
       },
       {
         'name': 'Who Moved',
@@ -189,52 +189,71 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   }
 
   Widget _getDemoGameWidget(Map<String, dynamic> game) {
-    // Create a demo version of the game without recording functionality
     final gameWidget = game['game'] as Widget;
-    
-    // For games that have onGameComplete callback, we need to handle them differently
     if (gameWidget is LightTapGame) {
       return LightTapGame(
-        difficulty: 'Easy',
-        onGameComplete: null, // No recording in demo mode
+        difficulty: 'Starter',
+        onGameComplete: null,
       );
     } else if (gameWidget is WhoMovedGame) {
       return WhoMovedGame(
-        difficulty: 'Easy',
+        difficulty: 'Starter',
         onGameComplete: null,
       );
     } else if (gameWidget is FindMeGame) {
       return FindMeGame(
-        difficulty: 'Easy',
+        difficulty: 'Starter',
         onGameComplete: null,
       );
     }
-    
-    // For other games, return as is (they might not have recording)
     return gameWidget;
   }
 
   void _showDifficultyDialog(BuildContext context, Map<String, dynamic> game) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Difficulty'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text('Easy'),
-              onTap: () => _startGameWithDifficulty(context, game, 'Easy'),
-            ),
-            ListTile(
-              title: Text('Medium'),
-              onTap: () => _startGameWithDifficulty(context, game, 'Medium'),
-            ),
-            ListTile(
-              title: Text('Hard'),
-              onTap: () => _startGameWithDifficulty(context, game, 'Hard'),
-            ),
-          ],
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Text(
+                    'Select Difficulty',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Nunito',
+                      color: Color(0xFF393C48),
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                title: Text('Starter'),
+                onTap: () => _startGameWithDifficulty(context, game, 'Starter'),
+              ),
+              ListTile(
+                title: Text('Growing'),
+                onTap: () => _startGameWithDifficulty(context, game, 'Growing'),
+              ),
+              ListTile(
+                title: Text('Challenge'),
+                onTap: () => _startGameWithDifficulty(context, game, 'Challenge'),
+              ),
+            ],
+          ),
         ),
       ),
     );

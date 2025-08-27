@@ -16,8 +16,14 @@ class LightTapGame extends StatefulWidget {
     required String gameName,
     required String difficulty,
   })? onGameComplete;
+  final bool requirePinOnExit;
 
-  const LightTapGame({Key? key, required this.difficulty, this.onGameComplete}) : super(key: key);
+  const LightTapGame({
+    Key? key,
+    required this.difficulty,
+    this.onGameComplete,
+    this.requirePinOnExit = false,
+  }) : super(key: key);
 
   @override
   _LightTapGameState createState() => _LightTapGameState();
@@ -420,7 +426,11 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   }
 
   void _handleBackButton(BuildContext context) {
-    _showTeacherPinDialog(context);
+    if (widget.requirePinOnExit) {
+      _showTeacherPinDialog(context);
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   void _showTeacherPinDialog(BuildContext context) {
