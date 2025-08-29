@@ -13,7 +13,6 @@ import 'games/rhyme_time_game.dart';
 import 'games/riddle_game.dart';
 import 'games/sound_match_game.dart';
 import 'games/tictactoe_game.dart';
-// Removed unused import
 
 class CategoryGamesScreen extends StatefulWidget {
   final String category;
@@ -37,7 +36,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         'name': 'Light Tap',
         'icon': Icons.lightbulb_outline,
         'color': Colors.amber,
-  'game': LightTapGame(difficulty: 'Easy', requirePinOnExit: false),
+        'game': LightTapGame(difficulty: 'Easy', requirePinOnExit: false),
       },
       {
         'name': 'Who Moved',
@@ -103,7 +102,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
     'Logic': [
       {
         'name': 'Puzzle',
-        'icon': Icons.extension, // No puzzle_piece icon, use extension
+        'icon': Icons.extension,
         'color': Colors.deepOrange,
         'game': PuzzleGame(difficulty: 'Easy'),
       },
@@ -150,32 +149,37 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: screenSize.width > 600 ? 3 : 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.8,
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenSize.width * 0.08,
+            vertical: 40,
           ),
-          itemCount: games.length,
-          itemBuilder: (context, index) {
-            final game = games[index];
-            return _GameCard(
-              icon: game['icon'] as IconData,
-              iconColor: game['color'] as Color,
-              label: game['name'] as String,
-              onTap: () => _startGame(context, game),
-            );
-          },
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 24,
+              mainAxisSpacing: 24,
+              childAspectRatio: 0.95,
+            ),
+            itemCount: games.length,
+            itemBuilder: (context, index) {
+              final game = games[index];
+              return _GameCard(
+                icon: game['icon'] as IconData,
+                iconColor: game['color'] as Color,
+                label: game['name'] as String,
+                onTap: () => _startGame(context, game),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
   void _startGame(BuildContext context, Map<String, dynamic> game) {
-    // For demo mode, we'll use a simplified version without recording progress
     if (widget.isDemoMode) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -183,7 +187,6 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         ),
       );
     } else {
-      // For regular mode, show difficulty selection
       _showDifficultyDialog(context, game);
     }
   }
@@ -260,7 +263,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   }
 
   void _startGameWithDifficulty(BuildContext context, Map<String, dynamic> game, String difficulty) {
-    Navigator.of(context).pop(); // Close dialog
+    Navigator.of(context).pop();
     
     final gameName = game['name'] as String;
     final gameWidget = _createGameWithDifficulty(gameName, difficulty);
@@ -355,7 +358,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
     required String difficulty,
   }) async {
     if (widget.isDemoMode) {
-      return; // Don't record in demo mode
+      return;
     }
 
     try {
@@ -402,12 +405,12 @@ class _GameCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFF3F3F3),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 18,
-              offset: const Offset(2, 12),
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -415,28 +418,45 @@ class _GameCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
-              child: Center(
-                child: Icon(icon, color: iconColor, size: 60),
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F3F3),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 48,
+                  ),
+                ),
               ),
             ),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
               ),
               child: Text(
                 label,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
                   color: Color(0xFF444444),
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
