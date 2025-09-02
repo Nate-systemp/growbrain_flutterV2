@@ -247,37 +247,37 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _startGame() {
-  _shakeController.dispose();
-  _shakeController = AnimationController(
-    duration: shakeDuration,
-    vsync: this,
-  );
-  _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
-    CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
-  );
+    _shakeController.dispose();
+    _shakeController = AnimationController(
+      duration: shakeDuration,
+      vsync: this,
+    );
+    _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
 
-  setState(() {
-    gameStarted = true;
-    showingAnimation = true;
-    canSelect = false;
-    timer = 0;
-  });
+    setState(() {
+      gameStarted = true;
+      showingAnimation = true;
+      canSelect = false;
+      timer = 0;
+    });
 
-  Future.delayed(const Duration(seconds: 2), () async {
-    if (mounted) {
-      await _shakeController.forward();
-      // Add a small pause after shake
-      await Future.delayed(const Duration(milliseconds: 400));
+    Future.delayed(const Duration(seconds: 2), () async {
       if (mounted) {
-        setState(() {
-          showingAnimation = false;
-          canSelect = true;
-        });
-        _startRoundTimer();
+        await _shakeController.forward();
+        // Add a small pause after shake
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (mounted) {
+          setState(() {
+            showingAnimation = false;
+            canSelect = true;
+          });
+          _startRoundTimer();
+        }
       }
-    }
-  });
-}
+    });
+  }
 
   void _selectShape(int index) {
     if (!canSelect) return;
@@ -419,19 +419,19 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     switch (numberOfShapes) {
       case 3:
         columns = 3;
-        shapeSize = 140.0;
+        shapeSize = 270.0;
         break;
       case 5:
         columns = 3;
-        shapeSize = 120.0;
+        shapeSize = 240.0;
         break;
       case 8:
-        columns = 4;
-        shapeSize = 100.0;
+        columns = 2;
+        shapeSize = 260.0;
         break;
       default:
         columns = 3;
-        shapeSize = 140.0;
+        shapeSize = 190.0;
     }
 
     return LayoutBuilder(
@@ -949,7 +949,6 @@ class CustomShapeWidget extends StatelessWidget {
     );
   }
 }
-
 class ShapePainter extends CustomPainter {
   final ShapeType shapeType;
   final Color color;
@@ -958,42 +957,58 @@ class ShapePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 10;
+
+    // Solid fill
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 5;
+    // White border
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7;
 
-    switch (shapeType) {
+    // Soft shadow
+    canvas.drawShadow(
+      _getShapePath(shapeType, center, radius),
+      Colors.black.withOpacity(0.13),
+      10,
+      false,
+    );
+
+    // Draw shape
+    final shapePath = _getShapePath(shapeType, center, radius);
+    canvas.drawPath(shapePath, paint);
+    canvas.drawPath(shapePath, borderPaint);
+  }
+
+  Path _getShapePath(ShapeType type, Offset center, double radius) {
+    switch (type) {
       case ShapeType.circle:
-        canvas.drawCircle(center, radius, paint);
-        break;
+        return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
       case ShapeType.square:
-        final rect = Rect.fromCenter(
-          center: center,
-          width: radius * 1.6,
-          height: radius * 1.6,
-        );
-        canvas.drawRect(rect, paint);
-        break;
+        return Path()..addRRect(RRect.fromRectAndRadius(
+          Rect.fromCenter(center: center, width: radius * 1.6, height: radius * 1.6),
+          Radius.circular(radius * 0.35),
+        ));
       case ShapeType.triangle:
         final path = Path();
         path.moveTo(center.dx, center.dy - radius);
-        path.lineTo(center.dx - radius, center.dy + radius);
-        path.lineTo(center.dx + radius, center.dy + radius);
+        path.lineTo(center.dx - radius, center.dy + radius * 0.8);
+        path.lineTo(center.dx + radius, center.dy + radius * 0.8);
         path.close();
-        canvas.drawPath(path, paint);
-        break;
+        return path;
       case ShapeType.diamond:
         final path = Path();
         path.moveTo(center.dx, center.dy - radius);
-        path.lineTo(center.dx + radius, center.dy);
+        path.lineTo(center.dx + radius * 0.8, center.dy);
         path.lineTo(center.dx, center.dy + radius);
-        path.lineTo(center.dx - radius, center.dy);
+        path.lineTo(center.dx - radius * 0.8, center.dy);
         path.close();
-        canvas.drawPath(path, paint);
-        break;
+        return path;
       case ShapeType.pentagon:
         final path = Path();
         for (int i = 0; i < 5; i++) {
@@ -1007,8 +1022,7 @@ class ShapePainter extends CustomPainter {
           }
         }
         path.close();
-        canvas.drawPath(path, paint);
-        break;
+        return path;
       case ShapeType.hexagon:
         final path = Path();
         for (int i = 0; i < 6; i++) {
@@ -1022,8 +1036,7 @@ class ShapePainter extends CustomPainter {
           }
         }
         path.close();
-        canvas.drawPath(path, paint);
-        break;
+        return path;
       case ShapeType.star:
         final path = Path();
         for (int i = 0; i < 5; i++) {
@@ -1041,21 +1054,12 @@ class ShapePainter extends CustomPainter {
           path.lineTo(innerX, innerY);
         }
         path.close();
-        canvas.drawPath(path, paint);
-        break;
+        return path;
       case ShapeType.oval:
-        final rect = Rect.fromCenter(
-          center: center,
-          width: radius * 2,
-          height: radius * 1.2,
-        );
-        canvas.drawOval(rect, paint);
-        break;
+        return Path()..addOval(Rect.fromCenter(center: center, width: radius * 2, height: radius * 1.2));
     }
   }
 
   @override
-  bool shouldRepaint(covariant ShapePainter oldDelegate) {
-    return oldDelegate.shapeType != shapeType || oldDelegate.color != color;
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }

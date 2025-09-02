@@ -707,7 +707,7 @@ Widget build(BuildContext context) {
                 children: [
                   Icon(
                     targetObject!.icon,
-                    size: 32,
+                    size: 62,
                     color: const Color(0xFF5B6F4A),
                   ),
                   const SizedBox(height: 4),
@@ -715,7 +715,7 @@ Widget build(BuildContext context) {
                     targetObject!.name,
                     style: TextStyle(
                       color: const Color(0xFF5B6F4A),
-                      fontSize: 14,
+                      fontSize: 34,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -801,17 +801,17 @@ Widget build(BuildContext context) {
             
             // Set maximum card sizes based on object count for better readability
             if (gameObjects.length <= 4) {
-              cardSize = min(cardSize, 120.0);
+              cardSize = min(cardSize, 180.0);
             } else if (gameObjects.length <= 6) {
-              cardSize = min(cardSize, 110.0);
+              cardSize = min(cardSize, 170.0);
             } else if (gameObjects.length <= 9) {
-              cardSize = min(cardSize, 100.0);
+              cardSize = min(cardSize, 160.0);
             } else {
-              cardSize = min(cardSize, 90.0);
+              cardSize = min(cardSize, 130.0);
             }
             
             // Ensure minimum readable size
-            cardSize = max(cardSize, 70.0);
+            cardSize = max(cardSize, 100.0);
 
             return Center(
               child: Container(
