@@ -121,105 +121,136 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
   }
 
   Widget _buildSimpleCelebrationHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+  return Stack(
+    children: [
+      // Animated sparkles/confetti
+      Positioned.fill(
+        child: AnimatedBuilder(
+          animation: _sparkleAnimation,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: _ConfettiPainter(_sparkleAnimation.value),
+            );
+          },
+        ),
       ),
-      child: Column(
-        children: [
-          // Simple celebration row - no complex animations
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 48)),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7), // Soft yellow background
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF59E0B), width: 2),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFDCFDF7), Color(0xFFFEF3C7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.10),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Trophy illustration
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFFFF9C4)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                child: const Text('🏆', style: TextStyle(fontSize: 48)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withOpacity(0.3),
+                    blurRadius: 18,
+                    offset: Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              const Text('🎉', style: TextStyle(fontSize: 48)),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Big happy face
-          const Text('😊', style: TextStyle(fontSize: 80)),
-          
-          const SizedBox(height: 24),
-          
-          // Clear, simple text
-          const Text(
-            'GREAT JOB!',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF059669), // Green for success
-              letterSpacing: 2,
+              padding: EdgeInsets.all(18),
+              child: Icon(Icons.emoji_events, color: Color(0xFFF59E0B), size: 64),
             ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 12),
-          
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCFDF7), // Light green background
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF059669), width: 1),
+            const SizedBox(height: 18),
+            // Animated stars
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.star, color: Colors.amber, size: 32),
+                SizedBox(width: 8),
+                Icon(Icons.star, color: Colors.amberAccent, size: 40),
+                SizedBox(width: 8),
+                Icon(Icons.star, color: Colors.amber, size: 32),
+              ],
             ),
-            child: const Text(
-              'You finished all your games! 🎮',
+            const SizedBox(height: 18),
+            // Big happy face
+            const Text('😊', style: TextStyle(fontSize: 80)),
+            const SizedBox(height: 18),
+            // Pop-out congratulation text
+            Text(
+              'GREAT JOB!',
               style: TextStyle(
-                fontSize: 20,
-                color: Color(0xFF065F46), // Dark green text
-                fontWeight: FontWeight.w600,
+                fontSize: 40,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF059669),
+                letterSpacing: 2,
+                shadows: [
+                  Shadow(
+                    color: Colors.greenAccent.withOpacity(0.5),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
               textAlign: TextAlign.center,
             ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Student name - simple and clear
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6), // Clear blue
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${widget.student['fullName'] ?? 'Amazing Student'}!',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFDF7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF059669), width: 1),
               ),
-              textAlign: TextAlign.center,
+              child: const Text(
+                'You finished all your games! 🎮',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Color(0xFF065F46),
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            // Student name - simple and clear
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${widget.student['fullName'] ?? 'Amazing Student'}!',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
+    ],
+  );
+}
 
   Widget _buildSimpleStatsSection() {
     if (widget.sessionRecords.isEmpty) {
@@ -635,4 +666,29 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
         return '🎮';
     }
   }
+}
+class _ConfettiPainter extends CustomPainter {
+  final double progress;
+  _ConfettiPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rand = math.Random(1234);
+    for (int i = 0; i < 18; i++) {
+      final x = rand.nextDouble() * size.width;
+      final y = (rand.nextDouble() * size.height * 0.4) + progress * 18;
+      final color = Color.lerp(
+        Colors.amber,
+        Colors.greenAccent,
+        rand.nextDouble(),
+      )!;
+      final radius = rand.nextDouble() * 7 + 5;
+      final paint = Paint()..color = color.withOpacity(0.7);
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

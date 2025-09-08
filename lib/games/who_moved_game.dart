@@ -286,7 +286,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       selectedShapeIndex = index;
       canSelect = false;
     });
-
+      
+      SoundEffectsManager().playSuccess();
+    
     if (index == movedShapeIndex) {
       score += 10;
       correctAnswers++;

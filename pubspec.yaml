@@ -30,10 +30,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+    # add: 
     
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+  google_fonts: ^6.0.0
   cupertino_icons: ^1.0.8
   firebase_core: ^2.30.0
   firebase_auth: ^4.17.4
@@ -85,6 +87,7 @@ flutter:
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf
   #       - asset: fonts/Schyler-Italic.ttf
+  #       - asset: fonts/LuckiestGuy-Regular.ttf
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:
