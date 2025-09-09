@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 class RiddleGame extends StatefulWidget {
@@ -359,6 +360,8 @@ class _RiddleGameState extends State<RiddleGame> {
       correctAnswers++;
       score += 20 + (timeLeft > 0 ? timeLeft ~/ 3 : 0); // Time bonus
       HapticFeedback.mediumImpact();
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
     } else {
       wrongAnswers++;
       HapticFeedback.lightImpact();

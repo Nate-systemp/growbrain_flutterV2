@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 class PuzzleGame extends StatefulWidget {
@@ -313,6 +314,8 @@ class _PuzzleGameState extends State<PuzzleGame> {
     if (targetRow == piece.correctRow && targetCol == piece.correctCol) {
       score += 20; // Bonus for correct placement
       HapticFeedback.mediumImpact();
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
     } else {
       HapticFeedback.lightImpact();
     }

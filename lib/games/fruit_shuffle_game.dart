@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 
 class FruitShuffleGame extends StatefulWidget {
   final String difficulty;
@@ -226,6 +227,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
 
     if (correct == totalFruits) {
       // All correct!
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
       _completeGame(true);
     } else {
       // Wrong matches

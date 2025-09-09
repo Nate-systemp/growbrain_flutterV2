@@ -287,12 +287,12 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       canSelect = false;
     });
       
-      SoundEffectsManager().playSuccess();
+      SoundEffectsManager().playSuccessWithVoice();
     
     if (index == movedShapeIndex) {
       score += 10;
       correctAnswers++;
-      SoundEffectsManager().playSuccess();
+      SoundEffectsManager().playSuccessWithVoice();
       _showResult(true);
     } else {
       SoundEffectsManager().playWrong();

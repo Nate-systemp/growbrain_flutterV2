@@ -255,8 +255,8 @@ scaleAnimations = animationControllers.map((controller) =>
           isWaitingForInput = false;
         });
 
-        // Play success sound effect
-        SoundEffectsManager().playSuccess();
+        // Play success sound effect with voice
+        SoundEffectsManager().playSuccessWithVoice();
 
         // Show success feedback
         _showFeedback(true);

@@ -295,8 +295,8 @@ class _FindMeGameState extends State<FindMeGame>
       correctAnswers++;
     });
 
-    // Play success sound effect
-    SoundEffectsManager().playSuccess();
+    // Play success sound effect with voice
+    SoundEffectsManager().playSuccessWithVoice();
 
     _scoreAnimationController.forward().then((_) {
       _scoreAnimationController.reverse();

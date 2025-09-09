@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 class RhymeTimeGame extends StatefulWidget {
@@ -415,6 +416,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       });
 
       HapticFeedback.mediumImpact();
+      
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
 
       if (correctMatches == totalPairs) {
         gameTimer?.cancel();

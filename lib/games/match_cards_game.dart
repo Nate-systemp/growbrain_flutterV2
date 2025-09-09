@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 
 class MatchCardsGame extends StatefulWidget {
   final String difficulty;
@@ -130,6 +131,8 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           cards[secondFlipped!].isMatched = true;
         });
         matches++;
+        // Play success sound with voice effect
+        SoundEffectsManager().playSuccessWithVoice();
         // Check if all matched
         if (cards.every((c) => c.isMatched)) {
           stopwatch.stop();

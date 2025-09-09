@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 enum TicTacToeDifficulty { easy, medium, hard }
@@ -241,6 +242,8 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
         winner = 'You win!';
         matchPlayerWins++;
       });
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
       _saveRecord('win');
       _handleMatchProgress();
     } else if (_checkWinner('triangle')) {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
 import '../utils/background_music_manager.dart';
+import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 class ObjectHuntGame extends StatefulWidget {
@@ -395,6 +396,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       });
       
       HapticFeedback.mediumImpact();
+      
+      // Play success sound with voice effect
+      SoundEffectsManager().playSuccessWithVoice();
       
       if (correctFinds == totalTargets) {
         gameTimer?.cancel();

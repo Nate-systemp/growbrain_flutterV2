@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:math';
 
 class SoundEffectsManager {
   static final SoundEffectsManager _instance = SoundEffectsManager._internal();
@@ -6,7 +7,19 @@ class SoundEffectsManager {
   SoundEffectsManager._internal();
 
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _voicePlayer = AudioPlayer(); // Separate player for voice effects
   bool _soundEnabled = true;
+  
+  // Voice effects list
+  final List<String> _voiceEffects = [
+    'voice_fx/amazing.mp3',
+    'voice_fx/fabulous.mp3',
+    'voice_fx/keepitup.mp3',
+    'voice_fx/nice.mp3',
+  ];
+  
+  String? _lastPlayedVoice; // Track last played voice to prevent consecutive repeats
+  final Random _random = Random();
 
   /// Play success sound effect
   Future<void> playSuccess() async {
@@ -50,6 +63,43 @@ class SoundEffectsManager {
     }
   }
 
+  /// Play random voice effect (amazing, fabulous, keep it up, nice)
+  /// Ensures no consecutive repeats
+  Future<void> playRandomVoiceEffect() async {
+    if (!_soundEnabled) return;
+    
+    try {
+      // Get available voices (excluding the last played one)
+      List<String> availableVoices = List.from(_voiceEffects);
+      if (_lastPlayedVoice != null && availableVoices.length > 1) {
+        availableVoices.remove(_lastPlayedVoice);
+      }
+      
+      // Select a random voice from available ones
+      String selectedVoice = availableVoices[_random.nextInt(availableVoices.length)];
+      _lastPlayedVoice = selectedVoice;
+      
+      // Play the selected voice effect
+      await _voicePlayer.stop(); // Stop any currently playing voice
+      await _voicePlayer.setSource(AssetSource(selectedVoice));
+      await _voicePlayer.setVolume(0.8); // Set volume to 80%
+      await _voicePlayer.resume();
+    } catch (e) {
+      print('Error playing voice effect: $e');
+    }
+  }
+
+  /// Play success sound with voice effect
+  Future<void> playSuccessWithVoice() async {
+    if (!_soundEnabled) return;
+    
+    // Play both success sound and voice effect
+    await Future.wait([
+      playSuccess(),
+      playRandomVoiceEffect(),
+    ]);
+  }
+
   /// Enable or disable sound effects
   void setSoundEnabled(bool enabled) {
     _soundEnabled = enabled;
@@ -70,8 +120,9 @@ class SoundEffectsManager {
     }
   }
 
-  /// Dispose of the audio player
+  /// Dispose of the audio players
   void dispose() {
     _audioPlayer.dispose();
+    _voicePlayer.dispose();
   }
 }
