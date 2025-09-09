@@ -52,8 +52,12 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('TicTacToe');
+    // Normalize incoming/display difficulty and convert to enum
+    final _diff = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
     // Convert string difficulty to enum
-    switch (widget.difficulty.toLowerCase()) {
+    switch (_diff) {
       case 'easy':
         difficulty = TicTacToeDifficulty.easy;
         break;

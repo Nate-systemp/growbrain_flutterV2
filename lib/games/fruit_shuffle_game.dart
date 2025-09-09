@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:async';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class FruitShuffleGame extends StatefulWidget {
   final String difficulty;
@@ -46,6 +47,7 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
   int correctMatchesCount = 0;
   int totalFruits = 4;
   late String difficulty;
+  late String _normalizedDifficulty;
 
   // Shuffling animation variables
   List<Fruit?> visibleFruitsInBags = [];
@@ -74,6 +76,9 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Fruit Shuffle');
     difficulty = widget.difficulty;
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    );
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initializeGame();
@@ -299,7 +304,7 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
         completionTime: completionTime,
         challengeFocus: widget.challengeFocus,
         gameName: widget.gameName,
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
     // Auto-navigate to next game after short delay

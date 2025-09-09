@@ -13,18 +13,32 @@ class DifficultyUtils {
         return 'Starter';
     }
   }
-  
+
   /// Converts display names back to internal values (if needed)
   static String getDifficultyInternalValue(String displayName) {
     switch (displayName.toLowerCase()) {
       case 'starter':
+      case 'start':
         return 'Easy';
       case 'growing':
+      case 'grow':
         return 'Medium';
       case 'challenged':
+      case 'challenge':
+      case 'challange': // tolerate common typo
         return 'Hard';
       default:
-        return 'Easy';
+        // If caller passes internal values already (easy/medium/hard), pass through
+        switch (displayName.toLowerCase()) {
+          case 'easy':
+            return 'Easy';
+          case 'medium':
+            return 'Medium';
+          case 'hard':
+            return 'Hard';
+          default:
+            return 'Easy';
+        }
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
+import '../utils/difficulty_utils.dart';
 
 class MatchCardsGame extends StatefulWidget {
   final String difficulty;
@@ -39,6 +40,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   late final List<IconData> iconSet;
   late int numPairs;
   late String difficulty;
+  String _normalizedDifficulty = 'easy';
   late Stopwatch stopwatch;
   int attempts = 0;
   int matches = 0;
@@ -49,6 +51,9 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Match Cards');
     difficulty = widget.difficulty;
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    );
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initGame();
@@ -139,7 +144,6 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           timerActive = false;
           Future.delayed(const Duration(milliseconds: 500), () {
             if (widget.onGameComplete != null) {
-              final int totalPairs = cards.length ~/ 2;
               final int accuracy = attempts > 0
                   ? ((matches / attempts) * 100).round()
                   : 100;
@@ -149,7 +153,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
                 completionTime: completionTime,
                 challengeFocus: widget.challengeFocus,
                 gameName: widget.gameName,
-                difficulty: widget.difficulty,
+                difficulty: _normalizedDifficulty,
               );
             }
           });

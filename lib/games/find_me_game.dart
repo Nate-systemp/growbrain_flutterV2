@@ -15,20 +15,16 @@ class FindMeGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
-  const FindMeGame({
-    super.key,
-    required this.difficulty,
-    this.onGameComplete,
-  });
+  const FindMeGame({super.key, required this.difficulty, this.onGameComplete});
 
   @override
   State<FindMeGame> createState() => _FindMeGameState();
 }
 
-class _FindMeGameState extends State<FindMeGame>
-    with TickerProviderStateMixin {
+class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
   late AnimationController _cardAnimationController;
   late AnimationController _scoreAnimationController;
   late AnimationController _tapAnimationController;
@@ -46,9 +42,12 @@ class _FindMeGameState extends State<FindMeGame>
   bool gameStarted = false;
   bool gameEnded = false;
   bool isShowingTarget = false;
+  bool _isWrongHighlight = false;
+  bool _isCorrectHighlight = false;
   int round = 1;
   static const int maxRounds = 5;
   int tappedIndex = -1;
+  String _normalizedDifficulty = 'easy';
 
   @override
   void initState() {
@@ -73,32 +72,29 @@ class _FindMeGameState extends State<FindMeGame>
       vsync: this,
     );
 
-    _cardAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _cardAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _cardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _cardAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
-    _scoreAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.5,
-    ).animate(CurvedAnimation(
-      parent: _scoreAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _scoreAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(
+      CurvedAnimation(
+        parent: _scoreAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
-    _tapAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.85,
-    ).animate(CurvedAnimation(
-      parent: _tapAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _tapAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _tapAnimationController, curve: Curves.easeInOut),
+    );
   }
 
   void _initializeGame() {
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
     _generateGameObjects();
     _selectTarget();
   }
@@ -122,7 +118,7 @@ class _FindMeGameState extends State<FindMeGame>
       {'icon': Icons.book, 'name': 'Book'},
       {'icon': Icons.emoji_food_beverage, 'name': 'Cup'},
       {'icon': Icons.face, 'name': 'Face'},
-      
+
       // Additional Diverse Icons (20)
       {'icon': Icons.apple, 'name': 'Apple'},
       {'icon': Icons.beach_access, 'name': 'Beach'},
@@ -144,7 +140,7 @@ class _FindMeGameState extends State<FindMeGame>
       {'icon': Icons.watch, 'name': 'Watch'},
       {'icon': Icons.yard, 'name': 'Garden'},
       {'icon': Icons.zoom_in, 'name': 'Magnify'},
-      
+
       // Complex Icons (20)
       {'icon': Icons.anchor, 'name': 'Anchor'},
       {'icon': Icons.balance, 'name': 'Scale'},
@@ -166,7 +162,7 @@ class _FindMeGameState extends State<FindMeGame>
       {'icon': Icons.sports_tennis, 'name': 'Tennis'},
       {'icon': Icons.theater_comedy, 'name': 'Comedy'},
       {'icon': Icons.umbrella_outlined, 'name': 'Parasol'},
-      
+
       // Advanced Icons (14)
       {'icon': Icons.apartment, 'name': 'Building'},
       {'icon': Icons.brush, 'name': 'Brush'},
@@ -186,10 +182,10 @@ class _FindMeGameState extends State<FindMeGame>
 
     gameObjects.clear();
     tappedIndex = -1; // Reset tapped index
-    
+
     // Progressive difficulty: increase objects as rounds progress
     int baseObjectCount;
-    switch (widget.difficulty.toLowerCase()) {
+    switch (_normalizedDifficulty) {
       case 'easy':
         baseObjectCount = 4;
         break;
@@ -202,27 +198,29 @@ class _FindMeGameState extends State<FindMeGame>
       default:
         baseObjectCount = 6;
     }
-    
+
     // Add extra objects in later rounds
     int extraObjects = 0;
     if (round >= 3) extraObjects = 1;
     if (round >= 4) extraObjects = 2;
     if (round >= 5) extraObjects = 3;
-    
+
     int totalObjects = baseObjectCount + extraObjects;
-    
+
     // Shuffle and select objects
     final selectedObjects = List.from(allObjectData);
     selectedObjects.shuffle();
-    
+
     for (int i = 0; i < totalObjects && i < selectedObjects.length; i++) {
       final object = selectedObjects[i];
-      gameObjects.add(GameObject(
-        id: i,
-        icon: object['icon'],
-        name: object['name'],
-        isTarget: false,
-      ));
+      gameObjects.add(
+        GameObject(
+          id: i,
+          icon: object['icon'],
+          name: object['name'],
+          isTarget: false,
+        ),
+      );
     }
   }
 
@@ -274,7 +272,7 @@ class _FindMeGameState extends State<FindMeGame>
     setState(() {
       tappedIndex = index;
     });
-    
+
     _tapAnimationController.forward().then((_) {
       _tapAnimationController.reverse();
     });
@@ -284,7 +282,7 @@ class _FindMeGameState extends State<FindMeGame>
       if (object.isTarget) {
         _correctAnswer();
       } else {
-        _wrongAnswer();
+        _wrongAnswer(index);
       }
     });
   }
@@ -293,6 +291,9 @@ class _FindMeGameState extends State<FindMeGame>
     setState(() {
       score += 10;
       correctAnswers++;
+      // mark correct so UI can show green feedback
+      _isCorrectHighlight = true;
+      _isWrongHighlight = false;
     });
 
     // Play success sound effect with voice
@@ -302,20 +303,39 @@ class _FindMeGameState extends State<FindMeGame>
       _scoreAnimationController.reverse();
     });
 
-    _nextRound();
+    // Pause briefly to show green feedback, then advance to next round
+    Timer(const Duration(milliseconds: 700), () {
+      // clear correct highlight and advance
+      setState(() {
+        _isCorrectHighlight = false;
+      });
+      _nextRound();
+    });
   }
 
-  void _wrongAnswer() {
+  void _wrongAnswer(int index) {
     setState(() {
+      // Penalize time
       timeLeft = (timeLeft - 5).clamp(0, 60);
+      // Mark which card was wrong so we can show red feedback
+      tappedIndex = index;
+      _isWrongHighlight = true;
     });
 
     // Play wrong sound effect
     SoundEffectsManager().playWrong();
 
-    // Show feedback animation
+    // Brief feedback: pulse the card animation and then clear the wrong highlight
     _cardAnimationController.reverse().then((_) {
       _cardAnimationController.forward();
+    });
+
+    // Clear wrong highlight after a short delay so the player sees the red feedback
+    Timer(const Duration(milliseconds: 700), () {
+      setState(() {
+        _isWrongHighlight = false;
+        tappedIndex = -1;
+      });
     });
   }
 
@@ -362,13 +382,13 @@ class _FindMeGameState extends State<FindMeGame>
       }
       accuracy = accuracy.clamp(0, 100);
       final timeTaken = 60 - timeLeft;
-      
+
       widget.onGameComplete!(
         accuracy: accuracy,
         completionTime: timeTaken,
         challengeFocus: 'Visual attention and memory',
         gameName: 'Find Me',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
 
@@ -413,10 +433,7 @@ class _FindMeGameState extends State<FindMeGame>
               ),
               Text(
                 'Rounds Completed: $round',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
           ),
@@ -426,7 +443,9 @@ class _FindMeGameState extends State<FindMeGame>
               child: TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.of(context).pop(); // Close game and return to session
+                  Navigator.of(
+                    context,
+                  ).pop(); // Close game and return to session
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD740),
@@ -438,10 +457,7 @@ class _FindMeGameState extends State<FindMeGame>
                 ),
                 child: Text(
                   'Continue',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),
@@ -482,10 +498,14 @@ class _FindMeGameState extends State<FindMeGame>
           onPinVerified: () {
             Navigator.of(dialogContext).pop(); // Close dialog
             // Exit session and go to home screen after PIN verification
-            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
           },
           onCancel: () {
-            Navigator.of(dialogContext).pop(); // Just close dialog, stay in game
+            Navigator.of(
+              dialogContext,
+            ).pop(); // Just close dialog, stay in game
           },
         );
       },
@@ -504,82 +524,68 @@ class _FindMeGameState extends State<FindMeGame>
     super.dispose();
   }
 
- @override
-Widget build(BuildContext context) {
-  return PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) {
-        _handleBackButton(context);
-      }
-    },
-    child: Scaffold(
-      backgroundColor: const Color(0xFFF5F5DC),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF5B6F4A),
-        foregroundColor: Colors.white,
-        title: Text(
-          'Find Me! - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-          style: TextStyle(fontWeight: FontWeight.bold),
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5DC),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF5B6F4A),
+          foregroundColor: Colors.white,
+          title: Text(
+            'Find Me! - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
         ),
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              if (gameStarted && !gameEnded && isShowingTarget)
-                Expanded(
-                  child: Center(
-                    child: _buildTargetDisplay(),
-                  ),
-                ),
-              if (gameStarted && !gameEnded && !isShowingTarget)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: _buildInstructions(),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 20),
+                if (gameStarted && !gameEnded && isShowingTarget)
+                  Expanded(child: Center(child: _buildTargetDisplay())),
+                // During gameplay we show a short prompt telling the player
+                // which object to find. The full "How to Play" card is only
+                // shown on the start screen (in _buildStartCubeButton()).
+                if (gameStarted && !gameEnded && !isShowingTarget)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: _buildFindPrompt(),
+                      ),
                     ),
                   ),
-                ),
-              if (gameStarted && !gameEnded && !isShowingTarget)
-                Expanded(
-                  child: Stack(
-                    children: [
-                      _buildGameGrid(),
-                    ],
-                  ),
-                ),
-              if (!gameStarted)
-                Expanded(
-                  child: Center(
-                    child: _buildStartCubeButton(),
-                  ),
-                ),
-            ],
+                if (gameStarted && !gameEnded && !isShowingTarget)
+                  Expanded(child: Stack(children: [_buildGameGrid()])),
+                if (!gameStarted)
+                  Expanded(child: Center(child: _buildStartCubeButton())),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xFF5B6F4A),
-            const Color(0xFF6B7F5A),
-          ],
+          colors: [const Color(0xFF5B6F4A), const Color(0xFF6B7F5A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -625,11 +631,7 @@ Widget build(BuildContext context) {
     Widget content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          color: const Color(0xFFFFD740),
-          size: 24,
-        ),
+        Icon(icon, color: const Color(0xFFFFD740), size: 24),
         const SizedBox(height: 4),
         Text(
           label,
@@ -654,10 +656,7 @@ Widget build(BuildContext context) {
       return AnimatedBuilder(
         animation: animation,
         builder: (context, child) {
-          return Transform.scale(
-            scale: animation.value,
-            child: content,
-          );
+          return Transform.scale(scale: animation.value, child: content);
         },
       );
     }
@@ -698,10 +697,7 @@ Widget build(BuildContext context) {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF5B6F4A),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFF5B6F4A), width: 2),
               ),
               child: Column(
                 children: [
@@ -729,25 +725,86 @@ Widget build(BuildContext context) {
 
   Widget _buildInstructions() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF5B6F4A).withValues(alpha: 0.1),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF5B6F4A).withValues(alpha: 0.3),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.search, color: const Color(0xFF5B6F4A), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'How to Play:',
+                style: TextStyle(
+                  color: const Color(0xFF5B6F4A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '1. Watch the object highlighted for a few seconds.',
+            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '2. Memorize the object and its position.',
+            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '3. Tap the same object when the grid appears.',
+            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '4. Rounds get harder with more objects and less time.',
+            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFindPrompt() {
+    final String promptText = targetObject != null
+        ? 'Find the ${targetObject!.name} you just saw.'
+        : 'Find the object you just saw.';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.search,
-            color: const Color(0xFF5B6F4A),
-            size: 20,
-          ),
+          Icon(Icons.search, color: const Color(0xFF5B6F4A), size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Tap the ${targetObject?.name ?? "object"} you just saw!',
+              promptText,
               style: TextStyle(
                 color: const Color(0xFF5B6F4A),
                 fontSize: 14,
@@ -763,9 +820,7 @@ Widget build(BuildContext context) {
   Widget _buildGameGrid() {
     if (gameObjects.isEmpty) {
       return Center(
-        child: CircularProgressIndicator(
-          color: const Color(0xFF5B6F4A),
-        ),
+        child: CircularProgressIndicator(color: const Color(0xFF5B6F4A)),
       );
     }
 
@@ -787,18 +842,20 @@ Widget build(BuildContext context) {
             } else {
               crossAxisCount = 4; // 4x4+
             }
-            
+
             int rowCount = (gameObjects.length / crossAxisCount).ceil();
 
             // Calculate optimal card size
             double spacing = 8.0;
-            double availableWidth = constraints.maxWidth - (spacing * (crossAxisCount + 1));
-            double availableHeight = constraints.maxHeight - (spacing * (rowCount + 1));
-            
+            double availableWidth =
+                constraints.maxWidth - (spacing * (crossAxisCount + 1));
+            double availableHeight =
+                constraints.maxHeight - (spacing * (rowCount + 1));
+
             double cardWidth = availableWidth / crossAxisCount;
             double cardHeight = availableHeight / rowCount;
             double cardSize = min(cardWidth, cardHeight);
-            
+
             // Set maximum card sizes based on object count for better readability
             if (gameObjects.length <= 4) {
               cardSize = min(cardSize, 180.0);
@@ -809,7 +866,7 @@ Widget build(BuildContext context) {
             } else {
               cardSize = min(cardSize, 130.0);
             }
-            
+
             // Ensure minimum readable size
             cardSize = max(cardSize, 100.0);
 
@@ -823,7 +880,7 @@ Widget build(BuildContext context) {
                   children: gameObjects.asMap().entries.map((entry) {
                     int index = entry.key;
                     GameObject object = entry.value;
-                    
+
                     return Transform.scale(
                       scale: _cardAnimation.value,
                       child: SizedBox(
@@ -844,7 +901,10 @@ Widget build(BuildContext context) {
 
   Widget _buildGameCard(GameObject object, int index, double cardSize) {
     bool isTapped = tappedIndex == index;
-    
+
+    final bool isWrong = _isWrongHighlight && tappedIndex == index;
+    final bool isCorrect = _isCorrectHighlight && tappedIndex == index;
+
     return AnimatedBuilder(
       animation: _tapAnimation,
       builder: (context, child) {
@@ -858,27 +918,48 @@ Widget build(BuildContext context) {
               height: cardSize,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isTapped ? [
-                    const Color(0xFFFFD740).withValues(alpha: 0.3),
-                    const Color(0xFFFFD740).withValues(alpha: 0.1),
-                  ] : [
-                    Colors.white,
-                    const Color(0xFFF8F8F8),
-                  ],
+                  colors: isCorrect
+                      ? [
+                          Colors.green.withOpacity(0.12),
+                          Colors.green.withOpacity(0.06),
+                        ]
+                      : isWrong
+                      ? [
+                          Colors.red.withOpacity(0.12),
+                          Colors.red.withOpacity(0.06),
+                        ]
+                      : isTapped
+                      ? [
+                          const Color(0xFFFFD740).withValues(alpha: 0.3),
+                          const Color(0xFFFFD740).withValues(alpha: 0.1),
+                        ]
+                      : [Colors.white, const Color(0xFFF8F8F8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isTapped 
-                    ? const Color(0xFFFFD740)
-                    : const Color(0xFF5B6F4A).withValues(alpha: 0.2),
-                  width: isTapped ? 3.0 : 1.5,
+                  color: isCorrect
+                      ? Colors.green
+                      : isWrong
+                      ? Colors.red
+                      : isTapped
+                      ? const Color(0xFFFFD740)
+                      : const Color(0xFF5B6F4A).withValues(alpha: 0.2),
+                  width: isCorrect
+                      ? 3.0
+                      : (isWrong ? 3.0 : (isTapped ? 3.0 : 1.5)),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isTapped ? 0.15 : 0.06),
-                    blurRadius: isTapped ? 8 : 4,
+                    color: isCorrect
+                        ? Colors.green.withOpacity(0.12)
+                        : isWrong
+                        ? Colors.red.withOpacity(0.12)
+                        : Colors.black.withValues(
+                            alpha: isTapped ? 0.15 : 0.06,
+                          ),
+                    blurRadius: isTapped || isWrong || isCorrect ? 8 : 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -889,13 +970,21 @@ Widget build(BuildContext context) {
                   Icon(
                     object.icon,
                     size: cardSize * 0.35,
-                    color: const Color(0xFF5B6F4A),
+                    color: isCorrect
+                        ? Colors.green
+                        : isWrong
+                        ? Colors.red
+                        : const Color(0xFF5B6F4A),
                   ),
                   SizedBox(height: cardSize * 0.08),
                   Text(
                     object.name,
                     style: TextStyle(
-                      color: const Color(0xFF5B6F4A),
+                      color: isCorrect
+                          ? Colors.green
+                          : isWrong
+                          ? Colors.red
+                          : const Color(0xFF5B6F4A),
                       fontSize: cardSize * 0.12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -934,11 +1023,7 @@ Widget build(BuildContext context) {
               ],
             ),
             child: const Center(
-              child: Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 44,
-              ),
+              child: Icon(Icons.play_arrow, color: Colors.white, size: 44),
             ),
           ),
         ),
@@ -950,6 +1035,15 @@ Widget build(BuildContext context) {
             fontWeight: FontWeight.w600,
           ),
         ),
+        const SizedBox(height: 12),
+        // Show brief instructions on the start screen so players see how to play
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: _buildInstructions(),
+          ),
+        ),
       ],
     );
   }
@@ -959,10 +1053,7 @@ class _TeacherPinDialog extends StatefulWidget {
   final VoidCallback onPinVerified;
   final VoidCallback? onCancel;
 
-  const _TeacherPinDialog({
-    required this.onPinVerified,
-    this.onCancel,
-  });
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
 
   @override
   State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
@@ -981,7 +1072,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
 
   Future<void> _verifyPin() async {
     final pin = _pinController.text.trim();
-    
+
     if (pin.length != 6 || !RegExp(r'^[0-9]{6}').hasMatch(pin)) {
       setState(() {
         _error = 'PIN must be 6 digits';
@@ -1008,7 +1099,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           .collection('teachers')
           .doc(user.uid)
           .get();
-      
+
       final savedPin = doc.data()?['pin'];
       if (savedPin == null) {
         setState(() {
@@ -1040,9 +1131,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 400,
         padding: const EdgeInsets.all(24),
@@ -1051,11 +1140,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.security,
-                  color: const Color(0xFF5B6F4A),
-                  size: 32,
-                ),
+                Icon(Icons.security, color: const Color(0xFF5B6F4A), size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1072,10 +1157,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
             const SizedBox(height: 16),
             Text(
               'Enter your 6-digit PIN to exit the session and access teacher features.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -1093,17 +1175,17 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
               decoration: InputDecoration(
                 counterText: '',
                 hintText: '••••••',
-                hintStyle: TextStyle(
-                  color: Colors.grey[400],
-                  letterSpacing: 8,
-                ),
+                hintStyle: TextStyle(color: Colors.grey[400], letterSpacing: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: const Color(0xFF5B6F4A)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: const Color(0xFF5B6F4A), width: 2),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF5B6F4A),
+                    width: 2,
+                  ),
                 ),
                 errorText: _error,
                 errorStyle: const TextStyle(fontSize: 14),
@@ -1130,10 +1212,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -1155,7 +1234,9 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -1189,5 +1270,3 @@ class GameObject {
     this.isTarget = false,
   });
 }
-
-

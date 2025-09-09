@@ -65,6 +65,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   bool gameActive = false;
   bool canSelect = true;
   late DateTime gameStartTime;
+  String _normalizedDifficulty = 'easy';
 
   // Animation controllers for enhanced UI
   late AnimationController _cardAnimationController;
@@ -174,8 +175,12 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   }
 
   void _initializeGame() {
+    // Normalize difficulty
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
     // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
+    switch (_normalizedDifficulty) {
       case 'easy':
         totalPairs = 4; // 4 pairs
         timeLeft = 0; // No timer for easy
@@ -201,7 +206,8 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     wordList.clear();
     imageList.clear();
 
-    String difficultyKey = widget.difficulty.toLowerCase();
+    // Use normalized difficulty key (we stored it in _initializeGame)
+    String difficultyKey = _normalizedDifficulty.toLowerCase();
     List<Map<String, String>> availablePairs =
         wordImagePairs[difficultyKey] ?? wordImagePairs['easy']!;
 
@@ -394,7 +400,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       });
 
       HapticFeedback.mediumImpact();
-      
+
       // Play success sound with voice effect
       SoundEffectsManager().playSuccessWithVoice();
 
@@ -443,7 +449,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
         completionTime: completionTime,
         challengeFocus: 'Verbal',
         gameName: 'Picture Words',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
 

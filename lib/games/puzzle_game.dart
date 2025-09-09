@@ -14,13 +14,11 @@ class PuzzleGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
-  const PuzzleGame({
-    Key? key,
-    required this.difficulty,
-    this.onGameComplete,
-  }) : super(key: key);
+  const PuzzleGame({Key? key, required this.difficulty, this.onGameComplete})
+    : super(key: key);
 
   @override
   _PuzzleGameState createState() => _PuzzleGameState();
@@ -35,7 +33,7 @@ class PuzzlePiece {
   int currentCol;
   bool isPlaced;
   bool isDragging;
-  
+
   PuzzlePiece({
     required this.id,
     required this.emoji,
@@ -63,9 +61,10 @@ class _PuzzleGameState extends State<PuzzleGame> {
   Timer? gameTimer;
   int timeLeft = 0;
   String currentPuzzleTheme = 'Animals';
-  
+  String _normalizedDifficulty = 'easy';
+
   Random random = Random();
-  
+
   // Puzzle themes with emoji patterns
   final Map<String, Map<String, dynamic>> puzzleThemes = {
     'Animals': {
@@ -120,7 +119,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
       ],
     },
   };
-  
+
   // Soft, accessible colors
   final Color backgroundColor = Color(0xFFF8F9FA);
   final Color gridColor = Color(0xFFE0E0E0);
@@ -137,8 +136,11 @@ class _PuzzleGameState extends State<PuzzleGame> {
   }
 
   void _initializeGame() {
-    // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
+    // Normalize difficulty and set parameters
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
+    switch (_normalizedDifficulty) {
       case 'easy':
         gridSize = 2; // 2x2 = 4 pieces
         showReference = true;
@@ -159,7 +161,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
         showReference = true;
         timeLeft = 0;
     }
-    
+
     _setupPuzzle();
   }
 
@@ -168,38 +170,41 @@ class _PuzzleGameState extends State<PuzzleGame> {
     availablePieces.clear();
     placedPieces = 0;
     movesCount = 0;
-    
+
     // Select random theme
     List<String> themes = puzzleThemes.keys.toList();
     currentPuzzleTheme = themes[random.nextInt(themes.length)];
-    
+
     String gridKey = '${gridSize}x${gridSize}';
     List<List<String>> pattern = puzzleThemes[currentPuzzleTheme]![gridKey];
-    
+
     // Initialize grid
-    puzzleGrid = List.generate(gridSize, 
-      (row) => List.generate(gridSize, (col) => null)
+    puzzleGrid = List.generate(
+      gridSize,
+      (row) => List.generate(gridSize, (col) => null),
     );
-    
+
     // Create puzzle pieces
     for (int row = 0; row < gridSize; row++) {
       for (int col = 0; col < gridSize; col++) {
         int pieceId = row * gridSize + col;
-        puzzlePieces.add(PuzzlePiece(
-          id: pieceId,
-          emoji: pattern[row][col],
-          correctRow: row,
-          correctCol: col,
-          currentRow: -1, // Not placed initially
-          currentCol: -1,
-        ));
+        puzzlePieces.add(
+          PuzzlePiece(
+            id: pieceId,
+            emoji: pattern[row][col],
+            correctRow: row,
+            correctCol: col,
+            currentRow: -1, // Not placed initially
+            currentCol: -1,
+          ),
+        );
       }
     }
-    
+
     // Shuffle pieces for available pieces list
     availablePieces = List.from(puzzlePieces);
     availablePieces.shuffle();
-    
+
     setState(() {});
   }
 
@@ -212,7 +217,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
       movesCount = 0;
       placedPieces = 0;
     });
-    
+
     _showInstructions();
   }
 
@@ -222,7 +227,10 @@ class _PuzzleGameState extends State<PuzzleGame> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Puzzle Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
+        title: Text(
+          'Puzzle Instructions',
+          style: TextStyle(color: Color(0xFF2C3E50)),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -241,7 +249,10 @@ class _PuzzleGameState extends State<PuzzleGame> {
               SizedBox(height: 8),
               Text(
                 'Time limit: ${timeLeft ~/ 60}m ${timeLeft % 60}s',
-                style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFFE57373),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ],
@@ -254,7 +265,10 @@ class _PuzzleGameState extends State<PuzzleGame> {
                 _startTimer();
               }
             },
-            child: Text('Start Puzzle!', style: TextStyle(color: Color(0xFF81C784))),
+            child: Text(
+              'Start Puzzle!',
+              style: TextStyle(color: Color(0xFF81C784)),
+            ),
           ),
         ],
       ),
@@ -266,7 +280,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
       setState(() {
         timeLeft--;
       });
-      
+
       if (timeLeft <= 0) {
         timer.cancel();
         _timeUp();
@@ -283,15 +297,15 @@ class _PuzzleGameState extends State<PuzzleGame> {
 
   void _onPiecePlaced(PuzzlePiece piece, int targetRow, int targetCol) {
     if (!gameActive) return;
-    
+
     movesCount++;
-    
+
     // Remove piece from its current position if it was placed
     if (piece.currentRow >= 0 && piece.currentCol >= 0) {
       puzzleGrid[piece.currentRow][piece.currentCol] = null;
       placedPieces--;
     }
-    
+
     // Remove any piece currently in the target position
     if (puzzleGrid[targetRow][targetCol] != null) {
       var displaced = puzzleGrid[targetRow][targetCol]!;
@@ -301,7 +315,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
       availablePieces.add(displaced);
       placedPieces--;
     }
-    
+
     // Place the new piece
     puzzleGrid[targetRow][targetCol] = piece;
     piece.currentRow = targetRow;
@@ -309,7 +323,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
     piece.isPlaced = true;
     availablePieces.remove(piece);
     placedPieces++;
-    
+
     // Check if piece is in correct position
     if (targetRow == piece.correctRow && targetCol == piece.correctCol) {
       score += 20; // Bonus for correct placement
@@ -319,9 +333,9 @@ class _PuzzleGameState extends State<PuzzleGame> {
     } else {
       HapticFeedback.lightImpact();
     }
-    
+
     setState(() {});
-    
+
     // Check if puzzle is complete
     if (_isPuzzleComplete()) {
       gameTimer?.cancel();
@@ -331,11 +345,13 @@ class _PuzzleGameState extends State<PuzzleGame> {
 
   bool _isPuzzleComplete() {
     if (placedPieces != gridSize * gridSize) return false;
-    
+
     for (int row = 0; row < gridSize; row++) {
       for (int col = 0; col < gridSize; col++) {
         var piece = puzzleGrid[row][col];
-        if (piece == null || piece.correctRow != row || piece.correctCol != col) {
+        if (piece == null ||
+            piece.correctRow != row ||
+            piece.correctCol != col) {
           return false;
         }
       }
@@ -349,7 +365,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
     if (timeLeft > 0) {
       score += timeLeft; // Time bonus
     }
-    
+
     HapticFeedback.heavyImpact();
     _endGame();
   }
@@ -358,15 +374,17 @@ class _PuzzleGameState extends State<PuzzleGame> {
     setState(() {
       gameActive = false;
     });
-    
+
     gameTimer?.cancel();
-    
+
     // Calculate game statistics
     int totalPieces = gridSize * gridSize;
-    double accuracyDouble = totalPieces > 0 ? (placedPieces / totalPieces) * 100 : 0;
+    double accuracyDouble = totalPieces > 0
+        ? (placedPieces / totalPieces) * 100
+        : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -374,7 +392,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
         completionTime: completionTime,
         challengeFocus: 'Logic',
         gameName: 'Puzzle',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
   }
@@ -392,7 +410,9 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
+        title: Text(
+          'Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+        ),
         backgroundColor: Color(0xFFFFCC80), // Soft orange
         foregroundColor: Colors.white,
       ),
@@ -407,27 +427,61 @@ class _PuzzleGameState extends State<PuzzleGame> {
                 children: [
                   Column(
                     children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Moves: $movesCount', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
+                      Text(
+                        'Score: $score',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      Text(
+                        'Moves: $movesCount',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
                     ],
                   ),
                   Column(
                     children: [
-                      Text('Placed: $placedPieces/${gridSize * gridSize}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Theme: $currentPuzzleTheme', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
+                      Text(
+                        'Placed: $placedPieces/${gridSize * gridSize}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      Text(
+                        'Theme: $currentPuzzleTheme',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
                     ],
                   ),
                   if (timeLeft > 0)
                     Column(
                       children: [
-                        Text('Time: ${timeLeft ~/ 60}:${(timeLeft % 60).toString().padLeft(2, '0')}', 
-                             style: TextStyle(fontSize: 16, color: timeLeft <= 30 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
+                        Text(
+                          'Time: ${timeLeft ~/ 60}:${(timeLeft % 60).toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: timeLeft <= 30
+                                ? Color(0xFFE57373)
+                                : Color(0xFF2C3E50),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                 ],
               ),
             ),
-            
+
             // Game Area
             Expanded(
               child: Padding(
@@ -445,15 +499,15 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.extension,
-          size: 80,
-          color: Color(0xFFFFCC80),
-        ),
+        Icon(Icons.extension, size: 80, color: Color(0xFFFFCC80)),
         SizedBox(height: 20),
         Text(
           'Puzzle Game',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -478,7 +532,9 @@ class _PuzzleGameState extends State<PuzzleGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -489,11 +545,11 @@ class _PuzzleGameState extends State<PuzzleGame> {
     if (!gameActive && _isPuzzleComplete()) {
       return _buildWinScreen();
     }
-    
+
     if (!gameActive) {
       return _buildTimeUpScreen();
     }
-    
+
     return Column(
       children: [
         // Reference image (if enabled)
@@ -509,7 +565,11 @@ class _PuzzleGameState extends State<PuzzleGame> {
               children: [
                 Text(
                   'Reference Image',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                 ),
                 SizedBox(height: 8),
                 _buildReferenceGrid(),
@@ -517,7 +577,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
             ),
           ),
         ],
-        
+
         // Puzzle Grid
         Expanded(
           flex: 2,
@@ -526,7 +586,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
             child: _buildPuzzleGrid(),
           ),
         ),
-        
+
         // Available Pieces
         Container(
           height: 120,
@@ -539,12 +599,14 @@ class _PuzzleGameState extends State<PuzzleGame> {
             children: [
               Text(
                 'Drag Pieces Here',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
               ),
               SizedBox(height: 8),
-              Expanded(
-                child: _buildAvailablePieces(),
-              ),
+              Expanded(child: _buildAvailablePieces()),
             ],
           ),
         ),
@@ -555,7 +617,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
   Widget _buildReferenceGrid() {
     String gridKey = '${gridSize}x${gridSize}';
     List<List<String>> pattern = puzzleThemes[currentPuzzleTheme]![gridKey];
-    
+
     return Container(
       width: 120,
       height: 120,
@@ -576,10 +638,7 @@ class _PuzzleGameState extends State<PuzzleGame> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(
-              child: Text(
-                pattern[row][col],
-                style: TextStyle(fontSize: 16),
-              ),
+              child: Text(pattern[row][col], style: TextStyle(fontSize: 16)),
             ),
           );
         },
@@ -605,14 +664,15 @@ class _PuzzleGameState extends State<PuzzleGame> {
 
   Widget _buildGridSlot(int row, int col) {
     PuzzlePiece? piece = puzzleGrid[row][col];
-    bool isCorrect = piece != null && piece.correctRow == row && piece.correctCol == col;
-    
+    bool isCorrect =
+        piece != null && piece.correctRow == row && piece.correctCol == col;
+
     return DragTarget<PuzzlePiece>(
       onAccept: (piece) => _onPiecePlaced(piece, row, col),
       builder: (context, candidateData, rejectedData) {
         return Container(
           decoration: BoxDecoration(
-            color: piece != null 
+            color: piece != null
                 ? (isCorrect ? placedColor : pieceColor)
                 : gridColor,
             borderRadius: BorderRadius.circular(8),
@@ -622,18 +682,9 @@ class _PuzzleGameState extends State<PuzzleGame> {
             ),
           ),
           child: piece != null
-              ? Center(
-                  child: Text(
-                    piece.emoji,
-                    style: TextStyle(fontSize: 24),
-                  ),
-                )
+              ? Center(child: Text(piece.emoji, style: TextStyle(fontSize: 24)))
               : Center(
-                  child: Icon(
-                    Icons.add,
-                    color: Colors.grey[400],
-                    size: 20,
-                  ),
+                  child: Icon(Icons.add, color: Colors.grey[400], size: 20),
                 ),
         );
       },
@@ -644,7 +695,9 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: availablePieces.map((piece) => _buildDraggablePiece(piece)).toList(),
+        children: availablePieces
+            .map((piece) => _buildDraggablePiece(piece))
+            .toList(),
       ),
     );
   }
@@ -675,20 +728,17 @@ class _PuzzleGameState extends State<PuzzleGame> {
         color: isDragging ? dragColor : pieceColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Color(0xFFE0E0E0)),
-        boxShadow: isDragging ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ] : [],
+        boxShadow: isDragging
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ]
+            : [],
       ),
-      child: Center(
-        child: Text(
-          piece.emoji,
-          style: TextStyle(fontSize: 24),
-        ),
-      ),
+      child: Center(child: Text(piece.emoji, style: TextStyle(fontSize: 24))),
     );
   }
 
@@ -696,15 +746,15 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.celebration,
-          size: 80,
-          color: Color(0xFF81C784),
-        ),
+        Icon(Icons.celebration, size: 80, color: Color(0xFF81C784)),
         SizedBox(height: 20),
         Text(
           'Puzzle Complete!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -728,18 +778,24 @@ class _PuzzleGameState extends State<PuzzleGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFFFCC80),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -750,15 +806,15 @@ class _PuzzleGameState extends State<PuzzleGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.timer_off,
-          size: 80,
-          color: Color(0xFFE57373),
-        ),
+        Icon(Icons.timer_off, size: 80, color: Color(0xFFE57373)),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -782,18 +838,24 @@ class _PuzzleGameState extends State<PuzzleGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFFFCC80),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],

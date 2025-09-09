@@ -14,7 +14,8 @@ class ObjectHuntGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
   const ObjectHuntGame({
     Key? key,
@@ -34,7 +35,7 @@ class SceneObject {
   bool isFound;
   bool isHighlighted;
   bool isDistractor;
-  
+
   SceneObject({
     required this.emoji,
     required this.name,
@@ -63,9 +64,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   int timeLeft = 0;
   int memorizationTime = 0;
   String currentScene = 'Living Room';
-  
+
   Random random = Random();
-  
+  String _normalizedDifficulty = 'easy';
+
   // Scene configurations with objects
   final Map<String, Map<String, dynamic>> scenes = {
     'Living Room': {
@@ -86,7 +88,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         {'emoji': '🎵', 'name': 'Music'},
         {'emoji': '🧸', 'name': 'Toy'},
         {'emoji': '🕶️', 'name': 'Glasses'},
-      ]
+      ],
     },
     'Park': {
       'background': '🏞️',
@@ -106,7 +108,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         {'emoji': '🐕', 'name': 'Dog'},
         {'emoji': '🦴', 'name': 'Bone'},
         {'emoji': '🌿', 'name': 'Grass'},
-      ]
+      ],
     },
     'Kitchen': {
       'background': '🏡',
@@ -126,10 +128,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         {'emoji': '🥕', 'name': 'Carrot'},
         {'emoji': '🍌', 'name': 'Banana'},
         {'emoji': '🧊', 'name': 'Ice'},
-      ]
+      ],
     },
   };
-  
+
   // Soft, accessible colors
   final Color backgroundColor = Color(0xFFF8F9FA);
   final Color targetHighlight = Color(0xFFFFF176); // Soft yellow
@@ -141,12 +143,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Object Hunt');
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
     _initializeGame();
   }
 
   void _initializeGame() {
-    // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
+    // Set difficulty parameters based on normalized difficulty
+    switch (_normalizedDifficulty) {
       case 'easy':
         totalTargets = 3;
         memorizationTime = 15; // 15 seconds
@@ -167,25 +172,27 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         memorizationTime = 15;
         timeLeft = 60;
     }
-    
+
     _setupScene();
   }
 
   void _setupScene() {
     sceneObjects.clear();
     targetObjects.clear();
-    
+
     // Select random scene
     List<String> sceneNames = scenes.keys.toList();
     currentScene = sceneNames[random.nextInt(sceneNames.length)];
-    
+
     var sceneData = scenes[currentScene]!;
-    List<Map<String, dynamic>> availableObjects = List.from(sceneData['objects']);
+    List<Map<String, dynamic>> availableObjects = List.from(
+      sceneData['objects'],
+    );
     availableObjects.shuffle();
-    
+
     // Calculate number of objects based on difficulty
     int totalObjects;
-    switch (widget.difficulty.toLowerCase()) {
+    switch (_normalizedDifficulty) {
       case 'easy':
         totalObjects = 8; // 3 targets + 5 distractors
         break;
@@ -198,30 +205,33 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       default:
         totalObjects = 8;
     }
-    
+
     // Take required number of objects
     var selectedObjects = availableObjects.take(totalObjects).toList();
-    
+
     // Create scene objects with random positions
     for (int i = 0; i < selectedObjects.length; i++) {
       var obj = selectedObjects[i];
-      sceneObjects.add(SceneObject(
-        emoji: obj['emoji'],
-        name: obj['name'],
-        position: _generateRandomPosition(i),
-        isTarget: i < totalTargets, // First objects are targets
-        isHighlighted: i < totalTargets, // Start highlighted during memorization
-      ));
+      sceneObjects.add(
+        SceneObject(
+          emoji: obj['emoji'],
+          name: obj['name'],
+          position: _generateRandomPosition(i),
+          isTarget: i < totalTargets, // First objects are targets
+          isHighlighted:
+              i < totalTargets, // Start highlighted during memorization
+        ),
+      );
     }
-    
+
     // Store target objects for reference
     targetObjects = sceneObjects.where((obj) => obj.isTarget).toList();
-    
+
     // Add some distractors for medium/hard
-    if (widget.difficulty.toLowerCase() != 'easy') {
+    if (_normalizedDifficulty != 'easy') {
       _addDistractors();
     }
-    
+
     setState(() {});
   }
 
@@ -231,35 +241,39 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     int columns = 4;
     int row = index ~/ columns;
     int col = index % columns;
-    
+
     double x = 50 + col * gridSize + random.nextDouble() * 20;
     double y = 100 + row * gridSize + random.nextDouble() * 20;
-    
+
     return Offset(x, y);
   }
 
   void _addDistractors() {
     // Add extra objects that appear during search phase for confusion
     var sceneData = scenes[currentScene]!;
-    List<Map<String, dynamic>> availableObjects = List.from(sceneData['objects']);
-    
+    List<Map<String, dynamic>> availableObjects = List.from(
+      sceneData['objects'],
+    );
+
     // Remove already used objects
     for (var sceneObj in sceneObjects) {
       availableObjects.removeWhere((obj) => obj['emoji'] == sceneObj.emoji);
     }
-    
+
     // Add 2-3 distractors for medium/hard
-    int distractorCount = widget.difficulty.toLowerCase() == 'medium' ? 2 : 3;
+    int distractorCount = _normalizedDifficulty == 'medium' ? 2 : 3;
     availableObjects.shuffle();
-    
+
     for (int i = 0; i < distractorCount && i < availableObjects.length; i++) {
       var obj = availableObjects[i];
-      sceneObjects.add(SceneObject(
-        emoji: obj['emoji'],
-        name: obj['name'],
-        position: _generateRandomPosition(sceneObjects.length),
-        isDistractor: true,
-      ));
+      sceneObjects.add(
+        SceneObject(
+          emoji: obj['emoji'],
+          name: obj['name'],
+          position: _generateRandomPosition(sceneObjects.length),
+          isDistractor: true,
+        ),
+      );
     }
   }
 
@@ -273,14 +287,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       score = 0;
       correctFinds = 0;
       wrongTaps = 0;
-      
+
       // Reset all objects
       for (var obj in sceneObjects) {
         obj.isFound = false;
-        obj.isHighlighted = obj.isTarget; // Highlight targets during memorization
+        obj.isHighlighted =
+            obj.isTarget; // Highlight targets during memorization
       }
     });
-    
+
     _showInstructions();
   }
 
@@ -290,7 +305,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Object Hunt Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
+        title: Text(
+          'Object Hunt Instructions',
+          style: TextStyle(color: Color(0xFF2C3E50)),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -308,11 +326,17 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             SizedBox(height: 8),
             Text(
               'Scene: $currentScene',
-              style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Color(0xFF2C3E50),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'Memorization time: ${memorizationTime}s',
-              style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Color(0xFFE57373),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -322,7 +346,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
               Navigator.pop(context);
               _startMemorizationPhase();
             },
-            child: Text('Start Memorizing!', style: TextStyle(color: Color(0xFF81C784))),
+            child: Text(
+              'Start Memorizing!',
+              style: TextStyle(color: Color(0xFF81C784)),
+            ),
           ),
         ],
       ),
@@ -337,7 +364,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         obj.isHighlighted = obj.isTarget;
       }
     });
-    
+
     // Start memorization timer
     phaseTimer = Timer(Duration(seconds: memorizationTime), () {
       _startSearchPhase();
@@ -348,16 +375,16 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     setState(() {
       memorizationPhase = false;
       searchPhase = true;
-      
+
       // Hide all highlights
       for (var obj in sceneObjects) {
         obj.isHighlighted = false;
       }
-      
+
       // Show distractors (they were hidden during memorization)
       // This adds to the challenge
     });
-    
+
     // Start search timer
     _startSearchTimer();
   }
@@ -367,7 +394,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       setState(() {
         timeLeft--;
       });
-      
+
       if (timeLeft <= 0) {
         timer.cancel();
         _timeUp();
@@ -384,9 +411,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
 
   void _onObjectTapped(SceneObject object) {
     if (!searchPhase || !gameActive || object.isFound) return;
-    
+
     HapticFeedback.lightImpact();
-    
+
     if (object.isTarget) {
       // Correct target found!
       setState(() {
@@ -394,12 +421,12 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         correctFinds++;
         score += 15 + (timeLeft ~/ 5); // Bonus for remaining time
       });
-      
+
       HapticFeedback.mediumImpact();
-      
+
       // Play success sound with voice effect
       SoundEffectsManager().playSuccessWithVoice();
-      
+
       if (correctFinds == totalTargets) {
         gameTimer?.cancel();
         _endGame();
@@ -408,18 +435,18 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       // Wrong object tapped
       wrongTaps++;
       score = (score - 5).clamp(0, score); // Penalty
-      
+
       // Flash red briefly
       setState(() {
         object.isHighlighted = true;
       });
-      
+
       Timer(Duration(milliseconds: 300), () {
         setState(() {
           object.isHighlighted = false;
         });
       });
-      
+
       HapticFeedback.lightImpact();
     }
   }
@@ -428,16 +455,17 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     setState(() {
       gameActive = false;
     });
-    
+
     gameTimer?.cancel();
     phaseTimer?.cancel();
-    
+
     // Calculate game statistics
-    double accuracyDouble = (correctFinds + wrongTaps) > 0 ? 
-        (correctFinds / (correctFinds + wrongTaps)) * 100 : 0;
+    double accuracyDouble = (correctFinds + wrongTaps) > 0
+        ? (correctFinds / (correctFinds + wrongTaps)) * 100
+        : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -445,7 +473,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         completionTime: completionTime,
         challengeFocus: 'Memory',
         gameName: 'Object Hunt',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
   }
@@ -464,7 +492,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
+        title: Text(
+          'Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+        ),
         backgroundColor: Color(0xFF90CAF9), // Soft blue
         foregroundColor: Colors.white,
       ),
@@ -479,26 +509,61 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
                 children: [
                   Column(
                     children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Wrong: $wrongTaps', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
+                      Text(
+                        'Score: $score',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      Text(
+                        'Wrong: $wrongTaps',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
                     ],
                   ),
                   Column(
                     children: [
-                      Text('Found: $correctFinds/$totalTargets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Scene: $currentScene', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
+                      Text(
+                        'Found: $correctFinds/$totalTargets',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      Text(
+                        'Scene: $currentScene',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
                     ],
                   ),
                   if (searchPhase)
                     Column(
                       children: [
-                        Text('Time: ${timeLeft}s', style: TextStyle(fontSize: 16, color: timeLeft <= 10 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
+                        Text(
+                          'Time: ${timeLeft}s',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: timeLeft <= 10
+                                ? Color(0xFFE57373)
+                                : Color(0xFF2C3E50),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                 ],
               ),
             ),
-            
+
             // Phase Indicator
             if (memorizationPhase)
               Container(
@@ -510,11 +575,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
                 ),
                 child: Text(
                   'MEMORIZATION PHASE - Study the highlighted objects!',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
-            
+
             if (searchPhase)
               Container(
                 padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
@@ -525,11 +594,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
                 ),
                 child: Text(
                   'SEARCH PHASE - Find the objects you memorized!',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
-            
+
             // Game Area
             Expanded(
               child: Padding(
@@ -554,7 +627,11 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         SizedBox(height: 20),
         Text(
           'Object Hunt',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -574,7 +651,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -585,11 +664,11 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     if (!gameActive && correctFinds == totalTargets) {
       return _buildWinScreen();
     }
-    
+
     if (!gameActive) {
       return _buildTimeUpScreen();
     }
-    
+
     return Stack(
       children: [
         // Scene background
@@ -602,7 +681,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             border: Border.all(color: Color(0xFFE0E0E0)),
           ),
           child: Stack(
-            children: sceneObjects.map((object) => _buildObjectWidget(object)).toList(),
+            children: sceneObjects
+                .map((object) => _buildObjectWidget(object))
+                .toList(),
           ),
         ),
       ],
@@ -614,10 +695,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     if (memorizationPhase && object.isDistractor) {
       return Container();
     }
-    
+
     Color backgroundColor = Colors.transparent;
     Color borderColor = Colors.transparent;
-    
+
     if (object.isHighlighted && memorizationPhase) {
       backgroundColor = targetHighlight.withOpacity(0.3);
       borderColor = targetHighlight;
@@ -628,7 +709,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       backgroundColor = wrongColor.withOpacity(0.3);
       borderColor = wrongColor;
     }
-    
+
     return Positioned(
       left: object.position.dx,
       top: object.position.dy,
@@ -644,10 +725,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             border: Border.all(color: borderColor, width: 2),
           ),
           child: Center(
-            child: Text(
-              object.emoji,
-              style: TextStyle(fontSize: 32),
-            ),
+            child: Text(object.emoji, style: TextStyle(fontSize: 32)),
           ),
         ),
       ),
@@ -655,21 +733,22 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   }
 
   Widget _buildWinScreen() {
-    double accuracy = (correctFinds + wrongTaps) > 0 ? 
-        (correctFinds / (correctFinds + wrongTaps)) * 100 : 100;
-    
+    double accuracy = (correctFinds + wrongTaps) > 0
+        ? (correctFinds / (correctFinds + wrongTaps)) * 100
+        : 100;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.search,
-          size: 80,
-          color: Color(0xFF81C784),
-        ),
+        Icon(Icons.search, size: 80, color: Color(0xFF81C784)),
         SizedBox(height: 20),
         Text(
           'Excellent Hunt!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -697,18 +776,24 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFF90CAF9),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -719,15 +804,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.timer_off,
-          size: 80,
-          color: Color(0xFFE57373),
-        ),
+        Icon(Icons.timer_off, size: 80, color: Color(0xFFE57373)),
         SizedBox(height: 20),
         Text(
           'Time\'s Up!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -751,18 +836,24 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFF90CAF9),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],

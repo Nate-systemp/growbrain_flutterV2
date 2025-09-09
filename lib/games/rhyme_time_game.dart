@@ -55,6 +55,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   int timeLeft = 0;
   bool gameStarted = false;
   bool gameActive = false;
+  String _normalizedDifficulty = 'easy';
 
   // Animation controllers for enhanced UX
   late AnimationController _cardAnimationController;
@@ -152,8 +153,13 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   }
 
   void _initializeGame() {
+    // Normalize difficulty and set parameters
+    final diffKey = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
+    _normalizedDifficulty = diffKey;
     // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
+    switch (diffKey) {
       case 'easy':
         totalPairs = 3; // 3 pairs = 6 words
         timeLeft = 0; // No timer for easy
@@ -171,13 +177,11 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         timeLeft = 0;
     }
 
-    _setupWords();
+    _setupWords(diffKey);
   }
 
-  void _setupWords() {
+  void _setupWords(String difficultyKey) {
     currentWords.clear();
-
-    String difficultyKey = widget.difficulty.toLowerCase();
     List<Map<String, String>> availableGroups =
         rhymeGroups[difficultyKey] ?? rhymeGroups['easy']!;
 
@@ -401,9 +405,10 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         int accuracyBonus = wrongAttempts <= 2
             ? 25
             : 0; // Accuracy bonus for few mistakes
-        int difficultyBonus = widget.difficulty == 'hard'
+        // Use normalized difficulty key already computed in initializer
+        int difficultyBonus = _normalizedDifficulty == 'hard'
             ? 30
-            : widget.difficulty == 'medium'
+            : _normalizedDifficulty == 'medium'
             ? 20
             : 10;
 
@@ -416,7 +421,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       });
 
       HapticFeedback.mediumImpact();
-      
+
       // Play success sound with voice effect
       SoundEffectsManager().playSuccessWithVoice();
 
@@ -469,7 +474,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
         completionTime: completionTime,
         challengeFocus: 'Verbal',
         gameName: 'Rhyme Time',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
 
@@ -679,102 +684,102 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
 
   // ...existing code...
 
-Widget _buildGameArea() {
-  if (!gameActive && correctMatches == totalPairs) {
-    return _buildEndScreen();
-  }
+  Widget _buildGameArea() {
+    if (!gameActive && correctMatches == totalPairs) {
+      return _buildEndScreen();
+    }
 
-  if (!gameActive && timeLeft <= 0) {
-    return _buildTimeUpScreen();
-  }
+    if (!gameActive && timeLeft <= 0) {
+      return _buildTimeUpScreen();
+    }
 
-  return Column(
-    children: [
-      Text(
-        'Tap two words that rhyme together!',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-        textAlign: TextAlign.center,
-      ),
-      SizedBox(height: 30),
-
-      // Enhanced Words Grid
-      Expanded(
-        child: Center(
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 24,
-            runSpacing: 24,
-            children: List.generate(currentWords.length, (index) {
-              return _buildWordCard(currentWords[index]);
-            }),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildWordCard(RhymeWord word) {
-  Color cardColor;
-  if (word.isMatched) {
-    cardColor = const Color(0xFF8FBC8F); // Light green for matched
-  } else if (word.isSelected) {
-    cardColor = const Color(0xFFFFD700); // Bright yellow for selected
-  } else {
-    cardColor = const Color(0xFF5B6F4A); // Dark olive green for normal
-  }
-
-  return GestureDetector(
-    onTap: () => _onWordTapped(word),
-    child: AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      width: 120,
-      height: 70,
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: word.isMatched
-              ? Colors.green.shade700
-              : word.isSelected
-                  ? Colors.amber.shade700
-                  : Colors.white,
-          width: word.isMatched || word.isSelected ? 3 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(word.isSelected ? 0.25 : 0.12),
-            blurRadius: word.isSelected ? 12 : 6,
-            offset: Offset(0, word.isSelected ? 6 : 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          word.word,
+    return Column(
+      children: [
+        Text(
+          'Tap two words that rhyme together!',
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: word.isMatched
-                ? Colors.white
-                : word.isSelected
-                    ? Colors.black
-                    : Colors.white,
-            letterSpacing: 1.5,
+            color: Colors.black87,
           ),
           textAlign: TextAlign.center,
         ),
+        SizedBox(height: 30),
+
+        // Enhanced Words Grid
+        Expanded(
+          child: Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 24,
+              runSpacing: 24,
+              children: List.generate(currentWords.length, (index) {
+                return _buildWordCard(currentWords[index]);
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWordCard(RhymeWord word) {
+    Color cardColor;
+    if (word.isMatched) {
+      cardColor = const Color(0xFF8FBC8F); // Light green for matched
+    } else if (word.isSelected) {
+      cardColor = const Color(0xFFFFD700); // Bright yellow for selected
+    } else {
+      cardColor = const Color(0xFF5B6F4A); // Dark olive green for normal
+    }
+
+    return GestureDetector(
+      onTap: () => _onWordTapped(word),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        width: 120,
+        height: 70,
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: word.isMatched
+                ? Colors.green.shade700
+                : word.isSelected
+                ? Colors.amber.shade700
+                : Colors.white,
+            width: word.isMatched || word.isSelected ? 3 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(word.isSelected ? 0.25 : 0.12),
+              blurRadius: word.isSelected ? 12 : 6,
+              offset: Offset(0, word.isSelected ? 6 : 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            word.word,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: word.isMatched
+                  ? Colors.white
+                  : word.isSelected
+                  ? Colors.black
+                  : Colors.white,
+              letterSpacing: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
-    ),
-  );
-}
-// ...existing code...
+    );
+  }
+  // ...existing code...
 
   Widget _buildEndScreen() {
     double accuracyDouble = wrongAttempts > 0
@@ -1066,69 +1071,69 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                   ),
                   const SizedBox(height: 16), // Reduced from 20
                   Row(
-  children: [
-    Expanded(
-      child: TextButton(
-        onPressed: () {
-          if (widget.onCancel != null) {
-            widget.onCancel!();
-          } else {
-            Navigator.of(context).pop();
-          }
-        },
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            vertical: 26, // Mas malaki para tablet
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const Text(
-          'Cancel',
-          style: TextStyle(
-            fontSize: 24, // Mas malaking font
-            color: Colors.grey,
-          ),
-        ),
-      ),
-    ),
-    const SizedBox(width: 24), // Mas malawak na pagitan
-    Expanded(
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _verifyPin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF5B6F4A),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            vertical: 26, // Mas malaki para tablet
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: _isLoading
-            ? const SizedBox(
-                height: 32, // Mas malaking spinner
-                width: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white,
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            if (widget.onCancel != null) {
+                              widget.onCancel!();
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 26, // Mas malaki para tablet
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 24, // Mas malaking font
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24), // Mas malawak na pagitan
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _verifyPin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B6F4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 26, // Mas malaki para tablet
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 32, // Mas malaking spinner
+                                  width: 32,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Verify',
+                                  style: TextStyle(
+                                    fontSize: 24, // Mas malaking font
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              )
-            : const Text(
-                'Verify',
-                style: TextStyle(
-                  fontSize: 24, // Mas malaking font
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-      ),
-    ),
-  ],
-),
                 ],
               ),
             ),

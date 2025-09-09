@@ -15,7 +15,8 @@ class LightTapGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
   final bool requirePinOnExit;
 
   const LightTapGame({
@@ -29,7 +30,8 @@ class LightTapGame extends StatefulWidget {
   _LightTapGameState createState() => _LightTapGameState();
 }
 
-class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMixin {
+class _LightTapGameState extends State<LightTapGame>
+    with TickerProviderStateMixin {
   // Game state
   List<int> sequence = [];
   List<int> userSequence = [];
@@ -42,19 +44,22 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   int score = 0;
   int correctSequences = 0;
   int wrongTaps = 0;
+  int roundsPlayed = 0;
+  int totalRounds = 5;
   DateTime gameStartTime = DateTime.now();
-  
+
   // Game configuration based on difficulty
   int gridSize = 4; // 2x2 grid by default
   int sequenceLength = 1;
   int maxSequenceLength = 8;
   int sequenceSpeed = 800; // milliseconds per light
-  
+  String _normalizedDifficulty = 'Easy';
+
   // UI state
   List<bool> lightStates = [];
   List<AnimationController> animationControllers = [];
   List<Animation<double>> scaleAnimations = [];
-  
+
   // App color scheme
   final Color primaryColor = Color(0xFF5B6F4A);
   final Color accentColor = Color(0xFFFFD740);
@@ -64,11 +69,11 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
   final Color successColor = Color(0xFF81C784);
   // Header gradient end color (matches Find Me)
   final Color headerGradientEnd = Color(0xFF6B7F5A);
-  
+
   // Light colors for the game
   final List<Color> lightColors = [
     Color(0xFF4CAF50), // Green
-    Color(0xFF2196F3), // Blue  
+    Color(0xFF2196F3), // Blue
     Color(0xFFFF9800), // Orange
     Color(0xFF9C27B0), // Purple
     Color(0xFFF44336), // Red
@@ -77,18 +82,26 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     Color(0xFF795548), // Brown
     Color(0xFFE91E63), // Pink
   ];
-  
+
   final Color inactiveLightColor = Color(0xFFE0E0E0);
 
-  
   @override
   void initState() {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Light Tap');
+    // Normalize difficulty once
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    );
+    // DEBUG: trace normalized difficulty at init
+    // ignore: avoid_print
+    print(
+      '[LightTap] init difficulty="${widget.difficulty}" normalized="$_normalizedDifficulty"',
+    );
     _initializeGame();
   }
-  
+
   @override
   void dispose() {
     for (var controller in animationControllers) {
@@ -98,10 +111,10 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
-  
+
   void _initializeGame() {
-    // Configure game based on difficulty
-    switch (widget.difficulty) {
+    // Configure game based on normalized internal difficulty value
+    switch (_normalizedDifficulty) {
       case 'Easy':
         gridSize = 4; // 2x2 grid
         maxSequenceLength = 5;
@@ -117,34 +130,62 @@ class _LightTapGameState extends State<LightTapGame> with TickerProviderStateMix
         maxSequenceLength = 10;
         sequenceSpeed = 600;
         break;
+      default:
+        gridSize = 4;
+        maxSequenceLength = 5;
+        sequenceSpeed = 1000;
+        break;
     }
-    
+
     // Initialize light states
     lightStates = List.generate(gridSize, (index) => false);
-    
+
+    // Set total rounds per session according to difficulty
+    switch (_normalizedDifficulty) {
+      case 'Easy':
+        totalRounds = 3; // Starter
+        break;
+      case 'Medium':
+        totalRounds = 5; // Growing
+        break;
+      case 'Hard':
+        totalRounds = 7; // Challenged
+        break;
+      default:
+        totalRounds = 5;
+        break;
+    }
+
     // Initialize animations
     // ...existing code...
-// In _initializeGame()
-animationControllers = List.generate(gridSize, (index) =>
-  AnimationController(
-    duration: Duration(milliseconds: 320), // smoother, slightly longer
-    vsync: this,
-  )
-);
+    // In _initializeGame()
+    animationControllers = List.generate(
+      gridSize,
+      (index) => AnimationController(
+        duration: Duration(milliseconds: 220), // smoother, slightly longer
+        vsync: this,
+      ),
+    );
 
-scaleAnimations = animationControllers.map((controller) =>
-  Tween<double>(begin: 1.0, end: 1.2).animate(
-    CurvedAnimation(parent: controller, curve: Curves.easeInOut) // smoother curve
-  )
-).toList();
-// ...existing code...
+    scaleAnimations = animationControllers
+        .map(
+          (controller) => Tween<double>(begin: 1.0, end: 1.2).animate(
+            CurvedAnimation(
+              parent: controller,
+              curve: Curves.easeInOut,
+            ), // smoother curve
+          ),
+        )
+        .toList();
+    // ...existing code...
   }
-  
+
   void _startGame() {
     setState(() {
       gameStarted = true;
       gameOver = false;
       currentLevel = 1;
+      roundsPlayed = 0;
       score = 0;
       correctSequences = 0;
       wrongTaps = 0;
@@ -152,144 +193,157 @@ scaleAnimations = animationControllers.map((controller) =>
       sequence.clear();
       userSequence.clear();
     });
-    
+
     _nextLevel();
   }
-  
+
   void _nextLevel() {
-    if (currentLevel > maxLevel) {
+    // If we've completed the configured number of rounds, end the session
+    if (roundsPlayed >= totalRounds) {
       _endGame(true);
       return;
     }
-    
+
     setState(() {
       sequenceLength = math.min(currentLevel + 1, maxSequenceLength);
       userSequence.clear();
       isWaitingForInput = false;
     });
-    
+
     _generateNewSequence();
     _showSequence();
   }
-  
+
   void _generateNewSequence() {
     final random = math.Random();
-    sequence = List.generate(sequenceLength, (index) => random.nextInt(gridSize));
+    sequence = List.generate(
+      sequenceLength,
+      (index) => random.nextInt(gridSize),
+    );
   }
-  
+
   void _showSequence() async {
     setState(() {
       isShowingSequence = true;
       isWaitingForInput = false;
     });
-    
+
     // Wait a moment before starting
     await Future.delayed(Duration(milliseconds: 500));
-    
+
     // Show each light in sequence
     for (int i = 0; i < sequence.length; i++) {
       if (!mounted) return;
-      
+
       final lightIndex = sequence[i];
-      
+
       // Light up
       setState(() {
         lightStates[lightIndex] = true;
       });
       animationControllers[lightIndex].forward();
-      
+
       await Future.delayed(Duration(milliseconds: sequenceSpeed ~/ 2));
-      
+
       // Light off
       setState(() {
         lightStates[lightIndex] = false;
       });
       animationControllers[lightIndex].reverse();
-      
+
       await Future.delayed(Duration(milliseconds: sequenceSpeed ~/ 2));
     }
-    
+
     // Ready for user input
     setState(() {
       isShowingSequence = false;
       isWaitingForInput = true;
     });
   }
-  
+
   void _onLightTap(int index) {
-  if (!isWaitingForInput || isShowingSequence) return;
+    if (!isWaitingForInput || isShowingSequence) return;
 
-  // Light up immediately on tap
-  setState(() {
-    lightStates[index] = true;
-  });
-
-  animationControllers[index].forward().then((_) {
-    animationControllers[index].reverse().then((_) {
-      // Turn off light after animation
-      if (mounted) {
-        setState(() {
-          lightStates[index] = false;
-        });
-      }
+    // Light up immediately on tap
+    setState(() {
+      lightStates[index] = true;
     });
-  });
 
-  userSequence.add(index);
-
-  // Check if the tap is correct
-  if (userSequence.length <= sequence.length) {
-    final currentIndex = userSequence.length - 1;
-
-    if (userSequence[currentIndex] == sequence[currentIndex]) {
-      // Correct tap
-      setState(() {
-        score += 10;
+    animationControllers[index].forward().then((_) {
+      animationControllers[index].reverse().then((_) {
+        // Turn off light after animation
+        if (mounted) {
+          setState(() {
+            lightStates[index] = false;
+          });
+        }
       });
+    });
 
-      // Check if sequence is complete
-      if (userSequence.length == sequence.length) {
+    userSequence.add(index);
+
+    // Check if the tap is correct
+    if (userSequence.length <= sequence.length) {
+      final currentIndex = userSequence.length - 1;
+
+      if (userSequence[currentIndex] == sequence[currentIndex]) {
+        // Correct tap
         setState(() {
-          correctSequences++;
-          currentLevel++;
+          score += 10;
+        });
+
+        // Check if sequence is complete
+        if (userSequence.length == sequence.length) {
+          setState(() {
+            correctSequences++;
+            roundsPlayed++;
+            currentLevel++;
+            isWaitingForInput = false;
+          });
+
+          // Play success sound effect with voice
+          SoundEffectsManager().playSuccessWithVoice();
+
+          // Show success feedback
+          _showFeedback(true);
+
+          // If we've completed the required rounds, end session; otherwise continue
+          Future.delayed(Duration(milliseconds: 1500), () {
+            if (!mounted) return;
+            if (roundsPlayed >= totalRounds) {
+              _endGame(true);
+            } else {
+              _nextLevel();
+            }
+          });
+        }
+      } else {
+        // Wrong tap
+        setState(() {
+          wrongTaps++;
+          roundsPlayed++;
           isWaitingForInput = false;
         });
 
-        // Play success sound effect with voice
-        SoundEffectsManager().playSuccessWithVoice();
+        // Play wrong sound effect
+        SoundEffectsManager().playWrong();
 
-        // Show success feedback
-        _showFeedback(true);
+        _showFeedback(false);
 
-        // Move to next level after delay
+        // Continue to next round unless we've finished the configured rounds
         Future.delayed(Duration(milliseconds: 1500), () {
-          if (mounted) {
+          if (!mounted) return;
+          if (roundsPlayed >= totalRounds) {
+            _endGame(true);
+          } else {
+            // Proceed to next round
             _nextLevel();
           }
         });
       }
-    } else {
-      // Wrong tap
-      setState(() {
-        wrongTaps++;
-        isWaitingForInput = false;
-      });
-
-      // Play wrong sound effect
-      SoundEffectsManager().playWrong();
-
-      _showFeedback(false);
-
-      // End game or retry based on difficulty
-      Future.delayed(Duration(milliseconds: 1500), () {
-        if (mounted) {
-          _endGame(false);
-        }
-      });
     }
   }
-}
-  
+
   void _showFeedback(bool isCorrect) {
     showDialog(
       context: context,
@@ -317,17 +371,14 @@ scaleAnimations = animationControllers.map((controller) =>
               SizedBox(height: 8),
               Text(
                 'Level ${currentLevel} Complete!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: primaryColor,
-                ),
+                style: TextStyle(fontSize: 16, color: primaryColor),
               ),
             ],
           ],
         ),
       ),
     );
-    
+
     // Auto-close dialog
     Future.delayed(Duration(milliseconds: 1000), () {
       if (mounted) {
@@ -335,14 +386,14 @@ scaleAnimations = animationControllers.map((controller) =>
       }
     });
   }
-  
+
   void _endGame(bool completed) async {
     setState(() {
       gameOver = true;
       isWaitingForInput = false;
       isShowingSequence = false;
     });
-    
+
     final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
     // Compute accuracy as correct / total attempts (correct + wrong). If no attempts, accuracy = 0.
     final totalAttempts = correctSequences + wrongTaps;
@@ -351,8 +402,8 @@ scaleAnimations = animationControllers.map((controller) =>
       accuracy = ((correctSequences / totalAttempts) * 100).round();
     }
     // Clamp to 0..100 just in case
-  accuracy = accuracy.clamp(0, 100);
-    
+    accuracy = accuracy.clamp(0, 100);
+
     // Call completion callback
     if (widget.onGameComplete != null) {
       await widget.onGameComplete!(
@@ -360,13 +411,13 @@ scaleAnimations = animationControllers.map((controller) =>
         completionTime: completionTime,
         challengeFocus: 'Memory',
         gameName: 'Light Tap',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
-    
+
     _showGameOverDialog(completed, accuracy, completionTime);
   }
-  
+
   void _showGameOverDialog(bool completed, int accuracy, int completionTime) {
     showDialog(
       context: context,
@@ -375,10 +426,7 @@ scaleAnimations = animationControllers.map((controller) =>
         backgroundColor: surfaceColor,
         title: Text(
           'Nice Job! ',
-          style: TextStyle(
-            color: primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -420,22 +468,30 @@ scaleAnimations = animationControllers.map((controller) =>
       ),
     );
   }
-  
+
   int _getGridColumns() {
     switch (gridSize) {
-      case 4: return 2; // 2x2
-      case 6: return 2; // 2x3
-      case 9: return 3; // 3x3
-      default: return 2;
+      case 4:
+        return 2; // 2x2
+      case 6:
+        return 2; // 2x3
+      case 9:
+        return 3; // 3x3
+      default:
+        return 2;
     }
   }
-  
+
   int _getGridRows() {
     switch (gridSize) {
-      case 4: return 2; // 2x2
-      case 6: return 3; // 2x3
-      case 9: return 3; // 3x3
-      default: return 2;
+      case 4:
+        return 2; // 2x2
+      case 6:
+        return 3; // 2x3
+      case 9:
+        return 3; // 3x3
+      default:
+        return 2;
     }
   }
 
@@ -456,10 +512,14 @@ scaleAnimations = animationControllers.map((controller) =>
           onPinVerified: () {
             Navigator.of(dialogContext).pop(); // Close dialog
             // Exit session and go to home screen after PIN verification
-            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
           },
           onCancel: () {
-            Navigator.of(dialogContext).pop(); // Just close dialog, stay in game
+            Navigator.of(
+              dialogContext,
+            ).pop(); // Just close dialog, stay in game
           },
         );
       },
@@ -515,11 +575,7 @@ scaleAnimations = animationControllers.map((controller) =>
                     children: [
                       Column(
                         children: [
-                          Icon(
-                            Icons.flag,
-                            color: accentColor,
-                            size: 20,
-                          ),
+                          Icon(Icons.flag, color: accentColor, size: 20),
                           const SizedBox(height: 4),
                           Text(
                             'Level',
@@ -540,11 +596,7 @@ scaleAnimations = animationControllers.map((controller) =>
                       ),
                       Column(
                         children: [
-                          Icon(
-                            Icons.score,
-                            color: accentColor,
-                            size: 20,
-                          ),
+                          Icon(Icons.score, color: accentColor, size: 20),
                           const SizedBox(height: 4),
                           Text(
                             'Score',
@@ -565,11 +617,7 @@ scaleAnimations = animationControllers.map((controller) =>
                       ),
                       Column(
                         children: [
-                          Icon(
-                            Icons.list,
-                            color: accentColor,
-                            size: 20,
-                          ),
+                          Icon(Icons.list, color: accentColor, size: 20),
                           const SizedBox(height: 4),
                           Text(
                             'Sequence',
@@ -591,9 +639,9 @@ scaleAnimations = animationControllers.map((controller) =>
                     ],
                   ),
                 ),
-                
+
                 SizedBox(height: 24),
-                
+
                 // Status text
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -610,9 +658,9 @@ scaleAnimations = animationControllers.map((controller) =>
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 24),
-                
+
                 // Game grid
                 Expanded(
                   child: gameStarted ? _buildGameGrid() : _buildStartScreen(),
@@ -624,7 +672,7 @@ scaleAnimations = animationControllers.map((controller) =>
       ),
     );
   }
-  
+
   String _getStatusText() {
     if (!gameStarted) {
       return 'Tap "Start Game" to begin!';
@@ -636,17 +684,13 @@ scaleAnimations = animationControllers.map((controller) =>
       return 'Get ready for the next sequence...';
     }
   }
-  
+
   Widget _buildStartScreen() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.lightbulb_outline,
-            size: 100,
-            color: accentColor,
-          ),
+          Icon(Icons.lightbulb_outline, size: 100, color: accentColor),
           SizedBox(height: 24),
           Text(
             'Light Tap Memory Game',
@@ -688,10 +732,7 @@ scaleAnimations = animationControllers.map((controller) =>
                   '2. Memorize the pattern\n'
                   '3. Tap the lights in the same order\n'
                   '4. Sequences get longer each level!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: primaryColor,
-                  ),
+                  style: TextStyle(fontSize: 14, color: primaryColor),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -717,17 +758,17 @@ scaleAnimations = animationControllers.map((controller) =>
       ),
     );
   }
-  
+
   Widget _buildGameGrid() {
     final columns = _getGridColumns();
     final rows = _getGridRows();
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxSize = math.min(constraints.maxWidth, constraints.maxHeight);
         final gridSize = maxSize * 0.8;
         final buttonSize = (gridSize / math.max(columns, rows)) - 12;
-        
+
         return Center(
           child: Container(
             width: gridSize,
@@ -750,14 +791,15 @@ scaleAnimations = animationControllers.map((controller) =>
                         onTap: () => _onLightTap(index),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: lightStates[index] 
+                            color: lightStates[index]
                                 ? lightColors[index % lightColors.length]
                                 : inactiveLightColor,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
                                 color: lightStates[index]
-                                    ? lightColors[index % lightColors.length].withOpacity(0.5)
+                                    ? lightColors[index % lightColors.length]
+                                          .withOpacity(0.5)
                                     : Colors.black.withOpacity(0.1),
                                 blurRadius: lightStates[index] ? 8 : 4,
                                 offset: Offset(0, lightStates[index] ? 4 : 2),
@@ -770,7 +812,9 @@ scaleAnimations = animationControllers.map((controller) =>
                               style: TextStyle(
                                 fontSize: buttonSize * 0.2,
                                 fontWeight: FontWeight.bold,
-                                color: lightStates[index] ? Colors.white : primaryColor,
+                                color: lightStates[index]
+                                    ? Colors.white
+                                    : primaryColor,
                               ),
                             ),
                           ),
@@ -792,10 +836,7 @@ class _TeacherPinDialog extends StatefulWidget {
   final VoidCallback onPinVerified;
   final VoidCallback? onCancel;
 
-  const _TeacherPinDialog({
-    required this.onPinVerified,
-    this.onCancel,
-  });
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
 
   @override
   State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
@@ -814,7 +855,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
 
   Future<void> _verifyPin() async {
     final pin = _pinController.text.trim();
-    
+
     if (pin.length != 6 || !RegExp(r'^[0-9]{6}').hasMatch(pin)) {
       setState(() {
         _error = 'PIN must be 6 digits';
@@ -841,7 +882,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           .collection('teachers')
           .doc(user.uid)
           .get();
-      
+
       final savedPin = doc.data()?['pin'];
       if (savedPin == null) {
         setState(() {
@@ -873,9 +914,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 400,
         padding: const EdgeInsets.all(24),
@@ -884,11 +923,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.security,
-                  color: const Color(0xFF5B6F4A),
-                  size: 32,
-                ),
+                Icon(Icons.security, color: const Color(0xFF5B6F4A), size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -905,10 +940,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
             const SizedBox(height: 16),
             Text(
               'Enter your 6-digit PIN to exit the session and access teacher features.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -926,17 +958,17 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
               decoration: InputDecoration(
                 counterText: '',
                 hintText: '••••••',
-                hintStyle: TextStyle(
-                  color: Colors.grey[400],
-                  letterSpacing: 8,
-                ),
+                hintStyle: TextStyle(color: Colors.grey[400], letterSpacing: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: const Color(0xFF5B6F4A)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: const Color(0xFF5B6F4A), width: 2),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF5B6F4A),
+                    width: 2,
+                  ),
                 ),
                 errorText: _error,
                 errorStyle: const TextStyle(fontSize: 14),
@@ -963,10 +995,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -988,7 +1017,9 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(

@@ -50,6 +50,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   List<SoundItem> _currentOptions = [];
   bool _isAnswering = false;
   DateTime? _gameStartTime;
+  late String _normalizedDifficulty;
 
   final List<SoundItem> _allSounds = [
     SoundItem(name: 'Dog', emoji: '🐕', description: 'Woof woof!'),
@@ -69,6 +70,9 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Sound Match');
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    );
     // Initialize with first round immediately
     _initializeGame();
   }
@@ -160,7 +164,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
 
       // Play success sound with voice effect
       SoundEffectsManager().playSuccessWithVoice();
-      
+
       _showFeedback('🎉 Correct! Great job!', Colors.green);
 
       Future.delayed(Duration(seconds: 1), () {
@@ -206,7 +210,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
         completionTime: completionTime,
         challengeFocus: 'Auditory Processing',
         gameName: 'Sound Match',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
 

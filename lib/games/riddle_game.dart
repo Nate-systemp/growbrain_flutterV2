@@ -14,13 +14,11 @@ class RiddleGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
-  const RiddleGame({
-    Key? key,
-    required this.difficulty,
-    this.onGameComplete,
-  }) : super(key: key);
+  const RiddleGame({Key? key, required this.difficulty, this.onGameComplete})
+    : super(key: key);
 
   @override
   _RiddleGameState createState() => _RiddleGameState();
@@ -32,7 +30,7 @@ class Riddle {
   final List<String> options;
   final String? visualHint;
   final String? explanation;
-  
+
   Riddle({
     required this.question,
     required this.correctAnswer,
@@ -58,9 +56,9 @@ class _RiddleGameState extends State<RiddleGame> {
   Timer? riddleTimer;
   int timeLeft = 0;
   int timePerRiddle = 0;
-  
+
   Random random = Random();
-  
+
   // Riddle sets organized by difficulty
   final Map<String, List<Riddle>> riddleSets = {
     'easy': [
@@ -100,7 +98,8 @@ class _RiddleGameState extends State<RiddleGame> {
         explanation: "Birds fly in the sky and are covered with feathers!",
       ),
       Riddle(
-        question: "I'm cold, white, and fall from the sky in winter. What am I?",
+        question:
+            "I'm cold, white, and fall from the sky in winter. What am I?",
         correctAnswer: "Snow",
         options: ["Rain", "Snow", "Hail", "Ice"],
         visualHint: "❄️",
@@ -109,11 +108,13 @@ class _RiddleGameState extends State<RiddleGame> {
     ],
     'medium': [
       Riddle(
-        question: "I have keys but no locks. I have space but no room. You can enter but not go inside. What am I?",
+        question:
+            "I have keys but no locks. I have space but no room. You can enter but not go inside. What am I?",
         correctAnswer: "Keyboard",
         options: ["Piano", "Computer", "Keyboard", "House"],
         visualHint: "⌨️",
-        explanation: "A keyboard has keys, spacebar, and enter key but no physical locks or rooms!",
+        explanation:
+            "A keyboard has keys, spacebar, and enter key but no physical locks or rooms!",
       ),
       Riddle(
         question: "I'm tall when I'm young and short when I'm old. What am I?",
@@ -127,7 +128,8 @@ class _RiddleGameState extends State<RiddleGame> {
         correctAnswer: "Clock",
         options: ["Clock", "Robot", "Statue", "Glove"],
         visualHint: "⏰",
-        explanation: "A clock has hands (hour and minute hands) but cannot clap!",
+        explanation:
+            "A clock has hands (hour and minute hands) but cannot clap!",
       ),
       Riddle(
         question: "I get wet while drying. What am I?",
@@ -137,11 +139,13 @@ class _RiddleGameState extends State<RiddleGame> {
         explanation: "A towel gets wet when it dries other things!",
       ),
       Riddle(
-        question: "I'm light as a feather, yet the strongest person can't hold me for long. What am I?",
+        question:
+            "I'm light as a feather, yet the strongest person can't hold me for long. What am I?",
         correctAnswer: "Breath",
         options: ["Air", "Breath", "Feather", "Paper"],
         visualHint: "💨",
-        explanation: "Your breath is very light, but you can't hold it for very long!",
+        explanation:
+            "Your breath is very light, but you can't hold it for very long!",
       ),
       Riddle(
         question: "I have a neck but no head. What am I?",
@@ -153,18 +157,22 @@ class _RiddleGameState extends State<RiddleGame> {
     ],
     'hard': [
       Riddle(
-        question: "The more you take away from me, the bigger I become. What am I?",
+        question:
+            "The more you take away from me, the bigger I become. What am I?",
         correctAnswer: "Hole",
         options: ["Hole", "Debt", "Problem", "Shadow"],
         visualHint: "🕳️",
-        explanation: "When you dig a hole, the more dirt you take away, the bigger the hole gets!",
+        explanation:
+            "When you dig a hole, the more dirt you take away, the bigger the hole gets!",
       ),
       Riddle(
-        question: "I'm not alive, but I grow. I don't have lungs, but I need air. I don't have a mouth, but water kills me. What am I?",
+        question:
+            "I'm not alive, but I grow. I don't have lungs, but I need air. I don't have a mouth, but water kills me. What am I?",
         correctAnswer: "Fire",
         options: ["Plant", "Fire", "Balloon", "Cloud"],
         visualHint: "🔥",
-        explanation: "Fire grows larger, needs oxygen (air), but water extinguishes it!",
+        explanation:
+            "Fire grows larger, needs oxygen (air), but water extinguishes it!",
       ),
       Riddle(
         question: "What has many teeth but cannot bite?",
@@ -174,18 +182,22 @@ class _RiddleGameState extends State<RiddleGame> {
         explanation: "A comb has many teeth (the thin parts) but cannot bite!",
       ),
       Riddle(
-        question: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?",
+        question:
+            "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?",
         correctAnswer: "Map",
         options: ["Map", "Globe", "Picture", "Book"],
         visualHint: "🗺️",
-        explanation: "A map shows cities, mountains, and water, but not the actual houses, trees, or fish!",
+        explanation:
+            "A map shows cities, mountains, and water, but not the actual houses, trees, or fish!",
       ),
       Riddle(
-        question: "What comes once in a minute, twice in a moment, but never in a thousand years?",
+        question:
+            "What comes once in a minute, twice in a moment, but never in a thousand years?",
         correctAnswer: "Letter M",
         options: ["Time", "Letter M", "Sound", "Breath"],
         visualHint: "🔤",
-        explanation: "The letter 'M' appears once in 'minute', twice in 'moment', but never in 'thousand years'!",
+        explanation:
+            "The letter 'M' appears once in 'minute', twice in 'moment', but never in 'thousand years'!",
       ),
       Riddle(
         question: "I'm always in front of you but can't be seen. What am I?",
@@ -196,7 +208,7 @@ class _RiddleGameState extends State<RiddleGame> {
       ),
     ],
   };
-  
+
   // Soft, accessible colors
   final Color backgroundColor = Color(0xFFF8F9FA);
   final Color questionColor = Color(0xFFE1F5FE); // Light blue
@@ -214,8 +226,12 @@ class _RiddleGameState extends State<RiddleGame> {
   }
 
   void _initializeGame() {
+    // Normalize difficulty key and set difficulty parameters
+    final diffKey = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    ).toLowerCase();
     // Set difficulty parameters
-    switch (widget.difficulty.toLowerCase()) {
+    switch (diffKey) {
       case 'easy':
         totalRiddles = 5;
         timePerRiddle = 0; // No timer for easy
@@ -232,20 +248,21 @@ class _RiddleGameState extends State<RiddleGame> {
         totalRiddles = 5;
         timePerRiddle = 0;
     }
-    
-    _setupRiddles();
+
+    _setupRiddles(diffKey);
   }
 
-  void _setupRiddles() {
+  void _setupRiddles(String difficultyKey) {
     gameRiddles.clear();
-    
-    String difficultyKey = widget.difficulty.toLowerCase();
-    List<Riddle> availableRiddles = List.from(riddleSets[difficultyKey] ?? riddleSets['easy']!);
+
+    List<Riddle> availableRiddles = List.from(
+      riddleSets[difficultyKey] ?? riddleSets['easy']!,
+    );
     availableRiddles.shuffle();
-    
+
     // Take required number of riddles
     gameRiddles = availableRiddles.take(totalRiddles).toList();
-    
+
     currentRiddleIndex = 0;
     setState(() {});
   }
@@ -263,7 +280,7 @@ class _RiddleGameState extends State<RiddleGame> {
       selectedAnswer = null;
       showHint = false;
     });
-    
+
     _showInstructions();
   }
 
@@ -273,7 +290,10 @@ class _RiddleGameState extends State<RiddleGame> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Color(0xFFF8F9FA),
-        title: Text('Riddle Instructions', style: TextStyle(color: Color(0xFF2C3E50))),
+        title: Text(
+          'Riddle Instructions',
+          style: TextStyle(color: Color(0xFF2C3E50)),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -292,7 +312,10 @@ class _RiddleGameState extends State<RiddleGame> {
               SizedBox(height: 8),
               Text(
                 'Time per riddle: ${timePerRiddle}s',
-                style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFFE57373),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ],
@@ -303,7 +326,10 @@ class _RiddleGameState extends State<RiddleGame> {
               Navigator.pop(context);
               _startCurrentRiddle();
             },
-            child: Text('Start Solving!', style: TextStyle(color: Color(0xFF81C784))),
+            child: Text(
+              'Start Solving!',
+              style: TextStyle(color: Color(0xFF81C784)),
+            ),
           ),
         ],
       ),
@@ -317,7 +343,7 @@ class _RiddleGameState extends State<RiddleGame> {
       showHint = false;
       timeLeft = timePerRiddle;
     });
-    
+
     if (timePerRiddle > 0) {
       _startRiddleTimer();
     }
@@ -329,7 +355,7 @@ class _RiddleGameState extends State<RiddleGame> {
       setState(() {
         timeLeft--;
       });
-      
+
       if (timeLeft <= 0) {
         timer.cancel();
         _timeUpForRiddle();
@@ -346,16 +372,16 @@ class _RiddleGameState extends State<RiddleGame> {
 
   void _onAnswerSelected(String answer) {
     if (riddleAnswered || !gameActive) return;
-    
+
     riddleTimer?.cancel();
     setState(() {
       selectedAnswer = answer;
       riddleAnswered = true;
     });
-    
+
     Riddle currentRiddle = gameRiddles[currentRiddleIndex];
     bool isCorrect = answer == currentRiddle.correctAnswer;
-    
+
     if (isCorrect) {
       correctAnswers++;
       score += 20 + (timeLeft > 0 ? timeLeft ~/ 3 : 0); // Time bonus
@@ -366,7 +392,7 @@ class _RiddleGameState extends State<RiddleGame> {
       wrongAnswers++;
       HapticFeedback.lightImpact();
     }
-    
+
     _showRiddleResult(isCorrect, currentRiddle.explanation ?? "");
   }
 
@@ -378,7 +404,9 @@ class _RiddleGameState extends State<RiddleGame> {
         backgroundColor: Color(0xFFF8F9FA),
         title: Text(
           isCorrect ? 'Correct! 🎉' : 'Oops! 😅',
-          style: TextStyle(color: isCorrect ? Color(0xFF81C784) : Color(0xFFE57373)),
+          style: TextStyle(
+            color: isCorrect ? Color(0xFF81C784) : Color(0xFFE57373),
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -386,7 +414,10 @@ class _RiddleGameState extends State<RiddleGame> {
             if (!isCorrect) ...[
               Text(
                 'The correct answer was: ${gameRiddles[currentRiddleIndex].correctAnswer}',
-                style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 8),
@@ -413,7 +444,9 @@ class _RiddleGameState extends State<RiddleGame> {
               _nextRiddle();
             },
             child: Text(
-              currentRiddleIndex < totalRiddles - 1 ? 'Next Riddle' : 'See Results',
+              currentRiddleIndex < totalRiddles - 1
+                  ? 'Next Riddle'
+                  : 'See Results',
               style: TextStyle(color: Color(0xFF81C784)),
             ),
           ),
@@ -436,7 +469,7 @@ class _RiddleGameState extends State<RiddleGame> {
   void _showHintDialog() {
     Riddle currentRiddle = gameRiddles[currentRiddleIndex];
     if (currentRiddle.visualHint == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -472,14 +505,16 @@ class _RiddleGameState extends State<RiddleGame> {
     setState(() {
       gameActive = false;
     });
-    
+
     riddleTimer?.cancel();
-    
+
     // Calculate game statistics
-    double accuracyDouble = totalRiddles > 0 ? (correctAnswers / totalRiddles) * 100 : 0;
+    double accuracyDouble = totalRiddles > 0
+        ? (correctAnswers / totalRiddles) * 100
+        : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-    
+
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
       widget.onGameComplete!(
@@ -505,7 +540,9 @@ class _RiddleGameState extends State<RiddleGame> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}'),
+        title: Text(
+          'Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+        ),
         backgroundColor: Color(0xFFCE93D8), // Soft purple
         foregroundColor: Colors.white,
       ),
@@ -520,21 +557,50 @@ class _RiddleGameState extends State<RiddleGame> {
                 children: [
                   Column(
                     children: [
-                      Text('Score: $score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                      Text('Correct: $correctAnswers', style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50))),
+                      Text(
+                        'Score: $score',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      Text(
+                        'Correct: $correctAnswers',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
                     ],
                   ),
-                  Text('Riddle: ${currentRiddleIndex + 1}/$totalRiddles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+                  Text(
+                    'Riddle: ${currentRiddleIndex + 1}/$totalRiddles',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
                   if (timePerRiddle > 0 && gameActive && !riddleAnswered)
                     Column(
                       children: [
-                        Text('Time: ${timeLeft}s', style: TextStyle(fontSize: 16, color: timeLeft <= 5 ? Color(0xFFE57373) : Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
+                        Text(
+                          'Time: ${timeLeft}s',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: timeLeft <= 5
+                                ? Color(0xFFE57373)
+                                : Color(0xFF2C3E50),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                 ],
               ),
             ),
-            
+
             // Game Area
             Expanded(
               child: Padding(
@@ -552,15 +618,15 @@ class _RiddleGameState extends State<RiddleGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.quiz,
-          size: 80,
-          color: Color(0xFFCE93D8),
-        ),
+        Icon(Icons.quiz, size: 80, color: Color(0xFFCE93D8)),
         SizedBox(height: 20),
         Text(
           'Riddle Game',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -580,7 +646,9 @@ class _RiddleGameState extends State<RiddleGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -591,13 +659,13 @@ class _RiddleGameState extends State<RiddleGame> {
     if (!gameActive) {
       return _buildEndScreen();
     }
-    
+
     if (currentRiddleIndex >= gameRiddles.length) {
       return _buildEndScreen();
     }
-    
+
     Riddle currentRiddle = gameRiddles[currentRiddleIndex];
-    
+
     return Column(
       children: [
         // Question Area
@@ -632,7 +700,9 @@ class _RiddleGameState extends State<RiddleGame> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFFFF176),
                         foregroundColor: Color(0xFF2C3E50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ],
@@ -641,11 +711,13 @@ class _RiddleGameState extends State<RiddleGame> {
             ],
           ),
         ),
-        
+
         // Answer Options
         Expanded(
           child: Column(
-            children: currentRiddle.options.map((option) => _buildAnswerOption(option)).toList(),
+            children: currentRiddle.options
+                .map((option) => _buildAnswerOption(option))
+                .toList(),
           ),
         ),
       ],
@@ -654,9 +726,11 @@ class _RiddleGameState extends State<RiddleGame> {
 
   Widget _buildAnswerOption(String option) {
     bool isSelected = selectedAnswer == option;
-    bool isCorrect = riddleAnswered && option == gameRiddles[currentRiddleIndex].correctAnswer;
+    bool isCorrect =
+        riddleAnswered &&
+        option == gameRiddles[currentRiddleIndex].correctAnswer;
     bool isWrong = riddleAnswered && isSelected && !isCorrect;
-    
+
     Color backgroundColor;
     if (isCorrect) {
       backgroundColor = correctColor;
@@ -667,7 +741,7 @@ class _RiddleGameState extends State<RiddleGame> {
     } else {
       backgroundColor = optionColor;
     }
-    
+
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: 8),
@@ -677,7 +751,9 @@ class _RiddleGameState extends State<RiddleGame> {
           backgroundColor: backgroundColor,
           foregroundColor: Color(0xFF2C3E50),
           padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
         ),
         child: Row(
@@ -695,7 +771,9 @@ class _RiddleGameState extends State<RiddleGame> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
-                  color: (isCorrect || isWrong) ? Colors.white : Color(0xFF2C3E50),
+                  color: (isCorrect || isWrong)
+                      ? Colors.white
+                      : Color(0xFF2C3E50),
                 ),
                 textAlign: TextAlign.left,
               ),
@@ -707,20 +785,22 @@ class _RiddleGameState extends State<RiddleGame> {
   }
 
   Widget _buildEndScreen() {
-    double accuracy = totalRiddles > 0 ? (correctAnswers / totalRiddles) * 100 : 0;
-    
+    double accuracy = totalRiddles > 0
+        ? (correctAnswers / totalRiddles) * 100
+        : 0;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.psychology,
-          size: 80,
-          color: Color(0xFF81C784),
-        ),
+        Icon(Icons.psychology, size: 80, color: Color(0xFF81C784)),
         SizedBox(height: 20),
         Text(
           'Riddles Complete!',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         SizedBox(height: 20),
         Text(
@@ -748,18 +828,24 @@ class _RiddleGameState extends State<RiddleGame> {
             backgroundColor: Color(0xFF81C784),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.onGameComplete != null ? 'Next Game' : 'Back to Menu'),
+          child: Text(
+            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFCE93D8),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],

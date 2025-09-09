@@ -66,6 +66,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   bool showingAnimation = false;
   bool canSelect = false;
   bool gameCompleted = false;
+  String _normalizedDifficulty = 'Easy';
+
+  // App color scheme
   final Color primaryColor = const Color(0xFF5B6F4A);
   final Color accentColor = const Color(0xFFFFD740);
   final Color backgroundColor = const Color(0xFFF5F5DC);
@@ -76,7 +79,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   static const int totalRounds = 3;
 
   int get numberOfShapes {
-    switch (widget.difficulty) {
+    switch (_normalizedDifficulty) {
       case 'Easy':
         return 3;
       case 'Medium':
@@ -90,7 +93,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
 
   int get timerDuration {
     int baseDuration;
-    switch (widget.difficulty) {
+    switch (_normalizedDifficulty) {
       case 'Easy':
         baseDuration = 30;
         break;
@@ -109,7 +112,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
 
   Duration get shakeDuration {
     double baseDurationSeconds;
-    switch (widget.difficulty) {
+    switch (_normalizedDifficulty) {
       case 'Easy':
         baseDurationSeconds = 1.0;
         break;
@@ -132,6 +135,17 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     super.initState();
     gameStartTime = DateTime.now();
     BackgroundMusicManager().startGameMusic('Who Moved?');
+    // Normalize difficulty (accept display names like "Growing"/"Starter")
+    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
+      widget.difficulty,
+    );
+
+    // DEBUG: log normalized difficulty
+    // ignore: avoid_print
+    print(
+      '[WhoMoved] init difficulty="${widget.difficulty}" normalized="$_normalizedDifficulty"',
+    );
+
     _shakeController = AnimationController(
       duration: shakeDuration,
       vsync: this,
@@ -139,6 +153,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
+
     _initializeGame();
   }
 
@@ -263,6 +278,12 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       timer = 0;
     });
 
+    // DEBUG: starting round
+    // ignore: avoid_print
+    print(
+      '[WhoMoved] start round ${roundsPlayed + 1} with speed=${shakeDuration.inMilliseconds}ms',
+    );
+
     Future.delayed(const Duration(seconds: 2), () async {
       if (mounted) {
         await _shakeController.forward();
@@ -286,9 +307,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       selectedShapeIndex = index;
       canSelect = false;
     });
-      
-      SoundEffectsManager().playSuccessWithVoice();
-    
+
+    SoundEffectsManager().playSuccessWithVoice();
+
     if (index == movedShapeIndex) {
       score += 10;
       correctAnswers++;
@@ -341,11 +362,22 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     }
 
     _shakeController.reset();
+    // Prepare next round and start it immediately (don't show intro again)
     setState(() {
-      gameStarted = false;
       timer = 0;
     });
+
     _initializeGame();
+
+    // Small delay to allow UI to settle, then start the next round automatically
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        // DEBUG: auto-starting next round
+        // ignore: avoid_print
+        print('[WhoMoved] auto-starting next round ${roundsPlayed + 1}');
+        _startGame();
+      }
+    });
   }
 
   void _endGame() {
@@ -367,7 +399,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         completionTime: completionTime,
         challengeFocus: widget.challengeFocus ?? 'Memory',
         gameName: widget.gameName ?? 'Who Moved?',
-        difficulty: widget.difficulty,
+        difficulty: _normalizedDifficulty,
       );
     }
 
@@ -951,6 +983,7 @@ class CustomShapeWidget extends StatelessWidget {
     );
   }
 }
+
 class ShapePainter extends CustomPainter {
   final ShapeType shapeType;
   final Color color;
@@ -992,10 +1025,16 @@ class ShapePainter extends CustomPainter {
       case ShapeType.circle:
         return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
       case ShapeType.square:
-        return Path()..addRRect(RRect.fromRectAndRadius(
-          Rect.fromCenter(center: center, width: radius * 1.6, height: radius * 1.6),
-          Radius.circular(radius * 0.35),
-        ));
+        return Path()..addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: center,
+              width: radius * 1.6,
+              height: radius * 1.6,
+            ),
+            Radius.circular(radius * 0.35),
+          ),
+        );
       case ShapeType.triangle:
         final path = Path();
         path.moveTo(center.dx, center.dy - radius);
@@ -1058,7 +1097,13 @@ class ShapePainter extends CustomPainter {
         path.close();
         return path;
       case ShapeType.oval:
-        return Path()..addOval(Rect.fromCenter(center: center, width: radius * 2, height: radius * 1.2));
+        return Path()..addOval(
+          Rect.fromCenter(
+            center: center,
+            width: radius * 2,
+            height: radius * 1.2,
+          ),
+        );
     }
   }
 
