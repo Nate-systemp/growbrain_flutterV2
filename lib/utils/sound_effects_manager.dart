@@ -120,6 +120,20 @@ class SoundEffectsManager {
     }
   }
 
+  /// Play puzzle click sound effect
+  Future<void> playPuzzleClickSound() async {
+    if (!_soundEnabled) return;
+    
+    try {
+      await _audioPlayer.stop(); // Stop any currently playing sound
+      await _audioPlayer.setSource(AssetSource('sound_fx/puzzel click sounds.wav'));
+      await _audioPlayer.setVolume(0.6); // Set volume to 60%
+      await _audioPlayer.resume();
+    } catch (e) {
+      print('Error playing puzzle click sound: $e');
+    }
+  }
+
   /// Dispose of the audio players
   void dispose() {
     _audioPlayer.dispose();

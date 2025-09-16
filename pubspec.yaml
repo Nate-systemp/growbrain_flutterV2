@@ -71,6 +71,10 @@ flutter:
     - assets/bg_music/
     - assets/sound_fx/
     - assets/voice_fx/
+    - assets/attention.png
+    - assets/verbal.png
+    - assets/memory.png
+    - assets/logic.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -227,8 +227,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             bottom: cardSpacing / 2,
                           ),
                           child: _HomeCard(
-                            icon: Icons.lightbulb_outline,
-                            iconColor: Colors.amber,
+                            imagePath: 'assets/attention.png',
                             label: 'Attention',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
@@ -245,10 +244,8 @@ class _MyHomePageState extends State<MyHomePage> {
                             bottom: cardSpacing / 2,
                           ),
                           child: _HomeCard(
-                            icon: Icons.abc,
-                            iconColor: Colors.redAccent,
+                            imagePath: 'assets/verbal.png',
                             label: 'Verbal',
-                            customIcon: true,
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
                                 builder: (_) => CategoryGamesScreen(category: 'Verbal'),
@@ -268,10 +265,8 @@ class _MyHomePageState extends State<MyHomePage> {
                             top: cardSpacing / 2,
                           ),
                           child: _HomeCard(
-                            icon: Icons.style,
-                            iconColor: Colors.redAccent,
+                            imagePath: 'assets/memory.png',
                             label: 'Memory',
-                            customIcon: true,
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
                                 builder: (_) => CategoryGamesScreen(category: 'Memory'),
@@ -287,8 +282,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             top: cardSpacing / 2,
                           ),
                           child: _HomeCard(
-                            icon: Icons.psychology,
-                            iconColor: Colors.deepOrangeAccent,
+                            imagePath: 'assets/logic.png',
                             label: 'Logic',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
@@ -312,22 +306,18 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class _HomeCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
+  final String? imagePath;
   final String label;
-  final bool customIcon;
   final double width;
   final double height;
   final VoidCallback? onTap;
 
   const _HomeCard({
-    required this.icon,
-    required this.iconColor,
+    this.imagePath,
     required this.label,
-    this.customIcon = false,
     required this.width,
     required this.height,
-  this.onTap,
+    this.onTap,
     Key? key,
   }) : super(key: key);
 
@@ -335,94 +325,14 @@ class _HomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: width,
-        height: height,
-        margin: const EdgeInsets.all(0),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F3F3),
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 18,
-              offset: const Offset(2, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Center(
-                child: customIcon && label == 'Verbal'
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'A',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                              fontSize: 60,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'B',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                              fontSize: 60,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'C',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                              fontSize: 60,
-                            ),
-                          ),
-                        ],
-                      )
-                    : customIcon && label == 'Memory'
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.style, color: Colors.redAccent, size: 60),
-                              const SizedBox(width: 4),
-                              Icon(Icons.style, color: Colors.green, size: 60),
-                            ],
-                          )
-                        : Icon(icon, color: iconColor, size: 90),
-              ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 22),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
-              ),
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 38,
-                  color: Color(0xFF444444),
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: imagePath != null
+          ? Image.asset(
+              imagePath!,
+              fit: BoxFit.contain,
+              width: width,
+              height: height,
+            )
+          : Icon(Icons.help, color: Colors.grey, size: 90),
     );
   }
 }

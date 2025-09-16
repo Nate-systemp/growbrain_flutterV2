@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math' as math;
 import 'utils/difficulty_utils.dart';
 import 'games/match_cards_game.dart';
 import 'games/tictactoe_game.dart';
@@ -493,90 +494,275 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       final studentName = widget.student['fullName'] ?? 'Student';
       return Scaffold(
         backgroundColor: const Color(0xFF5B6F4A),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // Back button
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.black87,
-                            size: 24,
-                          ),
-                          tooltip: 'Back to Teacher Dashboard',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          'Set Session for ${widget.student['fullName'] ?? 'Student'}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              // Header
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  'set session',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
                   ),
-                  const SizedBox(height: 20),
-                  
-                  // Main content row
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isWideScreen = constraints.maxWidth > 800;
-                      
-                      if (isWideScreen) {
-                        // Wide screen layout - side by side
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Left panel - Selected Games
-                            Expanded(
-                              flex: 2,
-                              child: _buildSelectedGamesPanel(studentName),
-                            ),
-                            const SizedBox(width: 20),
-                            // Right panel - Game Categories
-                            Expanded(
-                              flex: 3,
-                              child: _buildGameCategoriesPanel(),
-                            ),
-                          ],
-                        );
-                      } else {
-                        // Narrow screen layout - stacked
-                        return Column(
-                          children: [
-                            _buildSelectedGamesPanel(studentName),
-                            const SizedBox(height: 20),
-                            _buildGameCategoriesPanel(),
-                          ],
-                        );
-                      }
-                    },
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
+              
+              // Main content - exact Figma layout
+              Expanded(
+                child: Row(
+                  children: [
+                    // Left panel - exactly like Figma
+                    SizedBox(
+                      width: 260,
+                      child: Column(
+                        children: [
+                          // Back button
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: MaterialButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.arrow_back,
+                                    color: Colors.grey[600],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Back',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Selected Games panel
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Selected Games',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  Text(
+                                    'for ${studentName.split(' ').first}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Tap on selected games to set difficulty',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black38,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  
+                                  // Game slots - 2x2 grid layout for selected games
+                                  Expanded(
+                                    child: selectedGames.isEmpty
+                                        ? Center(
+                                            child: Text(
+                                              'No games selected',
+                                              style: TextStyle(
+                                                color: Colors.grey[500],
+                                                fontSize: 14,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          )
+                                        : Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                                            child: GridView.builder(
+                                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 2,
+                                                mainAxisSpacing: 12,
+                                                crossAxisSpacing: 12,
+                                                childAspectRatio: 1.0,
+                                              ),
+                                              itemCount: selectedGames.length,
+                                              shrinkWrap: true,
+                                              physics: const NeverScrollableScrollPhysics(),
+                                              itemBuilder: (context, index) {
+                                                final game = selectedGames.elementAt(index);
+                                                return GestureDetector(
+                                                  onTap: () => _showSetDifficultyModal(game),
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF5B6F4A),
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.1),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(0, 2),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Center(
+                                                      child: Icon(
+                                                        _getGameIcon(game),
+                                                        color: Colors.white,
+                                                        size: 24,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Clear All button
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE57373), // Red
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: MaterialButton(
+                              onPressed: () {
+                                setState(() {
+                                  selectedGames.clear();
+                                  gameDifficulties.clear();
+                                });
+                              },
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Clear All',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Save button
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB74D), // Orange
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: MaterialButton(
+                              onPressed: _saving ? null : _saveSession,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Save',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Play button
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB74D), // Orange
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: MaterialButton(
+                              onPressed: _showPlayModal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Play',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    
+                    // Right panel - 2x2 category grid centered and compact
+                    Expanded(
+                      child: Center(
+                        child: SizedBox(
+                          width: 650,
+                          height: 650,
+                          child: GridView.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 20,
+                            crossAxisSpacing: 20,
+                            childAspectRatio: 1.0,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _buildCategoryCard('Attention'),
+                              _buildCategoryCard('Verbal'),
+                              _buildCategoryCard('Memory'),
+                              _buildCategoryCard('Logic'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -594,198 +780,357 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     }
   }
 
-  Widget _buildSelectedGamesPanel(String studentName) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 350),
-      child: Column(
+  Widget _buildGameSlot(int index) {
+    final hasGame = selectedGames.length > index;
+    final game = hasGame ? selectedGames.elementAt(index) : null;
+    
+    if (!hasGame) {
+      return Container(); // Return empty container for slots without games
+    }
+    
+    return GestureDetector(
+      onTap: () => _showSetDifficultyModal(game!),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF5B6F4A),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            _getGameIcon(game!),
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(String category) {
+    final games = categoryGames[category] ?? [];
+    final isSelected = selectedGames.any((game) => games.contains(game));
+    
+    return GestureDetector(
+      onTap: () => _openCategoryModal(category),
+      child: Stack(
         children: [
-          // Selected Games panel
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 300, maxHeight: 400),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 8,
-                  offset: const Offset(2, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF7F7F7),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Selected Games',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'for ${studentName.split(' ').first}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Tap on selected games to set difficulty',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.black38,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Game slots
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // First row - 2 games
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _SelectedGameSlot(
-                              game: selectedGames.isNotEmpty
-                                  ? selectedGames.elementAt(0)
-                                  : null,
-                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
-                            ),
-                            _SelectedGameSlot(
-                              game: selectedGames.length > 1
-                                  ? selectedGames.elementAt(1)
-                                  : null,
-                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
-                            ),
-                          ],
-                        ),
-                        // Second row - 2 games
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _SelectedGameSlot(
-                              game: selectedGames.length > 2
-                                  ? selectedGames.elementAt(2)
-                                  : null,
-                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
-                            ),
-                            _SelectedGameSlot(
-                              game: selectedGames.length > 3
-                                  ? selectedGames.elementAt(3)
-                                  : null,
-                              onSetDifficulty: (g) => _showSetDifficultyModal(g),
-                            ),
-                          ],
-                        ),
-                        // Third row - 1 game (bonus)
-                        _SelectedGameSlot(
-                          game: selectedGames.length > 4
-                              ? selectedGames.elementAt(4)
-                              : null,
-                          faded: true,
-                          onSetDifficulty: (g) => _showSetDifficultyModal(g),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // Just the image - no background, no text
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: _getCategoryIcon(category),
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Action buttons
-          Column(
-            children: [
-              _StyledButton(
-                label: 'Clear All',
-                color: Colors.red,
-                onTap: () {
-                  setState(() {
-                    selectedGames.clear();
-                    gameDifficulties.clear();
-                  });
-                },
+          // Selected indicator (optional)
+          if (isSelected)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
-              const SizedBox(height: 10),
-              _YellowButton(
-                label: 'Save',
-                onTap: _saving
-                    ? () {}
-                    : () {
-                        _saveSession();
-                      },
-              ),
-              const SizedBox(height: 10),
-              _YellowButton(label: 'Play', onTap: _showPlayModal),
-            ],
-          ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildGameCategoriesPanel() {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 500),
-      child: GridView.count(
-        crossAxisCount: 2,
-        mainAxisSpacing: 20,
-        crossAxisSpacing: 20,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.2,
-        children: [
-          for (final category in allGames)
-            _GameCard(
-              label: category,
-              icon: _iconForCategory(category),
-              color: _colorForCategory(category),
-              selected: selectedGames.any(
-                (g) => categoryGames[category]!.contains(g),
+  Widget _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Attention':
+        return Image.asset(
+          'assets/attention.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      case 'Verbal':
+        return Image.asset(
+          'assets/verbal.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      case 'Memory':
+        return Image.asset(
+          'assets/memory.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      case 'Logic':
+        return Image.asset(
+          'assets/logic.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      default:
+        return Icon(Icons.extension, color: Colors.white, size: 30);
+    }
+  }
+
+  Color _getCategoryIconColor(String category) {
+    switch (category) {
+      case 'Attention':
+        return const Color(0xFFFFD740); // Yellow
+      case 'Verbal':
+        return const Color(0xFF42A5F5); // Blue  
+      case 'Memory':
+        return const Color(0xFFFFE0B2); // Light peach/cream
+      case 'Logic':
+        return const Color(0xFFFFAB91); // Light coral/pink
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getGameIcon(String game) {
+    switch (game) {
+      case 'Match Cards':
+        return Icons.style;
+      case 'TicTacToe':
+        return Icons.grid_3x3;
+      case 'Fruit Shuffle':
+        return Icons.shuffle;
+      case 'Who Moved?':
+        return Icons.visibility;
+      case 'Light Tap':
+        return Icons.touch_app;
+      case 'Find Me':
+        return Icons.search;
+      case 'Sound Match':
+        return Icons.volume_up;
+      case 'Rhyme Time':
+        return Icons.music_note;
+      case 'Picture Words':
+        return Icons.image;
+      case 'Object Hunt':
+        return Icons.explore;
+      case 'Puzzle':
+        return Icons.extension;
+      case 'Riddle Game':
+        return Icons.quiz;
+      default:
+        return Icons.games;
+    }
+  }
+
+  Widget _buildCompactSelectedGamesPanel(String studentName) {
+    return Column(
+      children: [
+        // Selected Games panel - more compact
+        Container(
+          width: double.infinity,
+          height: 200,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
-              enabled: availableGames.contains(category),
-              onTap: availableGames.contains(category) 
-                  ? () => _openCategoryModal(category)
-                  : () {}, // Empty function for disabled cards
+            ],
+          ),
+          child: Column(
+            children: [
+              // Title
+              const Text(
+                'Selected Games',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                'for ${studentName.split(' ').first}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Tap on selected games to set difficulty',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.black38,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Game slots - compact grid
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    for (int i = 0; i < 5; i++)
+                      _CompactGameSlot(
+                        game: selectedGames.length > i
+                            ? selectedGames.elementAt(i)
+                            : null,
+                        onTap: selectedGames.length > i
+                            ? () => _showSetDifficultyModal(selectedGames.elementAt(i))
+                            : null,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Action buttons - compact
+        Container(
+          width: double.infinity,
+          height: 45,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE57373), // Red color
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: MaterialButton(
+            onPressed: () {
+              setState(() {
+                selectedGames.clear();
+                gameDifficulties.clear();
+              });
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
             ),
-        ],
-      ),
+            child: const Text(
+              'Clear All',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          height: 45,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD740), // Yellow color
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: MaterialButton(
+            onPressed: _saving ? null : _saveSession,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Text(
+              'Save',
+              style: TextStyle(
+                color: const Color(0xFF5B6F4A),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          height: 45,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD740), // Yellow color
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: MaterialButton(
+            onPressed: _showPlayModal,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Text(
+              'Play',
+              style: TextStyle(
+                color: const Color(0xFF5B6F4A),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+  
+  Widget _buildSelectedGamesPanel(String studentName) {
+    return _buildCompactSelectedGamesPanel(studentName);
+  }
+
+  Widget _buildCompactGameCategoriesPanel() {
+    return GridView.count(
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.1,
+      children: [
+        for (final category in allGames)
+          _CompactGameCard(
+            label: category,
+            icon: _iconForCategory(category),
+            color: _colorForCategory(category),
+            selected: selectedGames.any(
+              (g) => categoryGames[category]!.contains(g),
+            ),
+            enabled: availableGames.contains(category),
+            onTap: availableGames.contains(category) 
+                ? () => _openCategoryModal(category)
+                : () {},
+          ),
+      ],
+    );
+  }
+  
+  Widget _buildGameCategoriesPanel() {
+    return _buildCompactGameCategoriesPanel();
   }
 
   IconData _iconForCategory(String category) {
     switch (category) {
       case 'Attention':
-        return Icons.lightbulb_outline;
+        return Icons.lightbulb;
       case 'Verbal':
         return Icons.abc;
       case 'Memory':
-        return Icons.style;
+        return Icons.dashboard;
       case 'Logic':
         return Icons.psychology;
       default:
@@ -796,13 +1141,13 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
   Color _colorForCategory(String category) {
     switch (category) {
       case 'Attention':
-        return Colors.amber;
+        return const Color(0xFFFFD740); // Yellow
       case 'Verbal':
-        return Colors.redAccent;
+        return const Color(0xFFFF6B6B); // Light red/pink
       case 'Memory':
-        return Colors.blueAccent;
+        return const Color(0xFF4ECDC4); // Teal
       case 'Logic':
-        return Colors.deepOrange;
+        return const Color(0xFFFF8A65); // Orange
       default:
         return Colors.grey;
     }
@@ -828,6 +1173,157 @@ class _GameCard extends StatefulWidget {
 
   @override
   State<_GameCard> createState() => _GameCardState();
+}
+
+// Compact Game Slot widget for selected games panel
+class _CompactGameSlot extends StatelessWidget {
+  final String? game;
+  final VoidCallback? onTap;
+
+  const _CompactGameSlot({Key? key, this.game, this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final hasGame = game != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: hasGame ? const Color(0xFF5B6F4A) : Colors.grey[300],
+          shape: BoxShape.circle,
+          boxShadow: hasGame ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        ),
+        child: Center(
+          child: hasGame
+              ? Icon(
+                  _getGameIcon(game!),
+                  color: Colors.white,
+                  size: 20,
+                )
+              : Icon(
+                  Icons.add,
+                  color: Colors.grey[500],
+                  size: 20,
+                ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getGameIcon(String gameName) {
+    // Return appropriate icon based on game name
+    switch (gameName) {
+      case 'Match Cards':
+        return Icons.style;
+      case 'TicTacToe':
+        return Icons.grid_3x3;
+      case 'Fruit Shuffle':
+        return Icons.shuffle;
+      case 'Who Moved?':
+        return Icons.visibility;
+      case 'Light Tap':
+        return Icons.touch_app;
+      case 'Find Me':
+        return Icons.search;
+      case 'Sound Match':
+        return Icons.volume_up;
+      case 'Rhyme Time':
+        return Icons.music_note;
+      case 'Picture Words':
+        return Icons.image;
+      case 'Object Hunt':
+        return Icons.explore;
+      case 'Puzzle':
+        return Icons.extension;
+      case 'Riddle Game':
+        return Icons.quiz;
+      default:
+        return Icons.star;
+    }
+  }
+}
+
+// Compact Game Card for category selection
+class _CompactGameCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _CompactGameCard({
+    Key? key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.selected,
+    this.enabled = true,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? color : Colors.transparent,
+              width: selected ? 3 : 0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 40,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: enabled ? Colors.black87 : Colors.black38,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixin {
@@ -2587,30 +3083,252 @@ class _DifficultyOption extends StatelessWidget {
 class _PieChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blue[700]!
-      ..style = PaintingStyle.fill;
+    // Simple pie chart implementation
+    final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Draw segments
+    paint.color = Colors.green;
     canvas.drawArc(
-      Rect.fromLTWH(0, 0, size.width, size.height),
+      Rect.fromCircle(center: center, radius: radius),
       0,
-      3.14 * 1.5,
+      3.14159 * 1.5, // 75% of circle
       true,
       paint,
     );
-    final paint2 = Paint()
-      ..color = Colors.blue[200]!
-      ..style = PaintingStyle.fill;
+
+    paint.color = Colors.red;
     canvas.drawArc(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      3.14 * 1.5,
-      3.14 * 0.5,
+      Rect.fromCircle(center: center, radius: radius),
+      3.14159 * 1.5,
+      3.14159 * 0.5, // 25% of circle
       true,
-      paint2,
+      paint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class _LightBulbPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    // Draw lightbulb body (more bulb-like shape)
+    final bulbPath = Path();
+    bulbPath.addOval(Rect.fromCenter(
+      center: Offset(center.dx, center.dy + 2),
+      width: size.width * 0.5,
+      height: size.width * 0.6,
+    ));
+    canvas.drawPath(bulbPath, paint);
+    
+    // Draw bulb base/screw
+    paint.color = Colors.grey[400]!;
+    final baseRect = Rect.fromCenter(
+      center: Offset(center.dx, center.dy + size.height * 0.35),
+      width: size.width * 0.3,
+      height: size.height * 0.15,
+    );
+    canvas.drawRect(baseRect, paint);
+    
+    // Draw rays around lightbulb
+    paint.color = const Color(0xFFFFD740); // Yellow rays
+    paint.strokeWidth = 2;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeCap = StrokeCap.round;
+    
+    for (int i = 0; i < 8; i++) {
+      final angle = (i * 45) * (3.14159 / 180);
+      final startX = center.dx + (size.width * 0.35) * math.cos(angle);
+      final startY = center.dy + (size.width * 0.35) * math.sin(angle);
+      final endX = center.dx + (size.width * 0.45) * math.cos(angle);
+      final endY = center.dy + (size.width * 0.45) * math.sin(angle);
+      
+      canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class _StrawberryPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    // Draw two strawberries side by side
+    _drawStrawberry(canvas, Offset(center.dx - 8, center.dy), size.width * 0.35);
+    _drawStrawberry(canvas, Offset(center.dx + 8, center.dy), size.width * 0.35);
+    
+    // Draw small hearts around strawberries
+    final heartPaint = Paint()
+      ..color = const Color(0xFFE91E63)
+      ..style = PaintingStyle.fill;
+    
+    _drawHeart(canvas, Offset(center.dx - 12, center.dy - 8), 3, heartPaint);
+    _drawHeart(canvas, Offset(center.dx + 12, center.dy - 8), 3, heartPaint);
+    _drawHeart(canvas, Offset(center.dx, center.dy + 10), 2, heartPaint);
+  }
+  
+  void _drawStrawberry(Canvas canvas, Offset center, double size) {
+    final paint = Paint()
+      ..color = const Color(0xFFE53935)
+      ..style = PaintingStyle.fill;
+    
+    // Draw strawberry body
+    final path = Path();
+    path.moveTo(center.dx, center.dy - size * 0.4);
+    path.quadraticBezierTo(
+      center.dx + size * 0.4, center.dy - size * 0.2,
+      center.dx + size * 0.3, center.dy + size * 0.4,
+    );
+    path.quadraticBezierTo(
+      center.dx, center.dy + size * 0.5,
+      center.dx - size * 0.3, center.dy + size * 0.4,
+    );
+    path.quadraticBezierTo(
+      center.dx - size * 0.4, center.dy - size * 0.2,
+      center.dx, center.dy - size * 0.4,
+    );
+    path.close();
+    canvas.drawPath(path, paint);
+    
+    // Draw strawberry leaves
+    paint.color = const Color(0xFF4CAF50);
+    final leafPath = Path();
+    leafPath.moveTo(center.dx - size * 0.2, center.dy - size * 0.4);
+    leafPath.lineTo(center.dx - size * 0.1, center.dy - size * 0.6);
+    leafPath.lineTo(center.dx, center.dy - size * 0.5);
+    leafPath.lineTo(center.dx + size * 0.1, center.dy - size * 0.6);
+    leafPath.lineTo(center.dx + size * 0.2, center.dy - size * 0.4);
+    leafPath.close();
+    canvas.drawPath(leafPath, paint);
+    
+    // Draw seeds
+    paint.color = Colors.yellow;
+    for (int i = 0; i < 4; i++) {
+      canvas.drawCircle(
+        Offset(center.dx + (i % 2 == 0 ? -2 : 2), center.dy + (i < 2 ? -2 : 2)),
+        0.8,
+        paint,
+      );
+    }
+  }
+  
+  void _drawHeart(Canvas canvas, Offset center, double size, Paint paint) {
+    final path = Path();
+    path.moveTo(center.dx, center.dy + size);
+    path.cubicTo(
+      center.dx - size, center.dy,
+      center.dx - size, center.dy - size * 0.5,
+      center.dx, center.dy - size * 0.3,
+    );
+    path.cubicTo(
+      center.dx + size, center.dy - size * 0.5,
+      center.dx + size, center.dy,
+      center.dx, center.dy + size,
+    );
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class _BrainPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFFF7043)
+      ..style = PaintingStyle.fill;
+    
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    // Draw brain shape with more realistic curves
+    final path = Path();
+    
+    // Left hemisphere
+    path.moveTo(center.dx - size.width * 0.1, center.dy - size.height * 0.3);
+    path.quadraticBezierTo(
+      center.dx - size.width * 0.4, center.dy - size.height * 0.4,
+      center.dx - size.width * 0.35, center.dy - size.height * 0.1,
+    );
+    path.quadraticBezierTo(
+      center.dx - size.width * 0.4, center.dy + size.height * 0.1,
+      center.dx - size.width * 0.2, center.dy + size.height * 0.3,
+    );
+    
+    // Bottom connection
+    path.quadraticBezierTo(
+      center.dx - size.width * 0.1, center.dy + size.height * 0.35,
+      center.dx, center.dy + size.height * 0.3,
+    );
+    
+    // Right hemisphere
+    path.quadraticBezierTo(
+      center.dx + size.width * 0.1, center.dy + size.height * 0.35,
+      center.dx + size.width * 0.2, center.dy + size.height * 0.3,
+    );
+    path.quadraticBezierTo(
+      center.dx + size.width * 0.4, center.dy + size.height * 0.1,
+      center.dx + size.width * 0.35, center.dy - size.height * 0.1,
+    );
+    path.quadraticBezierTo(
+      center.dx + size.width * 0.4, center.dy - size.height * 0.4,
+      center.dx + size.width * 0.1, center.dy - size.height * 0.3,
+    );
+    
+    // Top connection
+    path.quadraticBezierTo(
+      center.dx, center.dy - size.height * 0.35,
+      center.dx - size.width * 0.1, center.dy - size.height * 0.3,
+    );
+    
+    path.close();
+    canvas.drawPath(path, paint);
+    
+    // Add brain folds/wrinkles
+    paint.color = const Color(0xFFD84315);
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 1.5;
+    
+    // Left hemisphere wrinkles
+    final wrinkle1 = Path();
+    wrinkle1.moveTo(center.dx - size.width * 0.25, center.dy - size.height * 0.15);
+    wrinkle1.quadraticBezierTo(
+      center.dx - size.width * 0.15, center.dy - size.height * 0.05,
+      center.dx - size.width * 0.2, center.dy + size.height * 0.1,
+    );
+    canvas.drawPath(wrinkle1, paint);
+    
+    // Right hemisphere wrinkles  
+    final wrinkle2 = Path();
+    wrinkle2.moveTo(center.dx + size.width * 0.25, center.dy - size.height * 0.15);
+    wrinkle2.quadraticBezierTo(
+      center.dx + size.width * 0.15, center.dy - size.height * 0.05,
+      center.dx + size.width * 0.2, center.dy + size.height * 0.1,
+    );
+    canvas.drawPath(wrinkle2, paint);
+    
+    // Center division
+    canvas.drawLine(
+      Offset(center.dx, center.dy - size.height * 0.2),
+      Offset(center.dx, center.dy + size.height * 0.2),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 Future<List<String>?> showGameSelectionModal({
