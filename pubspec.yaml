@@ -43,6 +43,7 @@ dependencies:
   flutter_svg: ^2.2.0
   fl_chart: ^0.64.0
   audioplayers: ^5.2.1
+  flutter_tts: ^3.8.5
 
 dev_dependencies:
   flutter_test:

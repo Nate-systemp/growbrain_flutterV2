@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
@@ -56,6 +57,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   bool gameStarted = false;
   bool gameActive = false;
   String _normalizedDifficulty = 'easy';
+
+  // Text-to-speech instance
+  late FlutterTts flutterTts;
 
   // Animation controllers for enhanced UX
   late AnimationController _cardAnimationController;
@@ -135,6 +139,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Rhyme Time');
 
+    // Initialize text-to-speech
+    _initializeTts();
+
     // Initialize animation controllers
     _cardAnimationController = AnimationController(
       duration: Duration(milliseconds: 300),
@@ -150,6 +157,24 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     );
 
     _initializeGame();
+  }
+
+  void _initializeTts() async {
+    flutterTts = FlutterTts();
+    
+    // Configure TTS settings
+    await flutterTts.setLanguage('en-US');
+    await flutterTts.setSpeechRate(0.6); // Slower rate for clear pronunciation
+    await flutterTts.setVolume(0.8);
+    await flutterTts.setPitch(1.0);
+  }
+
+  Future<void> _speakWord(String word) async {
+    try {
+      await flutterTts.speak(word);
+    } catch (e) {
+      print('Error speaking word: $e');
+    }
   }
 
   void _initializeGame() {
@@ -269,7 +294,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '• Tap two words that rhyme\n• Find all rhyming pairs to win\n• Words that sound similar rhyme!\n• Get bonus points for speed!',
+                  '• Tap two words that rhyme\n• Find all rhyming pairs to win\n• Words that sound similar rhyme!\n• 🔊 Tap words to hear pronunciation\n• Get bonus points for speed!',
                   style: TextStyle(color: primaryColor, fontSize: 14),
                   textAlign: TextAlign.left,
                 ),
@@ -359,6 +384,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     if (!canSelect || !gameActive || word.isMatched) return;
 
     HapticFeedback.lightImpact();
+    
+    // Speak the word when tapped
+    _speakWord(word.word);
 
     if (firstSelectedWord == null) {
       // First word selected
@@ -488,6 +516,8 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     _scoreAnimationController.dispose();
     _celebrationController.dispose();
     gameTimer?.cancel();
+    // Stop text-to-speech
+    flutterTts.stop();
     // Stop background music when leaving the game
     BackgroundMusicManager().stopMusic();
     super.dispose();
@@ -710,6 +740,22 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
           ),
           textAlign: TextAlign.center,
         ),
+        SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.volume_up_rounded, size: 16, color: Colors.grey[600]),
+            SizedBox(width: 4),
+            Text(
+              'Tap any word to hear its pronunciation',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
         SizedBox(height: 30),
 
         // Enhanced Words Grid
@@ -767,19 +813,35 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
           ],
         ),
         child: Center(
-          child: Text(
-            word.word,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: word.isMatched
-                  ? Colors.white
-                  : word.isSelected
-                  ? Colors.black
-                  : Colors.white,
-              letterSpacing: 1.5,
-            ),
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                word.word,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: word.isMatched
+                      ? Colors.white
+                      : word.isSelected
+                      ? Colors.black
+                      : Colors.white,
+                  letterSpacing: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 2),
+              Icon(
+                Icons.volume_up_rounded,
+                size: 16,
+                color: (word.isMatched
+                        ? Colors.white
+                        : word.isSelected
+                        ? Colors.black
+                        : Colors.white)
+                    .withOpacity(0.7),
+              ),
+            ],
           ),
         ),
       ),
