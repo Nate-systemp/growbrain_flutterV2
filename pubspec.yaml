@@ -73,6 +73,9 @@ flutter:
     - assets/sound_fx/
     - assets/voice_fx/
     - assets/attention.png
+    - assets/save.png
+    - assets/play.png
+    - assets/background.png
     - assets/verbal.png
     - assets/memory.png
     - assets/logic.png

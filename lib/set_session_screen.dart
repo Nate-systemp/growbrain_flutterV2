@@ -488,48 +488,59 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    try {
-      final studentName = widget.student['fullName'] ?? 'Student';
-      return Scaffold(
-        backgroundColor: const Color(0xFF5B6F4A),
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              // Header
-              Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  'set session',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
+ @override
+Widget build(BuildContext context) {
+  try {
+    final studentName = widget.student['fullName'] ?? 'Student';
+    return Scaffold(
+      // Remove backgroundColor so image is visible
+      body: Stack(
+        children: [
+          // Background image
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/background.png'), // Make sure this exists!
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          // Foreground content
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                // Header
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    'set session',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Main content - exact Figma layout
-              Expanded(
-                child: Row(
-                  children: [
-                    // Left panel - exactly like Figma
-                    SizedBox(
-                      width: 260,
-                      child: Column(
-                        children: [
-                          // Back button
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
+                const SizedBox(height: 20),
+                // Main content - exact Figma layout
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Left panel - exactly like Figma
+                      SizedBox(
+                        width: 260,
+                        child: Column(
+                            children: [
+                            // Back button
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: MaterialButton(
+                              ),
+                              child: MaterialButton(
                               onPressed: () => Navigator.of(context).pop(),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
@@ -537,29 +548,28 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.arrow_back,
-                                    color: Colors.grey[600],
-                                    size: 20,
+                                Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.grey[600],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Back',
+                                  style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Back',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                                ),
                                 ],
                               ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          
-                          // Selected Games panel
-                          Expanded(
-                            child: Container(
+                            const SizedBox(height: 20),
+                            // Selected Games panel
+                            Expanded(
+                              child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -568,105 +578,103 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
                               ),
                               child: Column(
                                 children: [
-                                  Text(
-                                    'Selected Games',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[800],
-                                    ),
+                                Text(
+                                  'Selected Games',
+                                  style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
                                   ),
-                                  Text(
-                                    'for ${studentName.split(' ').first}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                ),
+                                Text(
+                                  'for ${studentName.split(' ').first}',
+                                  style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
                                   ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Tap on selected games to set difficulty',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black38,
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Tap on selected games to set difficulty',
+                                  style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black38,
+                                  fontStyle: FontStyle.italic,
                                   ),
-                                  const SizedBox(height: 20),
-                                  
-                                  // Game slots - 2x2 grid layout for selected games
-                                  Expanded(
-                                    child: selectedGames.isEmpty
-                                        ? Center(
-                                            child: Text(
-                                              'No games selected',
-                                              style: TextStyle(
-                                                color: Colors.grey[500],
-                                                fontSize: 14,
-                                                fontStyle: FontStyle.italic,
-                                              ),
+                                ),
+                                const SizedBox(height: 20),
+                                // Game slots - 2x2 grid layout for selected games
+                                Expanded(
+                                  child: selectedGames.isEmpty
+                                    ? Center(
+                                      child: Text(
+                                      'No games selected',
+                                      style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 14,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                      ),
+                                    )
+                                    : Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      child: GridView.builder(
+                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 12,
+                                        crossAxisSpacing: 12,
+                                        childAspectRatio: 1.0,
+                                      ),
+                                      itemCount: selectedGames.length,
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemBuilder: (context, index) {
+                                        final game = selectedGames.elementAt(index);
+                                        return GestureDetector(
+                                        onTap: () => _showSetDifficultyModal(game),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                          color: const Color(0xFF5B6F4A),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
                                             ),
-                                          )
-                                        : Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                                            child: GridView.builder(
-                                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                                crossAxisCount: 2,
-                                                mainAxisSpacing: 12,
-                                                crossAxisSpacing: 12,
-                                                childAspectRatio: 1.0,
-                                              ),
-                                              itemCount: selectedGames.length,
-                                              shrinkWrap: true,
-                                              physics: const NeverScrollableScrollPhysics(),
-                                              itemBuilder: (context, index) {
-                                                final game = selectedGames.elementAt(index);
-                                                return GestureDetector(
-                                                  onTap: () => _showSetDifficultyModal(game),
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(0xFF5B6F4A),
-                                                      shape: BoxShape.circle,
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withOpacity(0.1),
-                                                          blurRadius: 4,
-                                                          offset: const Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Center(
-                                                      child: Icon(
-                                                        _getGameIcon(game),
-                                                        color: Colors.white,
-                                                        size: 24,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            ),
+                                          ],
                                           ),
-                                  ),
+                                          child: Center(
+                                          child: Icon(
+                                            _getGameIcon(game),
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                          ),
+                                        ),
+                                        );
+                                      },
+                                      ),
+                                    ),
+                                ),
                                 ],
                               ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          
-                          // Clear All button
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
+                            const SizedBox(height: 20),
+                            // Clear All button
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
                               color: const Color(0xFFE57373), // Red
                               borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: MaterialButton(
+                              ),
+                              child: MaterialButton(
                               onPressed: () {
                                 setState(() {
-                                  selectedGames.clear();
-                                  gameDifficulties.clear();
+                                selectedGames.clear();
+                                gameDifficulties.clear();
                                 });
                               },
                               shape: RoundedRectangleBorder(
@@ -675,111 +683,119 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
                               child: Text(
                                 'Clear All',
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          
-                          // Save button
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFB74D), // Orange
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: MaterialButton(
-                              onPressed: _saving ? null : _saveSession,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
                               ),
-                              child: Text(
-                                'Save',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                            const SizedBox(height: 12),
+                            // Save and Play buttons with images
+                            Row(
+                              children: [
+                              Expanded(
+                                child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: MaterialButton(
+                                  onPressed: _saving ? null : _saveSession,
+                                  shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                    'assets/save.png',
+                                    height: 80,
+                                    width: 80,
+                                    ),
+                                    
+                                  ],
+                                  ),
+                                ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          
-                          // Play button
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFB74D), // Orange
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: MaterialButton(
-                              onPressed: _showPlayModal,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Text(
-                                'Play',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: MaterialButton(
+                                  onPressed: _showPlayModal,
+                                  shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                    'assets/play.png',
+                                     height: 100,
+                                    width: 80,
+                                    ),
+                                  ],
+                                  ),
+                                ),
                                 ),
                               ),
+                              ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
-                    
-                    // Right panel - 2x2 category grid centered and compact
-                    Expanded(
-                      child: Center(
-                        child: SizedBox(
-                          width: 650,
-                          height: 650,
-                          child: GridView.count(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 20,
-                            crossAxisSpacing: 20,
-                            childAspectRatio: 1.0,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              _buildCategoryCard('Attention'),
-                              _buildCategoryCard('Verbal'),
-                              _buildCategoryCard('Memory'),
-                              _buildCategoryCard('Logic'),
-                            ],
+                      const SizedBox(width: 20),
+                      // Right panel - 2x2 category grid centered and compact
+                      Expanded(
+                        child: Center(
+                          child: SizedBox(
+                            width: 650,
+                            height: 650,
+                            child: GridView.count(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 20,
+                              crossAxisSpacing: 20,
+                              childAspectRatio: 1.0,
+                              physics: const NeverScrollableScrollPhysics(),
+                              children: [
+                                _buildCategoryCard('Attention'),
+                                _buildCategoryCard('Verbal'),
+                                _buildCategoryCard('Memory'),
+                                _buildCategoryCard('Logic'),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  } catch (e, st) {
+    debugPrint('Error in SetSessionScreen build: $e\n$st');
+    return Scaffold(
+      backgroundColor: const Color(0xFF5B6F4A),
+      body: const Center(
+        child: Text(
+          'Error loading session screen',
+          style: TextStyle(color: Colors.white, fontSize: 18),
         ),
-      );
-    } catch (e, st) {
-      debugPrint('Error in SetSessionScreen build: $e\n$st');
-      return Scaffold(
-        backgroundColor: const Color(0xFF5B6F4A),
-        body: const Center(
-          child: Text(
-            'Error loading session screen',
-            style: TextStyle(color: Colors.white, fontSize: 18),
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
-
+}
   Widget _buildGameSlot(int index) {
     final hasGame = selectedGames.length > index;
     final game = hasGame ? selectedGames.elementAt(index) : null;
@@ -1041,52 +1057,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          height: 45,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFD740), // Yellow color
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: MaterialButton(
-            onPressed: _saving ? null : _saveSession,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: const Color(0xFF5B6F4A),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          height: 45,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFD740), // Yellow color
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: MaterialButton(
-            onPressed: _showPlayModal,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Text(
-              'Play',
-              style: TextStyle(
-                color: const Color(0xFF5B6F4A),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+        
       ],
     );
   }

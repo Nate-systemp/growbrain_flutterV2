@@ -132,10 +132,18 @@ class _MyHomePageState extends State<MyHomePage> {
     final double cardSpacing = screenWidth > 1000 ? 60 : screenWidth * 0.06;
     final double gridSidePadding = screenWidth * 0.05;
     
-    return Scaffold(
-      backgroundColor: const Color(0xFF5B6F4A),
+       return Scaffold(
       body: Stack(
         children: [
+          // Background image
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/background.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
           // Logout button - responsive positioning (left side)
           Positioned(
             top: screenHeight * 0.05,
