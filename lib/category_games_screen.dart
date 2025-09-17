@@ -366,6 +366,24 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
       return WhoMovedGame(difficulty: 'Starter', onGameComplete: null);
     } else if (gameWidget is FindMeGame) {
       return FindMeGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is RhymeTimeGame) {
+      return RhymeTimeGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is PictureWordsGame) {
+      return PictureWordsGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is RiddleGame) {
+      return RiddleGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is MatchCardsGame) {
+      return MatchCardsGame(difficulty: 'Starter', challengeFocus: 'Memory', gameName: 'Match Cards', onGameComplete: null);
+    } else if (gameWidget is FruitShuffleGame) {
+      return FruitShuffleGame(difficulty: 'Starter', challengeFocus: 'Memory', gameName: 'Fruit Shuffle', onGameComplete: null);
+    } else if (gameWidget is SoundMatchGame) {
+      return SoundMatchGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is PuzzleGame) {
+      return PuzzleGame(difficulty: 'Starter', onGameComplete: null);
+    } else if (gameWidget is TicTacToeGameScreen) {
+      return TicTacToeGameScreen(difficulty: 'Starter', challengeFocus: 'Logic', gameName: 'Tic Tac Toe', onGameComplete: ({required int accuracy, required int completionTime, required String challengeFocus, required String gameName, required String difficulty}) {});
+    } else if (gameWidget is ObjectHuntGame) {
+      return ObjectHuntGame(difficulty: 'Starter', onGameComplete: null);
     }
     return gameWidget;
   }

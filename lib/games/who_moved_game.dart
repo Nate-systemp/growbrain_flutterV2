@@ -544,7 +544,13 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _handleBackButton(BuildContext context) {
-    _showTeacherPinDialog(context);
+    // If this is a demo game (onGameComplete is null), allow direct navigation back
+    if (widget.onGameComplete == null) {
+      Navigator.of(context).pop();
+    } else {
+      // Only show PIN dialog for actual student sessions
+      _showTeacherPinDialog(context);
+    }
   }
 
   void _showTeacherPinDialog(BuildContext context) {

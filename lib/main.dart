@@ -231,7 +231,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             label: 'Attention',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => CategoryGamesScreen(category: 'Attention'),
+                                builder: (_) => CategoryGamesScreen(category: 'Attention', isDemoMode: true),
                               ));
                             },
                             width: cardWidth,
@@ -248,7 +248,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             label: 'Verbal',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => CategoryGamesScreen(category: 'Verbal'),
+                                builder: (_) => CategoryGamesScreen(category: 'Verbal', isDemoMode: true),
                               ));
                             },
                             width: cardWidth,
@@ -269,7 +269,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             label: 'Memory',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => CategoryGamesScreen(category: 'Memory'),
+                                builder: (_) => CategoryGamesScreen(category: 'Memory', isDemoMode: true),
                               ));
                             },
                             width: cardWidth,
@@ -286,7 +286,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             label: 'Logic',
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => CategoryGamesScreen(category: 'Logic'),
+                                builder: (_) => CategoryGamesScreen(category: 'Logic', isDemoMode: true),
                               ));
                             },
                             width: cardWidth,
