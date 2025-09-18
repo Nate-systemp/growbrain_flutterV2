@@ -67,6 +67,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
 
   Random random = Random();
   String _normalizedDifficulty = 'easy';
+  
+  // App color scheme
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
 
   // Scene configurations with objects
   final Map<String, Map<String, dynamic>> scenes = {
@@ -132,11 +136,11 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     },
   };
 
-  // Soft, accessible colors
-  final Color backgroundColor = Color(0xFFF8F9FA);
-  final Color targetHighlight = Color(0xFFFFF176); // Soft yellow
-  final Color foundColor = Color(0xFF81C784); // Soft green
-  final Color wrongColor = Color(0xFFEF9A9A); // Soft red
+  // App color scheme for UI
+  final Color backgroundColor = const Color(0xFFF5F5DC);
+  final Color targetHighlight = const Color(0xFFFFD740); // Accent yellow
+  final Color foundColor = const Color(0xFF81C784); // Soft green
+  final Color wrongColor = const Color(0xFFEF9A9A); // Soft red
 
   @override
   void initState() {
@@ -280,8 +284,8 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   void _startGame() {
     setState(() {
       gameStarted = true;
-      gameActive = true;
-      memorizationPhase = true;
+      gameActive = false; // Will be set to true after instructions
+      memorizationPhase = false; // Will start after instructions
       searchPhase = false;
       gameStartTime = DateTime.now();
       score = 0;
@@ -291,8 +295,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       // Reset all objects
       for (var obj in sceneObjects) {
         obj.isFound = false;
-        obj.isHighlighted =
-            obj.isTarget; // Highlight targets during memorization
+        obj.isHighlighted = false; // Start with no highlights
       }
     });
 
@@ -358,14 +361,18 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
 
   void _startMemorizationPhase() {
     setState(() {
+      gameActive = true; // Now the game is truly active
       memorizationPhase = true;
-      // Show highlights on target objects
+      searchPhase = false;
+      
+      // Show highlights on target objects only
       for (var obj in sceneObjects) {
         obj.isHighlighted = obj.isTarget;
+        obj.isFound = false;
       }
     });
 
-    // Start memorization timer
+    // Start memorization timer with visual countdown
     phaseTimer = Timer(Duration(seconds: memorizationTime), () {
       _startSearchPhase();
     });
@@ -494,9 +501,12 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       appBar: AppBar(
         title: Text(
           'Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Color(0xFF90CAF9), // Soft blue
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
@@ -570,15 +580,16 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
                 padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                 margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Color(0xFFFFF9C4),
+                  color: accentColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: accentColor, width: 2),
                 ),
                 child: Text(
                   'MEMORIZATION PHASE - Study the highlighted objects!',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
+                    color: primaryColor,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -589,15 +600,16 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
                 padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                 margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Color(0xFFE1F5FE),
+                  color: primaryColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: primaryColor, width: 2),
                 ),
                 child: Text(
                   'SEARCH PHASE - Find the objects you memorized!',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
+                    color: primaryColor,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -630,7 +642,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
+            color: primaryColor,
           ),
         ),
         SizedBox(height: 20),
@@ -648,7 +660,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
           onPressed: _startGame,
           child: Text('Start Hunt'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(
@@ -661,6 +673,33 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   }
 
   Widget _buildGameArea() {
+    // If game is started but not active, show waiting screen
+    if (gameStarted && !gameActive) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.visibility, size: 60, color: primaryColor),
+            SizedBox(height: 20),
+            Text(
+              'Get Ready!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'The memorization phase will begin shortly...',
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     if (!gameActive && correctFinds == totalTargets) {
       return _buildWinScreen();
     }

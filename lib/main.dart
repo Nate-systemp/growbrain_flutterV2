@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'teacher_pin_modal.dart';
 import 'teacher_management.dart';
 import 'category_games_screen.dart';
+import 'utils/session_volume_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,10 @@ void main() async {
   print('Before Firebase init');
   await Firebase.initializeApp();
   print('After Firebase init');
+  
+  // Initialize demo volumes (separate from session volumes)
+  await SessionVolumeManager.instance.initializeDemoVolumes();
+  
   runApp(const MyApp());
 }
 

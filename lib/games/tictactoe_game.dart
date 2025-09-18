@@ -39,6 +39,13 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
   String winner = '';
   late TicTacToeDifficulty difficulty;
   int win = 0, loss = 0, draw = 0;
+  bool gameStarted = false;
+  DateTime? lastClickTime;
+  
+  // App color scheme
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
+  final Color backgroundColor = const Color(0xFFF5F5DC);
 
   // Best of 3 match state
   int matchPlayerWins = 0;
@@ -114,6 +121,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
       xTurn = true;
       gameOver = false;
       winner = '';
+      lastClickTime = null; // Reset click timer
     });
   }
 
@@ -128,8 +136,23 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
     });
   }
 
+  void _startGame() {
+    setState(() {
+      gameStarted = true;
+    });
+  }
+
   void _makeMove(int idx) {
-    if (board[idx] != '' || gameOver) return;
+    if (!gameStarted || board[idx] != '' || gameOver) return;
+    
+    // Add click interval to prevent spam clicking
+    DateTime now = DateTime.now();
+    if (lastClickTime != null && 
+        now.difference(lastClickTime!).inMilliseconds < 300) {
+      return; // Ignore clicks that are too fast
+    }
+    lastClickTime = now;
+    
     setState(() {
       board[idx] = xTurn ? 'square' : 'triangle';
       xTurn = !xTurn;
@@ -328,32 +351,79 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('TicTacToe (vs AI)'),
-        backgroundColor: Colors.orange,
-        actions: [
-          PopupMenuButton<TicTacToeDifficulty>(
-            icon: const Icon(Icons.settings),
-            onSelected: (d) => setState(() => difficulty = d),
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: TicTacToeDifficulty.easy,
-                child: Text('Easy'),
-              ),
-              const PopupMenuItem(
-                value: TicTacToeDifficulty.medium,
-                child: Text('Medium'),
-              ),
-              const PopupMenuItem(
-                value: TicTacToeDifficulty.hard,
-                child: Text('Hard'),
-              ),
-            ],
-          ),
-        ],
+        title: Text(
+          'Tic Tac Toe - ${widget.difficulty}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: Center(
+      body: !gameStarted ? _buildStartScreen() : _buildGameScreen(),
+    );
+  }
+
+  Widget _buildStartScreen() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.grid_3x3,
+              size: 80,
+              color: primaryColor,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Tic Tac Toe!',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Play against the AI in a best of 3 match!\nYou are squares ⬜, AI is triangles 🔺',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _startGame,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text(
+                'Start Game',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameScreen() {
+    return Center(
+      child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -372,7 +442,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
               width: 320,
               height: 320,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: backgroundColor,
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
               ),
@@ -389,7 +459,14 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange, width: 2),
+                      border: Border.all(color: primaryColor, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: board[idx] == 'square'
@@ -397,14 +474,14 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.orange,
+                                color: accentColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             )
                           : board[idx] == 'triangle'
                           ? CustomPaint(
                               size: const Size(40, 40),
-                              painter: TrianglePainter(),
+                              painter: TrianglePainter(color: primaryColor),
                             )
                           : const SizedBox(),
                     ),
@@ -427,7 +504,8 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                   ElevatedButton(
                     onPressed: matchOver ? null : _resetBoard,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text('Next Game'),
                   ),
@@ -442,11 +520,11 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.emoji_events, color: Colors.orange),
+                    Icon(Icons.emoji_events, color: accentColor),
                     const SizedBox(width: 12),
                     Text('Wins: $win', style: const TextStyle(fontSize: 18)),
                     const SizedBox(width: 18),
-                    const Icon(Icons.close, color: Colors.purple),
+                    Icon(Icons.close, color: primaryColor),
                     const SizedBox(width: 12),
                     Text('Losses: $loss', style: const TextStyle(fontSize: 18)),
                     const SizedBox(width: 18),
@@ -465,10 +543,14 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
 }
 
 class TrianglePainter extends CustomPainter {
+  final Color color;
+  
+  TrianglePainter({this.color = Colors.purple});
+  
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.purple
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path();

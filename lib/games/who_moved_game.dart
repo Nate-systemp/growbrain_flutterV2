@@ -18,7 +18,7 @@ enum ShapeType {
 }
 
 class GameShape {
-  ShapeType type;
+  ShapeType type;                                                       
   Color color;
   bool isMoved;
 
@@ -29,7 +29,7 @@ class WhoMovedGame extends StatefulWidget {
   final String difficulty;
   final String? challengeFocus;
   final String? gameName;
-  final Future<void> Function({
+  final Future<void> Function({  
     required int accuracy,
     required int completionTime,
     required String challengeFocus,
@@ -308,8 +308,6 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       canSelect = false;
     });
 
-    SoundEffectsManager().playSuccessWithVoice();
-
     if (index == movedShapeIndex) {
       score += 10;
       correctAnswers++;
@@ -498,38 +496,21 @@ class _WhoMovedGameState extends State<WhoMovedGame>
                   child: GestureDetector(
                     onTap: () => _selectShape(index),
                     child: Container(
-                      width: canSelect ? shapeSize + 16 : shapeSize,
-                      height: canSelect ? shapeSize + 16 : shapeSize,
+                      width: shapeSize,
+                      height: shapeSize,
                       decoration: BoxDecoration(
-                        color: canSelect
-                            ? Colors.white.withOpacity(0.8)
-                            : Colors.transparent,
+                        color: Colors.transparent,
                         border: isSelected
-                            ? Border.all(color: Colors.red, width: 3)
-                            : canSelect
-                            ? Border.all(
-                                color: Colors.grey.withOpacity(0.3),
-                                width: 1,
-                              )
+                            ? Border.all(color: Colors.red, width: 4)
                             : null,
-                        borderRadius: canSelect
-                            ? BorderRadius.circular(12)
-                            : null,
-                        boxShadow: canSelect
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
+                        borderRadius: isSelected
+                            ? BorderRadius.circular(8)
                             : null,
                       ),
                       child: Center(
                         child: CustomShapeWidget(
                           shape: shapes[index],
-                          size: canSelect ? shapeSize - 8 : shapeSize,
+                          size: shapeSize,
                         ),
                       ),
                     ),

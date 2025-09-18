@@ -16,6 +16,8 @@ import 'games/object_hunt_game.dart';
 import 'games/puzzle_game.dart';
 import 'games/riddle_game.dart';
 import 'congratulations_screen.dart';
+import 'utils/session_volume_manager.dart';
+import 'widgets/volume_control_dialog.dart';
 
 class SetSessionScreen extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -37,6 +39,8 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
   };
   bool _saving = false;
   Map<String, String> gameDifficulties = {};
+  // Use SessionVolumeManager for session-specific volumes
+  SessionVolumeManager get _volumeManager => SessionVolumeManager.instance;
 
   // Session tracking
   List<Map<String, dynamic>> sessionRecords = [];
@@ -47,6 +51,13 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     super.initState();
     _initializeAvailableGames();
     _loadSession();
+  }
+
+  @override
+  void dispose() {
+    // End session when leaving the screen
+    SessionVolumeManager.instance.endSession();
+    super.dispose();
   }
 
   void _initializeAvailableGames() {
@@ -75,6 +86,10 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final studentId = widget.student['id'] ?? widget.student['fullName'];
+    
+    // Start session with SessionVolumeManager
+    await _volumeManager.startSession(studentId);
+    
     try {
       final doc = await FirebaseFirestore.instance
           .collection('teachers')
@@ -137,13 +152,18 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     }
     final studentId = widget.student['id'] ?? widget.student['fullName'];
     try {
+      // Save session games
       await FirebaseFirestore.instance
           .collection('teachers')
           .doc(user.uid)
           .collection('students')
           .doc(studentId)
-          .set({'session': selectedGames.toList()}, SetOptions(merge: true));
-      await _loadSession();
+          .set({
+            'session': selectedGames.toList(),
+          }, SetOptions(merge: true));
+      
+      // Save session volumes through SessionVolumeManager
+      await _volumeManager.saveSessionVolumes(studentId);
       
       // Show fun and modern success dialog
       _showModernSuccessDialog();
@@ -355,6 +375,25 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
         gameDifficulties[game] = result;
       });
     }
+  }
+
+  void _showVolumeControlDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => VolumeControlDialog(
+        initialBackgroundMusicVolume: _volumeManager.sessionBackgroundMusicVolume,
+        initialSoundEffectsVolume: _volumeManager.sessionSoundEffectsVolume,
+        onBackgroundMusicVolumeChanged: (volume) async {
+          await _volumeManager.setSessionBackgroundMusicVolume(volume);
+          setState(() {}); // Trigger UI update
+        },
+        onSoundEffectsVolumeChanged: (volume) async {
+          await _volumeManager.setSessionSoundEffectsVolume(volume);
+          setState(() {}); // Trigger UI update
+        },
+      ),
+    );
   }
 
   Future<void> _handleGameCompletion({
@@ -675,6 +714,7 @@ Widget build(BuildContext context) {
                                 setState(() {
                                 selectedGames.clear();
                                 gameDifficulties.clear();
+                                // Don't reset background music setting - it's independent
                                 });
                               },
                               shape: RoundedRectangleBorder(
@@ -688,6 +728,56 @@ Widget build(BuildContext context) {
                                 fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Volume Control Setting
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: InkWell(
+                                onTap: _showVolumeControlDialog,
+                                borderRadius: BorderRadius.circular(20),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
+                                        ? Icons.volume_up 
+                                        : Icons.volume_off,
+                                      color: _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
+                                        ? const Color(0xFF5B6F4A) 
+                                        : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Volume Control',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.settings,
+                                      color: Colors.grey[400],
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),

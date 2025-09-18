@@ -58,6 +58,10 @@ class _RiddleGameState extends State<RiddleGame> {
   int timePerRiddle = 0;
 
   Random random = Random();
+  
+  // App color scheme
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
 
   // Riddle sets organized by difficulty
   final Map<String, List<Riddle>> riddleSets = {
@@ -209,13 +213,13 @@ class _RiddleGameState extends State<RiddleGame> {
     ],
   };
 
-  // Soft, accessible colors
-  final Color backgroundColor = Color(0xFFF8F9FA);
-  final Color questionColor = Color(0xFFE1F5FE); // Light blue
-  final Color optionColor = Color(0xFFFFFFFF); // White
-  final Color selectedColor = Color(0xFFFFF176); // Soft yellow
-  final Color correctColor = Color(0xFF81C784); // Soft green
-  final Color wrongColor = Color(0xFFEF9A9A); // Soft red
+  // App color scheme
+  final Color backgroundColor = const Color(0xFFF5F5DC);
+  final Color questionColor = const Color(0xFFF5F5DC); // Light cream
+  final Color optionColor = Colors.white; // White
+  final Color selectedColor = const Color(0xFFFFD740); // Accent yellow
+  final Color correctColor = const Color(0xFFC8E6C9); // Light green
+  final Color wrongColor = const Color(0xFFFFCDD2); // Light red
 
   @override
   void initState() {
@@ -391,6 +395,8 @@ class _RiddleGameState extends State<RiddleGame> {
     } else {
       wrongAnswers++;
       HapticFeedback.lightImpact();
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
     }
 
     _showRiddleResult(isCorrect, currentRiddle.explanation ?? "");
@@ -542,9 +548,12 @@ class _RiddleGameState extends State<RiddleGame> {
       appBar: AppBar(
         title: Text(
           'Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Color(0xFFCE93D8), // Soft purple
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
@@ -618,7 +627,7 @@ class _RiddleGameState extends State<RiddleGame> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.quiz, size: 80, color: Color(0xFFCE93D8)),
+        Icon(Icons.quiz, size: 80, color: primaryColor),
         SizedBox(height: 20),
         Text(
           'Riddle Game',
@@ -643,7 +652,7 @@ class _RiddleGameState extends State<RiddleGame> {
           onPressed: _startGame,
           child: Text('Start Riddles'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             shape: RoundedRectangleBorder(

@@ -8,7 +8,7 @@ class SoundEffectsManager {
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   final AudioPlayer _voicePlayer = AudioPlayer(); // Separate player for voice effects
-  bool _soundEnabled = true;
+  double _soundEffectsVolume = 0.7; // Global volume for sound effects and voice (0.0 to 1.0)
   
   // Voice effects list
   final List<String> _voiceEffects = [
@@ -23,12 +23,12 @@ class SoundEffectsManager {
 
   /// Play success sound effect
   Future<void> playSuccess() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     try {
       await _audioPlayer.stop(); // Stop any currently playing sound
       await _audioPlayer.setSource(AssetSource('sound_fx/success_fx_1.mp3'));
-      await _audioPlayer.setVolume(0.7); // Set volume to 70%
+      await _audioPlayer.setVolume(_soundEffectsVolume);
       await _audioPlayer.resume();
     } catch (e) {
       print('Error playing success sound: $e');
@@ -37,12 +37,12 @@ class SoundEffectsManager {
 
   /// Play wrong/error sound effect
   Future<void> playWrong() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     try {
       await _audioPlayer.stop(); // Stop any currently playing sound
       await _audioPlayer.setSource(AssetSource('sound_fx/wrong_fx_1.mp3'));
-      await _audioPlayer.setVolume(0.7); // Set volume to 70%
+      await _audioPlayer.setVolume(_soundEffectsVolume);
       await _audioPlayer.resume();
     } catch (e) {
       print('Error playing wrong sound: $e');
@@ -51,12 +51,12 @@ class SoundEffectsManager {
 
   /// Play congratulations sound effect
   Future<void> playCongratulations() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     try {
       await _audioPlayer.stop(); // Stop any currently playing sound
       await _audioPlayer.setSource(AssetSource('sound_fx/congrats_fx_1.mp3'));
-      await _audioPlayer.setVolume(0.8); // Set volume to 80% for celebration
+      await _audioPlayer.setVolume(_soundEffectsVolume * 1.14); // Slightly louder for celebration
       await _audioPlayer.resume();
     } catch (e) {
       print('Error playing congratulations sound: $e');
@@ -66,7 +66,7 @@ class SoundEffectsManager {
   /// Play random voice effect (amazing, fabulous, keep it up, nice)
   /// Ensures no consecutive repeats
   Future<void> playRandomVoiceEffect() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     try {
       // Get available voices (excluding the last played one)
@@ -82,7 +82,7 @@ class SoundEffectsManager {
       // Play the selected voice effect
       await _voicePlayer.stop(); // Stop any currently playing voice
       await _voicePlayer.setSource(AssetSource(selectedVoice));
-      await _voicePlayer.setVolume(0.8); // Set volume to 80%
+      await _voicePlayer.setVolume(_soundEffectsVolume * 1.14); // Slightly louder
       await _voicePlayer.resume();
     } catch (e) {
       print('Error playing voice effect: $e');
@@ -91,7 +91,7 @@ class SoundEffectsManager {
 
   /// Play success sound with voice effect
   Future<void> playSuccessWithVoice() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     // Play both success sound and voice effect
     await Future.wait([
@@ -100,34 +100,42 @@ class SoundEffectsManager {
     ]);
   }
 
-  /// Enable or disable sound effects
-  void setSoundEnabled(bool enabled) {
-    _soundEnabled = enabled;
-    if (!enabled) {
-      _audioPlayer.stop();
-    }
-  }
-
-  /// Check if sound effects are enabled
-  bool get isSoundEnabled => _soundEnabled;
-
-  /// Set volume for sound effects (0.0 to 1.0)
-  Future<void> setVolume(double volume) async {
+  /// Set sound effects volume (0.0 to 1.0)
+  Future<void> setSoundEffectsVolume(double volume) async {
     try {
-      await _audioPlayer.setVolume(volume.clamp(0.0, 1.0));
+      _soundEffectsVolume = volume.clamp(0.0, 1.0);
+      // Update volume for currently playing sounds if any
+      await _audioPlayer.setVolume(_soundEffectsVolume);
+      await _voicePlayer.setVolume(_soundEffectsVolume);
     } catch (e) {
       print('Error setting sound effects volume: $e');
     }
   }
+  
+  /// Enable or disable sound effects (for backward compatibility)
+  void setSoundEnabled(bool enabled) {
+    setSoundEffectsVolume(enabled ? 0.7 : 0.0);
+  }
+
+  /// Check if sound effects are enabled (for backward compatibility)
+  bool get isSoundEnabled => _soundEffectsVolume > 0.0;
+  
+  /// Get current sound effects volume
+  double get soundEffectsVolume => _soundEffectsVolume;
+
+  /// Set volume for sound effects (backward compatibility)
+  Future<void> setVolume(double volume) async {
+    await setSoundEffectsVolume(volume);
+  }
 
   /// Play puzzle click sound effect
   Future<void> playPuzzleClickSound() async {
-    if (!_soundEnabled) return;
+    if (_soundEffectsVolume == 0.0) return;
     
     try {
       await _audioPlayer.stop(); // Stop any currently playing sound
       await _audioPlayer.setSource(AssetSource('sound_fx/puzzel click sounds.wav'));
-      await _audioPlayer.setVolume(0.6); // Set volume to 60%
+      await _audioPlayer.setVolume(_soundEffectsVolume * 0.86); // Slightly lower for clicks
       await _audioPlayer.resume();
     } catch (e) {
       print('Error playing puzzle click sound: $e');

@@ -7,7 +7,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
-import '../teacher_pin_modal.dart';
 
 class SoundMatchGame extends StatefulWidget {
   final String difficulty;
@@ -51,6 +50,12 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   bool _isAnswering = false;
   DateTime? _gameStartTime;
   late String _normalizedDifficulty;
+  bool _gameStarted = false;
+  
+  // App color scheme
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
+  final Color backgroundColor = const Color(0xFFF5F5DC);
 
   final List<SoundItem> _allSounds = [
     SoundItem(name: 'Dog', emoji: '🐕', description: 'Woof woof!'),
@@ -73,8 +78,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
       widget.difficulty,
     );
-    // Initialize with first round immediately
-    _initializeGame();
+    // Don't initialize game automatically
   }
 
   @override
@@ -84,8 +88,16 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     super.dispose();
   }
 
+  void _startGame() {
+    setState(() {
+      _gameStarted = true;
+      _gameStartTime = DateTime.now();
+    });
+    _initializeGame();
+  }
+
   void _initializeGame() {
-    // Generate first round options immediately
+    // Generate first round options
     _currentSound = _allSounds[Random().nextInt(_allSounds.length)];
 
     List<SoundItem> options = [_currentSound];
@@ -101,8 +113,10 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       _currentRound = 1;
       _score = 0;
       _correctAnswers = 0;
-      _gameStartTime = DateTime.now();
     });
+    
+    // Auto-play sound after a short delay
+    Future.delayed(Duration(milliseconds: 500), _playCurrentSound);
   }
 
   void _generateNewRound() {
@@ -146,7 +160,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   }
 
   void _selectOption(SoundItem selectedItem) {
-    if (_isAnswering) return;
+    if (!_gameStarted || _isAnswering) return;
 
     setState(() {
       _isAnswering = true;
@@ -174,6 +188,9 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
         _generateNewRound();
       });
     } else {
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
+      
       _showFeedback('❌ Try again! Listen carefully.', Colors.red);
 
       Future.delayed(Duration(seconds: 1), () {
@@ -270,13 +287,69 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   }
 
   Widget _buildGameContent() {
+    if (!_gameStarted) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.headphones,
+                size: 80,
+                color: primaryColor,
+              ),
+            const SizedBox(height: 20),
+            Text(
+              'Sound Match!',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Listen to sounds and match them with the correct pictures.\nComplete 5 rounds to win!',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _startGame,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text(
+                'Start Game',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
+      );
+    }
+
     return Column(
       children: [
         // Header bar - Dark olive green style
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF5B6F4A), // Dark olive green header
+            color: primaryColor,
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(12),
               bottomRight: Radius.circular(12),
@@ -288,40 +361,17 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
               Text(
                 'Score: $_score',
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              Column(
-                children: [
-                  const Text(
-                    'Sound Match - Starter',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    'Round: $_currentRound/5',
-                    style: const TextStyle(fontSize: 10, color: Colors.white),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A5A3A), // Slightly darker green
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Get Ready...',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              Text(
+                'Round: $_currentRound/5',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -331,74 +381,90 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
         // Game area - Light creamy yellow background
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(20),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Instruction text
                 Text(
                   'Listen and pick the matching picture!',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Color(0xFF5B6F4A),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-
+                const SizedBox(height: 20),
+                
                 // Play sound button
                 ElevatedButton.icon(
                   onPressed: _playCurrentSound,
-                  icon: const Icon(
-                    Icons.volume_up,
-                    size: 16,
-                    color: Colors.black,
-                  ),
-                  label: const Text(
-                    '🔊 Play Sound',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFD700), // Bright yellow
-                    foregroundColor: Colors.black,
+                    backgroundColor: accentColor,
+                    foregroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 20,
+                      vertical: 12,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    elevation: 2,
+                  ),
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text(
+                    'Play Sound',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(height: 12),
-
+                const SizedBox(height: 20),
+                
                 // Options grid - Fixed size to prevent scrolling
                 Expanded(
                   child: _currentOptions.isEmpty
                       ? const Center(
                           child: Text(
-                            'No choices loaded!',
+                            'Loading game...',
                             style: TextStyle(
-                              color: Colors.red,
+                              color: Color(0xFF5B6F4A),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         )
-                      : GridView.count(
-                          physics:
-                              NeverScrollableScrollPhysics(), // Disable scrolling
-                          crossAxisCount: 2,
-                          childAspectRatio: 2.2, // More compact ratio
-                          crossAxisSpacing: 6,
-                          mainAxisSpacing: 6,
-                          children: _currentOptions
-                              .map((item) => _buildSoundOption(item))
-                              .toList(),
+                      : Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              // First row
+                              if (_currentOptions.length >= 2)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildSoundOption(_currentOptions[0]),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildSoundOption(_currentOptions[1]),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 12),
+                              // Second row
+                              if (_currentOptions.length >= 4)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildSoundOption(_currentOptions[2]),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildSoundOption(_currentOptions[3]),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
                         ),
                 ),
               ],
@@ -419,35 +485,61 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       shapeColor = const Color(0xFF5B6F4A); // Dark olive green for normal
     }
 
-    return GestureDetector(
-      onTap: () => _selectOption(item),
-      child: Container(
-        decoration: BoxDecoration(
-          color: shapeColor,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _selectOption(item),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 60, // Fixed height for consistent layout
+          decoration: BoxDecoration(
+            color: shapeColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(item.emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 4),
-            Text(
-              item.name,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
-              textAlign: TextAlign.center,
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Emoji with fixed width for alignment
+                SizedBox(
+                  width: 30,
+                  child: Center(
+                    child: Text(
+                      item.emoji,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Text taking remaining space
+                Expanded(
+                  child: Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.left,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

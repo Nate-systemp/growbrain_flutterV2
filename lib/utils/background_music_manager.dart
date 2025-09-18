@@ -8,6 +8,7 @@ class BackgroundMusicManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
   String? _currentTrack;
+  double _backgroundMusicVolume = 0.3; // Global volume for background music (0.0 to 1.0)
 
   // Game categorization mapping
   static const Map<String, String> _gameToCategory = {
@@ -41,6 +42,11 @@ class BackgroundMusicManager {
 
   /// Start background music for a specific game
   Future<void> startGameMusic(String gameName) async {
+    // Don't start music if volume is 0
+    if (_backgroundMusicVolume == 0.0) {
+      print('Background music volume is 0, skipping $gameName');
+      return;
+    }
     try {
       final category = _gameToCategory[gameName];
       if (category == null) {
@@ -64,7 +70,7 @@ class BackgroundMusicManager {
       if (!_isPlaying) {
         await _audioPlayer.setSource(AssetSource(musicFile.replaceFirst('assets/', '')));
         await _audioPlayer.setReleaseMode(ReleaseMode.loop); // Loop the music
-        await _audioPlayer.setVolume(0.3); // Set volume to 30%
+        await _audioPlayer.setVolume(_backgroundMusicVolume); // Set current volume
         await _audioPlayer.resume();
         _isPlaying = true;
         print('Started background music for $gameName: $musicFile');
@@ -114,12 +120,19 @@ class BackgroundMusicManager {
     }
   }
 
-  /// Set volume (0.0 to 1.0)
-  Future<void> setVolume(double volume) async {
+  /// Set background music volume (0.0 to 1.0)
+  Future<void> setBackgroundMusicVolume(double volume) async {
     try {
-      await _audioPlayer.setVolume(volume.clamp(0.0, 1.0));
+      _backgroundMusicVolume = volume.clamp(0.0, 1.0);
+      if (_isPlaying) {
+        await _audioPlayer.setVolume(_backgroundMusicVolume);
+      }
+      // If volume is set to 0 and music is playing, stop it
+      if (_backgroundMusicVolume == 0.0 && _isPlaying) {
+        await stopMusic();
+      }
     } catch (e) {
-      print('Error setting volume: $e');
+      print('Error setting background music volume: $e');
     }
   }
 
@@ -128,6 +141,17 @@ class BackgroundMusicManager {
 
   /// Get current track
   String? get currentTrack => _currentTrack;
+
+  /// Enable or disable background music globally (for backward compatibility)
+  void setBackgroundMusicEnabled(bool enabled) {
+    setBackgroundMusicVolume(enabled ? 0.3 : 0.0);
+  }
+
+  /// Check if background music is enabled (for backward compatibility)
+  bool get isBackgroundMusicEnabled => _backgroundMusicVolume > 0.0;
+  
+  /// Get current background music volume
+  double get backgroundMusicVolume => _backgroundMusicVolume;
 
   /// Dispose resources
   void dispose() {

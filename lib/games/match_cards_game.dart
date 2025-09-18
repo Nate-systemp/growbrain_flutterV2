@@ -44,6 +44,13 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   late Stopwatch stopwatch;
   int attempts = 0;
   int matches = 0;
+  bool gameStarted = false;
+  
+  // App color scheme
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
+  final Color backgroundColor = const Color(0xFFF5F5DC);
+  final Color surfaceColor = const Color(0xFFF5F5DC);
 
   @override
   void initState() {
@@ -57,9 +64,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initGame();
-    stopwatch.start();
-    timerActive = true;
-    _tickTimer();
+    // Don't auto-start the game anymore
   }
 
   void _setupDifficulty() {
@@ -120,8 +125,17 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     }
   }
 
+  void _startGame() {
+    setState(() {
+      gameStarted = true;
+    });
+    stopwatch.start();
+    timerActive = true;
+    _tickTimer();
+  }
+
   void _onCardTap(int idx) async {
-    if (waiting || cards[idx].isMatched || cards[idx].isFaceUp) return;
+    if (!gameStarted || waiting || cards[idx].isMatched || cards[idx].isFaceUp) return;
     setState(() => cards[idx].isFaceUp = true);
     if (firstFlipped == null) {
       firstFlipped = idx;
@@ -159,6 +173,8 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           });
         }
       } else {
+        // Play wrong sound effect
+        SoundEffectsManager().playWrong();
         setState(() {
           cards[firstFlipped!].isFaceUp = false;
           cards[secondFlipped!].isFaceUp = false;
@@ -186,7 +202,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     final screenWidth = MediaQuery.of(context).size.width;
     final gridWidth = (gridCols * 100).toDouble().clamp(320, screenWidth * 0.8);
     return Scaffold(
-      backgroundColor: const Color(0xFF64744B), // Muted/olive green
+      backgroundColor: backgroundColor,
       body: Stack(
         children: [
           // Decorative icons
@@ -229,114 +245,169 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
               ),
             ),
           ),
-          // Back button
+          // App bar
           Positioned(
-            top: 32,
-            left: 24,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF393C48),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 12,
-                ),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  fontFamily: 'Nunito',
-                ),
-                shadowColor: Colors.black.withOpacity(0.18),
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AppBar(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              title: Text(
+                'Match Cards - ${widget.difficulty}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back, size: 28),
-              label: const Text('Back'),
+              elevation: 0,
+              centerTitle: true,
             ),
           ),
           // Main game content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (difficulty == 'Hard')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'Timer: $timerSeconds s',
-                      style: const TextStyle(
-                        color: Colors.yellow,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Header with timer
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                const Text(
-                  'Match all pairs!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: gridWidth.toDouble(),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    itemCount: cards.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: gridCols,
-                      mainAxisSpacing: 24,
-                      crossAxisSpacing: 24,
-                    ),
-                    itemBuilder: (context, idx) {
-                      final card = cards[idx];
-                      return GestureDetector(
-                        onTap: () => _onCardTap(idx),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            color: card.isMatched
-                                ? Colors.white
-                                : (card.isFaceUp
-                                      ? Colors.purple
-                                      : Colors.purple[300]),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.18),
-                                blurRadius: 4,
-                                offset: const Offset(2, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: card.isFaceUp || card.isMatched
-                                ? Icon(
-                                    card.icon,
-                                    color: Colors.orange,
-                                    size: 54,
-                                  )
-                                : const Text(
-                                    '?',
-                                    style: TextStyle(
-                                      fontSize: 48,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Matches: $matches/${numPairs}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      );
-                    },
+                        if (difficulty == 'Hard')
+                          Text(
+                            'Time: ${timerSeconds}s',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: !gameStarted
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.psychology,
+                                  size: 80,
+                                  color: primaryColor,
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Memory Match!',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Flip cards to find matching pairs.\nRemember where each card is!',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 30),
+                                ElevatedButton(
+                                  onPressed: _startGame,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 40,
+                                      vertical: 15,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Start Game',
+                                    style: TextStyle(fontSize: 18),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Center(
+                            child: SizedBox(
+                              width: gridWidth.toDouble(),
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                itemCount: cards.length,
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: gridCols,
+                                  mainAxisSpacing: 16,
+                                  crossAxisSpacing: 16,
+                                ),
+                                itemBuilder: (context, idx) {
+                                  final card = cards[idx];
+                                  return GestureDetector(
+                                    onTap: () => _onCardTap(idx),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 250),
+                                      width: 90,
+                                      height: 90,
+                                      decoration: BoxDecoration(
+                                        color: card.isMatched
+                                            ? accentColor
+                                            : (card.isFaceUp
+                                                  ? Colors.white
+                                                  : primaryColor),
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: card.isFaceUp || card.isMatched
+                                            ? Icon(
+                                                card.icon,
+                                                color: card.isMatched ? primaryColor : primaryColor,
+                                                size: 40,
+                                              )
+                                            : const Text(
+                                                '?',
+                                                style: TextStyle(
+                                                  fontSize: 32,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

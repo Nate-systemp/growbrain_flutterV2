@@ -413,6 +413,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     } else {
       // No match - reset selection
       HapticFeedback.lightImpact();
+      
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
 
       Timer(Duration(milliseconds: 500), () {
         _resetSelection();

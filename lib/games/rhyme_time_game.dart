@@ -462,6 +462,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     } else {
       // No rhyme - reset selection
       HapticFeedback.lightImpact();
+      
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
 
       Timer(Duration(milliseconds: 500), () {
         setState(() {
