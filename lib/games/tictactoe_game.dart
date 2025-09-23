@@ -41,7 +41,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
   int win = 0, loss = 0, draw = 0;
   bool gameStarted = false;
   DateTime? lastClickTime;
-  
+
   // App color scheme
   final Color primaryColor = const Color(0xFF5B6F4A);
   final Color accentColor = const Color(0xFFFFD740);
@@ -144,22 +144,22 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
 
   void _makeMove(int idx) {
     if (!gameStarted || board[idx] != '' || gameOver) return;
-    
+
     // Add click interval to prevent spam clicking
     DateTime now = DateTime.now();
-    if (lastClickTime != null && 
+    if (lastClickTime != null &&
         now.difference(lastClickTime!).inMilliseconds < 300) {
       return; // Ignore clicks that are too fast
     }
     lastClickTime = now;
-    
+
     setState(() {
       board[idx] = xTurn ? 'square' : 'triangle';
       xTurn = !xTurn;
     });
     _checkGameOver();
     if (!gameOver && !xTurn) {
-      Future.delayed(const Duration(milliseconds: 400), _aiMove);
+      Future.delayed(const Duration(seconds: 2), _aiMove);
     }
   }
 
@@ -316,26 +316,45 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
               '$result\n\nPlayer: $matchPlayerWins\nAI: $matchAIWins\nDraws: $matchDraws',
             ),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).pop();
-                  widget.onGameComplete(
-                    accuracy: 100 * matchPlayerWins ~/ matchGame,
-                    completionTime: 30 * matchGame,
-                    challengeFocus: widget.challengeFocus,
-                    gameName: widget.gameName,
-                    difficulty: widget.difficulty,
-                  );
-                },
-                child: const Text('OK'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _resetMatch();
-                },
-                child: const Text('Play Again'),
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pop();
+                    widget.onGameComplete(
+                      accuracy: 100 * matchPlayerWins ~/ matchGame,
+                      completionTime: 30 * matchGame,
+                      challengeFocus: widget.challengeFocus,
+                      gameName: widget.gameName,
+                      difficulty: widget.difficulty,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2196F3),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -373,11 +392,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.grid_3x3,
-              size: 80,
-              color: primaryColor,
-            ),
+            Icon(Icons.grid_3x3, size: 80, color: primaryColor),
             const SizedBox(height: 20),
             Text(
               'Tic Tac Toe!',
@@ -390,10 +405,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
             const SizedBox(height: 10),
             Text(
               'Play against the AI in a best of 3 match!\nYou are squares ⬜, AI is triangles 🔺',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.black87),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 30),
@@ -410,10 +422,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text(
-                'Start Game',
-                style: TextStyle(fontSize: 18),
-              ),
+              child: const Text('Start Game', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
@@ -437,7 +446,74 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
               'Player: $matchPlayerWins  |  AI: $matchAIWins  |  Draws: $matchDraws',
               style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            // Turn Indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: xTurn
+                    ? const Color(0xFFE8F5E8)
+                    : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: xTurn
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFFF9800),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (xTurn) ...[
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD740),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Your Turn',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ] else ...[
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CustomPaint(
+                        painter: TrianglePainter(
+                          color: const Color(0xFF5B6F4A),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'AI Thinking...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE65100),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
             Container(
               width: 320,
               height: 320,
@@ -453,16 +529,19 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                 ),
                 itemCount: 9,
                 itemBuilder: (context, idx) => GestureDetector(
-                  onTap: () => _makeMove(idx),
+                  onTap: xTurn ? () => _makeMove(idx) : null,
                   child: Container(
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: xTurn ? Colors.white : Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: primaryColor, width: 2),
+                      border: Border.all(
+                        color: xTurn ? primaryColor : Colors.grey[300]!,
+                        width: 2,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withOpacity(xTurn ? 0.1 : 0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -511,30 +590,6 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
                   ),
                 ],
               ),
-            const SizedBox(height: 24),
-            Card(
-              color: Colors.white,
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.emoji_events, color: accentColor),
-                    const SizedBox(width: 12),
-                    Text('Wins: $win', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: 18),
-                    Icon(Icons.close, color: primaryColor),
-                    const SizedBox(width: 12),
-                    Text('Losses: $loss', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: 18),
-                    const Icon(Icons.remove, color: Colors.grey),
-                    const SizedBox(width: 12),
-                    Text('Draws: $draw', style: const TextStyle(fontSize: 18)),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -544,9 +599,9 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
 
 class TrianglePainter extends CustomPainter {
   final Color color;
-  
+
   TrianglePainter({this.color = Colors.purple});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()

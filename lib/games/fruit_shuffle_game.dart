@@ -30,7 +30,7 @@ class FruitShuffleGame extends StatefulWidget {
   State<FruitShuffleGame> createState() => _FruitShuffleGameState();
 }
 
-class _FruitShuffleGameState extends State<FruitShuffleGame> {
+class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProviderStateMixin {
   late List<Fruit> fruits;
   late List<Bag> bags;
   late List<Fruit> availableFruits;
@@ -54,20 +54,30 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
   int shuffleAnimationStep = 0;
   Timer? shuffleTimer;
 
+  // Animation controllers
+  late AnimationController _shakeController;
+  late AnimationController _revealController;
+  late AnimationController _fruitFlyController;
+  late Animation<double> _shakeAnimation;
+  late Animation<double> _revealAnimation;
+  late Animation<Offset> _fruitFlyAnimation;
+
+  // Animation state
+  bool _isAnimating = false;
+  Fruit? _animatingFruit;
+  Offset? _startPosition;
+  Offset? _endPosition;
+
   // Fruit types
   final List<Map<String, dynamic>> fruitTypes = [
-    {'name': 'Apple', 'icon': Icons.apple, 'color': Colors.red},
-    {
-      'name': 'Banana',
-      'icon': Icons.emoji_food_beverage,
-      'color': Colors.yellow,
-    },
-    {'name': 'Peach', 'icon': Icons.eco, 'color': Colors.orange},
-    {'name': 'Pear', 'icon': Icons.spa, 'color': Colors.green},
-    {'name': 'Strawberry', 'icon': Icons.emoji_nature, 'color': Colors.pink},
-    {'name': 'Grape', 'icon': Icons.bubble_chart, 'color': Colors.purple},
-    {'name': 'Lemon', 'icon': Icons.brightness_1, 'color': Colors.yellow},
-    {'name': 'Cherry', 'icon': Icons.emoji_emotions, 'color': Colors.red},
+    {'name': 'Apple', 'emoji': '🍎'},
+    {'name': 'Banana', 'emoji': '🍌'},
+    {'name': 'Orange', 'emoji': '🍊'},
+    {'name': 'Grapes', 'emoji': '🍇'},
+    {'name': 'Strawberry', 'emoji': '🍓'},
+    {'name': 'Cherry', 'emoji': '🍒'},
+    {'name': 'Pineapple', 'emoji': '🍍'},
+    {'name': 'Watermelon', 'emoji': '🍉'},
   ];
 
   @override
@@ -82,6 +92,36 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initializeGame();
+
+    // Initialize animation controllers
+    _shakeController = AnimationController(
+      duration: Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _revealController = AnimationController(
+      duration: Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fruitFlyController = AnimationController(
+      duration: Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
+
+    _revealAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _revealController, curve: Curves.easeInOut),
+    );
+
+    _fruitFlyAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _fruitFlyController,
+      curve: Curves.easeInOutCubic,
+    ));
   }
 
   void _setupDifficulty() {
@@ -104,8 +144,7 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
         .map(
           (type) => Fruit(
             name: type['name'],
-            icon: type['icon'],
-            color: type['color'],
+            emoji: type['emoji'],
           ),
         )
         .toList();
@@ -200,24 +239,80 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
   }
 
   void _selectFruit(Fruit fruit) {
-    if (!matchingPhase || gameCompleted) return;
+    if (!matchingPhase || gameCompleted || _isAnimating) return;
 
+    // Find the first empty bag that is not revealed (not a hint)
+    int emptyBagIndex = bags.indexWhere((bag) => bag.placedFruit == null && !bag.isRevealed);
+    if (emptyBagIndex != -1) {
+      _startFruitFlyAnimation(fruit, emptyBagIndex);
+    }
+  }
+
+  void _startFruitFlyAnimation(Fruit fruit, int targetBagIndex) {
     setState(() {
+      _isAnimating = true;
+      _animatingFruit = fruit;
       availableFruits.remove(fruit);
     });
 
-    // Find the first empty bag
-    int emptyBagIndex = bags.indexWhere((bag) => bag.placedFruit == null);
-    if (emptyBagIndex != -1) {
-      setState(() {
-        bags[emptyBagIndex].placedFruit = fruit;
-      });
+    // Calculate more accurate animation path
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+    
+    // Calculate basket positions more accurately
+    double basketWidth = 100;
+    double totalBasketsWidth = totalFruits * basketWidth;
+    double spacing = (screenWidth - totalBasketsWidth) / (totalFruits + 1);
+    double basketCenterX = spacing + (targetBagIndex * (basketWidth + spacing)) + (basketWidth / 2);
+    
+    // Start position (bottom fruit plate area)
+    double startX = screenWidth / 2;
+    double startY = screenHeight * 0.75; // Bottom area
+    
+    // End position (target basket center)
+    double endX = basketCenterX;
+    double endY = screenHeight * 0.35; // Basket area
+    
+    // Calculate relative movement
+    double deltaX = endX - startX;
+    double deltaY = endY - startY;
 
-      // Check if all fruits are placed
-      if (bags.every((bag) => bag.placedFruit != null)) {
+    // Update animation tween with accurate positions
+    _fruitFlyAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset(deltaX, deltaY),
+    ).animate(CurvedAnimation(
+      parent: _fruitFlyController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    // Start the animation
+    _fruitFlyController.forward().then((_) {
+      // Animation completed, place fruit in bag
+      setState(() {
+        bags[targetBagIndex].placedFruit = fruit;
+        _isAnimating = false;
+        _animatingFruit = null;
+      });
+      
+      _fruitFlyController.reset();
+
+      // Check if all non-revealed bags have fruits placed
+      if (bags.every((bag) => bag.placedFruit != null || bag.isRevealed)) {
         _checkMatches();
       }
-    }
+    });
+  }
+
+  void _removeFruitFromBag(Bag bag) {
+    if (!matchingPhase || gameCompleted || bag.placedFruit == null) return;
+
+    setState(() {
+      // Add the fruit back to available fruits
+      availableFruits.add(bag.placedFruit!);
+      // Remove the fruit from the bag
+      bag.placedFruit = null;
+    });
   }
 
   void _checkMatches() {
@@ -225,7 +320,10 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
     int correct = 0;
 
     for (int i = 0; i < bags.length; i++) {
-      if (bags[i].placedFruit?.name == bags[i].correctFruit.name) {
+      // Count as correct if:
+      // 1. Placed fruit matches correct fruit, OR
+      // 2. Bag is revealed (hint) - automatically correct
+      if (bags[i].isRevealed || bags[i].placedFruit?.name == bags[i].correctFruit.name) {
         correct++;
       }
     }
@@ -284,6 +382,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
         hintsUsed++;
         // Show the revealed fruit on the bag
         visibleFruitsInBags[randomIndex] = bags[randomIndex].correctFruit;
+        // Reset wrong attempts counter after giving hint
+        wrongAttempts = 0;
       });
     }
   }
@@ -307,19 +407,18 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
         difficulty: _normalizedDifficulty,
       );
     }
-    // Auto-navigate to next game after short delay
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
+    
+    // Show completion dialog
+    _showGameOverDialog(success);
   }
 
   @override
   void dispose() {
     stopwatch.stop();
     shuffleTimer?.cancel();
-    // Stop background music when leaving the game
+    _shakeController.dispose();
+    _revealController.dispose();
+    _fruitFlyController.dispose();
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
@@ -330,110 +429,281 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
       backgroundColor: const Color(0xFF64744B), // Muted green background
       body: Stack(
         children: [
-          // Decorative elements
-          Positioned(
-            top: 32,
-            left: 32,
-            child: Icon(
-              Icons.apple,
-              color: Colors.black.withValues(alpha: 0.08),
-              size: 48,
-            ),
-          ),
-          Positioned(
-            top: 80,
-            right: 60,
-            child: Icon(
-              Icons.eco,
-              color: Colors.black.withValues(alpha: 0.08),
-              size: 44,
-            ),
-          ),
+          // Main game content (lower layer)
+          Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    // Decorative elements
+                    Positioned(
+                      top: 32,
+                      left: 32,
+                      child: Icon(
+                        Icons.apple,
+                        color: Colors.black.withValues(alpha: 0.08),
+                        size: 48,
+                      ),
+                    ),
+                    Positioned(
+                      top: 80,
+                      right: 60,
+                      child: Icon(
+                        Icons.eco,
+                        color: Colors.black.withValues(alpha: 0.08),
+                        size: 44,
+                      ),
+                    ),
 
-          // Back button
-          Positioned(
-            top: 32,
-            left: 24,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF393C48),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 12,
-                ),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  fontFamily: 'Nunito',
-                ),
-                shadowColor: Colors.black.withValues(alpha: 0.18),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back, size: 28),
-              label: const Text('Back'),
-            ),
-          ),
+                    // Back button
+                    Positioned(
+                      top: 32,
+                      left: 24,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF393C48),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 12,
+                          ),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            fontFamily: 'Nunito',
+                          ),
+                          shadowColor: Colors.black.withValues(alpha: 0.18),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back, size: 28),
+                        label: const Text('Back'),
+                      ),
+                    ),
 
-          // Help button
-          Positioned(
-            top: 32,
-            right: 24,
-            child: Row(
-              children: [
-                const Text(
-                  'Need Help?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.help, color: Colors.blue, size: 24),
-                ),
-              ],
-            ),
-          ),
+                    // Help button
+                    Positioned(
+                      top: 32,
+                      right: 24,
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Need Help?',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.help, color: Colors.blue, size: 24),
+                          ),
+                        ],
+                      ),
+                    ),
 
-          // Main game content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+                    // Main game content
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
                 // Game status
                 if (!gameStarted)
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Fruit Shuffle',
-                        style: TextStyle(
+                      // Round and Correct counters
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'Round',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '1/${totalAttempts + 1}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'Correct',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$correctMatchesCount',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                      // Game icon and title
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.shuffle,
+                          size: 60,
                           color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Watch fruits shuffle, then remember their positions!',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Watch carefully!',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Watch fruits shuffle, then remember their positions!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                       const SizedBox(height: 40),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black87,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 40,
                             vertical: 16,
@@ -441,10 +711,11 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),
+                          elevation: 4,
                         ),
                         onPressed: _startShuffle,
                         child: const Text(
-                          'Start Shuffle',
+                          'Start !',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -458,10 +729,14 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
                   Column(
                     children: [
                       const SizedBox(height: 20),
-                      // Bags row during shuffle
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: bags.map((bag) => _buildBag(bag)).toList(),
+                      // Bags row during shuffle - Fixed positioning
+                      Container(
+                        width: double.infinity,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: bags.map((bag) => _buildBag(bag)).toList(),
+                        ),
                       ),
                     ],
                   ),
@@ -469,84 +744,107 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
                 if (matchingPhase && !gameCompleted)
                   Column(
                     children: [
-                      // Game info
+                      // Bags row - Fixed positioning
+                      Container(
+                        width: double.infinity,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: bags.map((bag) => _buildBag(bag)).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 200),
+
+                      // Available fruits row (excluding revealed fruits)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: availableFruits
+                            .where((fruit) {
+                              // Don't show fruits that are revealed as hints
+                              return !bags.any((bag) => 
+                                bag.isRevealed && bag.correctFruit.name == fruit.name);
+                            })
+                            .map((fruit) => _buildAnimatedFruit(fruit))
+                            .toList(),
+                      ),
+
+                    ],
+                  ),
+
+                // Completion screen removed - now handled by dialog
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          // Flying fruit animation overlay (TOP LAYER - above everything)
+          if (_isAnimating && _animatingFruit != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _fruitFlyAnimation,
+                  builder: (context, child) {
+                    double screenWidth = MediaQuery.of(context).size.width;
+                    double screenHeight = MediaQuery.of(context).size.height;
+                    
+                    // Start at bottom center, move according to animation
+                    double left = screenWidth / 2 - 55 + _fruitFlyAnimation.value.dx;
+                    double top = screenHeight * 0.75 - 55 + _fruitFlyAnimation.value.dy;
+                    
+                    return Container(
+                      child: Stack(
                         children: [
-                          Text(
-                            'Wrong: $wrongAttempts/$maxWrongAttempts',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            'Hints: $hintsUsed',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
+                          Positioned(
+                            left: left,
+                            top: top,
+                            child: Material(
+                              elevation: 10, // High elevation to stay on top
+                              shape: const CircleBorder(),
+                              child: Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFE0E0E0),
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.5),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                  gradient: const RadialGradient(
+                                    colors: [
+                                      Color(0xFFFAFAFA),
+                                      Colors.white,
+                                    ],
+                                    stops: [0.0, 1.0],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _animatingFruit!.emoji,
+                                    style: const TextStyle(fontSize: 68),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-
-                      // Bags row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: bags.map((bag) => _buildBag(bag)).toList(),
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Available fruits row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: availableFruits
-                            .map((fruit) => _buildFruit(fruit))
-                            .toList(),
-                      ),
-
-                      // Hint button
-                      if (wrongAttempts >= maxWrongAttempts &&
-                          hintsUsed < totalFruits)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: _showHint,
-                            child: const Text('Get Hint'),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                if (gameCompleted)
-                  Column(
-                    children: [
-                      const Text(
-                        'Game Completed!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Accuracy: ${totalAttempts > 0 ? ((correctMatchesCount / (totalAttempts * totalFruits)) * 100).round() : 100}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -556,110 +854,241 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
     final bagIndex = bag.number - 1;
     final visibleFruit = visibleFruitsInBags[bagIndex];
 
-    return Column(
-      children: [
-        // Placed fruit, revealed fruit, shuffling fruit, or final reveal
-        if (bag.placedFruit != null)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: bag.placedFruit!.color,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 4,
-                  offset: const Offset(2, 2),
-                ),
-              ],
-            ),
-            child: Icon(bag.placedFruit!.icon, color: Colors.white, size: 32),
-          )
-        else if (bag.isRevealed)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: bag.correctFruit.color,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 4,
-                  offset: const Offset(2, 2),
-                ),
-              ],
-            ),
-            child: Icon(bag.correctFruit.icon, color: Colors.white, size: 32),
-          )
-        else if (shuffling && visibleFruit != null)
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: visibleFruit.color,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 4,
-                  offset: const Offset(2, 2),
-                ),
-              ],
-            ),
-            child: Icon(visibleFruit.icon, color: Colors.white, size: 32),
-          )
-        else if (shuffleAnimationStep == 9 && visibleFruit != null)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: visibleFruit.color,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 4,
-                  offset: const Offset(2, 2),
-                ),
-              ],
-            ),
-            child: Icon(visibleFruit.icon, color: Colors.white, size: 32),
-          )
-        else
-          const SizedBox(width: 60, height: 60),
+    return SizedBox(
+      width: 100, // Fixed width to prevent movement
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Prevent expansion
+        children: [
+          // Empty space above basket (fruits will go inside basket now)
+          const SizedBox(width: 100, height: 100),
 
-        const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-        // Bag
-        Container(
-          width: 80,
-          height: 100,
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B4513), // Brown bag color
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 6,
-                offset: const Offset(3, 3),
+          // Basket - Fixed container with no animations
+          Container(
+            width: 100,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD2B48C), // Light tan/beige basket color
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+                bottomLeft: Radius.circular(25),
+                bottomRight: Radius.circular(25),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(2, 2),
+                ),
+              ],
+            ),
+          child: Stack(
+            children: [
+              // Basket weave pattern
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: BasketWeavePainter(),
+                ),
+              ),
+              // Handle
+              Positioned(
+                top: 8,
+                left: 10,
+                right: 10,
+                child: Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCD853F), // Medium brown handle
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Fruit inside basket (if placed or revealed)
+              if (bag.placedFruit != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: GestureDetector(
+                      onTap: () => _removeFruitFromBag(bag),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 4,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          bag.placedFruit!.emoji,
+                          style: const TextStyle(fontSize: 50),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else if (bag.isRevealed)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.green.shade300,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 4,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        bag.correctFruit.emoji,
+                        style: const TextStyle(fontSize: 50),
+                      ),
+                    ),
+                  ),
+                )
+              else if (shuffling && visibleFruit != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        visibleFruit.emoji,
+                        style: const TextStyle(fontSize: 50),
+                      ),
+                    ),
+                  ),
+                )
+              else if (shuffleAnimationStep == 9 && visibleFruit != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        visibleFruit.emoji,
+                        style: const TextStyle(fontSize: 50),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                // Number (only show when no fruit is in basket)
+                Center(
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFCD853F),
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${bag.number}',
+                        style: const TextStyle(
+                          color: Color(0xFFCD853F),
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-          child: Center(
-            child: Text(
-              '${bag.number}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
+        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedFruit(Fruit fruit) {
+    return GestureDetector(
+      onTap: () => _selectFruit(fruit),
+      child: Container(
+        width: 110,
+        height: 110,
+        decoration: BoxDecoration(
+          // Plate background
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFFE0E0E0),
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
+          ],
+          gradient: const RadialGradient(
+            colors: [
+              Color(0xFFFAFAFA), // Light center
+              Colors.white,      // White edge
+            ],
+            stops: [0.0, 1.0],
           ),
         ),
-      ],
+        child: Center(
+          child: Text(
+            fruit.emoji,
+            style: const TextStyle(fontSize: 68),
+          ),
+        ),
+      ),
     );
   }
 
@@ -667,31 +1096,190 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> {
     return GestureDetector(
       onTap: () => _selectFruit(fruit),
       child: Container(
-        width: 60,
-        height: 60,
+        width: 110,
+        height: 110,
         decoration: BoxDecoration(
-          color: fruit.color,
-          borderRadius: BorderRadius.circular(30),
+          // Plate background
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFFE0E0E0),
+            width: 3,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 4,
-              offset: const Offset(2, 2),
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
+          gradient: const RadialGradient(
+            colors: [
+              Color(0xFFFAFAFA), // Light center
+              Colors.white,      // White edge
+            ],
+            stops: [0.0, 1.0],
+          ),
         ),
-        child: Icon(fruit.icon, color: Colors.white, size: 32),
+        child: Center(
+          child: Text(
+            fruit.emoji,
+            style: const TextStyle(fontSize: 68),
+          ),
+        ),
       ),
+    );
+  }
+
+  void _showGameOverDialog(bool success) {
+    final accuracy = totalAttempts > 0
+        ? ((correctMatchesCount / (totalAttempts * totalFruits)) * 100).round()
+        : 100;
+    final completionTime = stopwatch.elapsed.inSeconds;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64744B),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF64744B).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.celebration,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Fruit Master! 🍎✨',
+                style: TextStyle(
+                  color: const Color(0xFF64744B),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5DC).withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatRow(Icons.star_rounded, 'Final Score', '${correctMatchesCount * 10} points'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.apple, 'Fruits Matched', '$correctMatchesCount/$totalFruits'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
+              ],
+            ),
+          ),
+          actions: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop(); // Close the game and return to session
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF64744B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: const Color(0xFF64744B), size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: const Color(0xFF64744B),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: const Color(0xFF64744B),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
 
 class Fruit {
   final String name;
-  final IconData icon;
-  final Color color;
+  final String emoji;
 
-  Fruit({required this.name, required this.icon, required this.color});
+  Fruit({required this.name, required this.emoji});
 }
 
 class Bag {
@@ -701,4 +1289,35 @@ class Bag {
   bool isRevealed = false;
 
   Bag({required this.number, required this.correctFruit});
+}
+
+class BasketWeavePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCD853F)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+
+    // Draw horizontal weave lines
+    for (double y = 20; y < size.height - 10; y += 8) {
+      canvas.drawLine(
+        Offset(8, y),
+        Offset(size.width - 8, y),
+        paint,
+      );
+    }
+
+    // Draw vertical weave lines
+    for (double x = 15; x < size.width - 8; x += 12) {
+      canvas.drawLine(
+        Offset(x, 20),
+        Offset(x, size.height - 10),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

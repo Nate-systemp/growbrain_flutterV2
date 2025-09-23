@@ -396,74 +396,142 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
   }
 
   void _showGameOverDialog() {
+    final accuracy = maxRounds > 0 ? ((correctAnswers / maxRounds) * 100).round() : 0;
+    final timeTaken = 60 - timeLeft;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF5B6F4A),
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: Text(
-            'Nice Job! 😊',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+          title: Column(
             children: [
-              Icon(
-                Icons.emoji_events,
-                color: const Color(0xFFFFD740),
-                size: 64,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5B6F4A).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.search_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Final Score: $score',
+                'Fantastic! 🔍✨',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5B6F4A),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-              ),
-              Text(
-                'Rounds Completed: $round',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                textAlign: TextAlign.center,
               ),
             ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5DC).withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatRow(Icons.star_rounded, 'Final Score', '$score points'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.flag_circle, 'Rounds Completed', '$round/$maxRounds'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.timer, 'Time Used', '${timeTaken}s'),
+              ],
+            ),
           ),
           actions: [
             Container(
               width: double.infinity,
-              child: TextButton(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(
-                    context,
-                  ).pop(); // Close game and return to session
+                  Navigator.of(context).pop(); // Just close the dialog
                 },
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD740),
-                  foregroundColor: const Color(0xFF5B6F4A),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B6F4A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 3,
                 ),
-                child: Text(
-                  'Continue',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD740).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: const Color(0xFF5B6F4A), size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: const Color(0xFF5B6F4A),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: const Color(0xFF5B6F4A),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1008,46 +1076,207 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
   }
 
   Widget _buildStartCubeButton() {
-    // Square cube with play icon and a small label below
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        GestureDetector(
-          onTap: _startGame,
-          child: Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: const Color(0xFF5B6F4A),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+        // Round and Correct counters
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Round',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$round/$maxRounds',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(Icons.play_arrow, color: Colors.white, size: 44),
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Correct',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$correctAnswers',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+        // Game icon and title
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.search,
+            size: 60,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Text(
+            'Find the object!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Start Game',
-          style: TextStyle(
-            color: const Color(0xFF5B6F4A),
-            fontWeight: FontWeight.w600,
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Text(
+            'Look for the target object and tap it quickly!',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
-        const SizedBox(height: 12),
-        // Show brief instructions on the start screen so players see how to play
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: _buildInstructions(),
+        const SizedBox(height: 40),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 40,
+              vertical: 16,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            elevation: 4,
+          ),
+          onPressed: _startGame,
+          child: const Text(
+            'Start !',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],

@@ -30,33 +30,16 @@ class CategoryGamesScreen extends StatefulWidget {
   _CategoryGamesScreenState createState() => _CategoryGamesScreenState();
 }
 
-// Custom painter for subtle diagonal stripes background
-class _StripedBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stripePaint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
-      ..strokeWidth = 18;
-
-    final double stripeSpacing = 48;
-    for (
-      double x = -size.height;
-      x < size.width + size.height;
-      x += stripeSpacing
-    ) {
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x - size.height, size.height),
-        stripePaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
+  int _selectedGameIndex = 0;
+  PageController _pageController = PageController(viewportFraction: 0.6);
+  
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+  
   // Define category to game mappings
   final Map<String, List<Map<String, dynamic>>> categoryGames = {
     'Attention': [
@@ -161,14 +144,16 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
     ],
   };
 
- @override
+  @override
   Widget build(BuildContext context) {
     final games = categoryGames[widget.category] ?? [];
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.shortestSide >= 600 || screenSize.width >= 900;
 
     // More generous padding for tablet, tighter for phones
-    final horizontalPadding = isTablet ? screenSize.width * 0.10 : screenSize.width * 0.06;
+    final horizontalPadding = isTablet
+        ? screenSize.width * 0.10
+        : screenSize.width * 0.06;
     final topPadding = isTablet ? 56.0 : 24.0;
     final spacing = isTablet ? 36.0 : 20.0;
 
@@ -177,7 +162,11 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(isTablet ? 96 : 72),
         child: Container(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 16, right: 16),
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top,
+            left: 16,
+            right: 16,
+          ),
           decoration: BoxDecoration(
             gradient: const RadialGradient(
               colors: [Color(0xFF5B6F4A), Color(0xFF2F6B3D)],
@@ -185,7 +174,11 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
               radius: 10.0,
             ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.22), blurRadius: 12, offset: Offset(0, 6))
+              BoxShadow(
+                color: Colors.black.withOpacity(0.22),
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
             ],
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
           ),
@@ -200,7 +193,11 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                   customBorder: const CircleBorder(),
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
-                    child: Icon(Icons.arrow_back, color: Colors.white, size: isTablet ? 28 : 22),
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: isTablet ? 28 : 22,
+                    ),
                   ),
                 ),
               ),
@@ -216,7 +213,11 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                         color: Colors.white,
                         fontSize: isTablet ? 34 : 22,
                         shadows: [
-                          Shadow(color: Colors.black.withOpacity(0.38), offset: Offset(0, 5), blurRadius: 8),
+                          Shadow(
+                            color: Colors.black.withOpacity(0.38),
+                            offset: Offset(0, 5),
+                            blurRadius: 8,
+                          ),
                         ],
                       ),
                       textAlign: TextAlign.center,
@@ -227,13 +228,28 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
               const SizedBox(width: 12),
               if (widget.isDemoMode)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade700,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 6, offset: Offset(0, 3))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.14),
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  child: Text('DEMO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'DEMO',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -250,13 +266,21 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, 36),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            topPadding,
+            horizontalPadding,
+            36,
+          ),
           child: Column(
             children: [
               // Instruction card with more breathing room
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 18, vertical: isTablet ? 16 : 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: isTablet ? 16 : 12,
+                ),
                 margin: EdgeInsets.only(bottom: isTablet ? 28 : 18),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.06),
@@ -266,79 +290,140 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.videogame_asset, color: Colors.white.withOpacity(0.9)),
+                    Icon(
+                      Icons.videogame_asset,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Choose a game to start — tap the big tile!',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: isTablet ? 18 : 14),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: isTablet ? 18 : 14,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Grid area
+              // PSP-Style Horizontal Carousel
               Expanded(
-                child: LayoutBuilder(builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth;
-                  final tileCountPerRow = isTablet ? 3 : (screenSize.width > 900 ? 3 : 2);
-                  final totalGaps = spacing * (tileCountPerRow - 1);
-                  final tileWidth = (maxWidth - totalGaps) / tileCountPerRow;
-
-                  // Reduce max size so tiles have room around them
-                  final maxTileWidth = isTablet ? 360.0 : 340.0;
-                  final finalTileWidth = math.min(tileWidth, maxTileWidth);
-                  final tileHeight = finalTileWidth * 1.02;
-                  final usedWidth = finalTileWidth * tileCountPerRow + totalGaps;
-
-                  return Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: usedWidth),
-                      child: GridView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.zero,
-                        itemCount: games.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: tileCountPerRow,
-                          crossAxisSpacing: spacing,
-                          mainAxisSpacing: spacing,
-                          childAspectRatio: finalTileWidth / tileHeight,
+                child: Column(
+                  children: [
+                    // Navigation arrows
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          onPressed: _selectedGameIndex > 0 ? _previousGame : null,
+                          icon: Icon(
+                            Icons.arrow_back_ios,
+                            color: _selectedGameIndex > 0 
+                                ? Colors.white.withOpacity(0.9)
+                                : Colors.white.withOpacity(0.3),
+                            size: isTablet ? 32 : 24,
+                          ),
                         ),
+                        Text(
+                          '${_selectedGameIndex + 1} / ${games.length}',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: isTablet ? 16 : 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _selectedGameIndex < games.length - 1 ? _nextGame : null,
+                          icon: Icon(
+                            Icons.arrow_forward_ios,
+                            color: _selectedGameIndex < games.length - 1 
+                                ? Colors.white.withOpacity(0.9)
+                                : Colors.white.withOpacity(0.3),
+                            size: isTablet ? 32 : 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Horizontal carousel
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _selectedGameIndex = index;
+                          });
+                        },
+                        itemCount: games.length,
                         itemBuilder: (context, index) {
                           final game = games[index];
-                          return SizedBox(
-                            width: finalTileWidth,
-                            child: _GameCard(
-                              icon: game['icon'] as IconData,
-                              iconColor: game['color'] as Color,
-                              label: game['name'] as String,
-                              onTap: () => _startGame(context, game),
-                              large: isTablet,
+                          final isSelected = index == _selectedGameIndex;
+                          
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            margin: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: isSelected ? 0 : 40,
+                            ),
+                            child: Transform.scale(
+                              scale: isSelected ? 1.0 : 0.85,
+                              child: _PSPGameCard(
+                                icon: game['icon'] as IconData,
+                                iconColor: game['color'] as Color,
+                                label: game['name'] as String,
+                                onTap: () => _startGame(context, game),
+                                isSelected: isSelected,
+                                large: isTablet,
+                              ),
                             ),
                           );
                         },
                       ),
                     ),
-                  );
-                }),
-              ),
-
-              // Bottom home button with more space from grid
-              Padding(
-                padding: const EdgeInsets.only(top: 18),
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.home, color: Colors.white),
-                  label: Text('Home', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.12),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 6,
-                  ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Action button for selected game
+                    Container(
+                      width: double.infinity,
+                      height: isTablet ? 60 : 50,
+                      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      child: ElevatedButton(
+                        onPressed: () => _startGame(context, games[_selectedGameIndex]),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF5B6F4A),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          elevation: 8,
+                          shadowColor: Colors.black.withOpacity(0.3),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.play_arrow,
+                              size: isTablet ? 28 : 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'START ${games[_selectedGameIndex]['name'].toString().toUpperCase()}',
+                              style: TextStyle(
+                                fontSize: isTablet ? 18 : 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -346,6 +431,25 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         ),
       ),
     );
+  }
+
+  void _previousGame() {
+    if (_selectedGameIndex > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _nextGame() {
+    final games = categoryGames[widget.category] ?? [];
+    if (_selectedGameIndex < games.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _startGame(BuildContext context, Map<String, dynamic> game) {
@@ -373,15 +477,37 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
     } else if (gameWidget is RiddleGame) {
       return RiddleGame(difficulty: 'Starter', onGameComplete: null);
     } else if (gameWidget is MatchCardsGame) {
-      return MatchCardsGame(difficulty: 'Starter', challengeFocus: 'Memory', gameName: 'Match Cards', onGameComplete: null);
+      return MatchCardsGame(
+        difficulty: 'Starter',
+        challengeFocus: 'Memory',
+        gameName: 'Match Cards',
+        onGameComplete: null,
+      );
     } else if (gameWidget is FruitShuffleGame) {
-      return FruitShuffleGame(difficulty: 'Starter', challengeFocus: 'Memory', gameName: 'Fruit Shuffle', onGameComplete: null);
+      return FruitShuffleGame(
+        difficulty: 'Starter',
+        challengeFocus: 'Memory',
+        gameName: 'Fruit Shuffle',
+        onGameComplete: null,
+      );
     } else if (gameWidget is SoundMatchGame) {
       return SoundMatchGame(difficulty: 'Starter', onGameComplete: null);
     } else if (gameWidget is PuzzleGame) {
       return PuzzleGame(difficulty: 'Starter', onGameComplete: null);
     } else if (gameWidget is TicTacToeGameScreen) {
-      return TicTacToeGameScreen(difficulty: 'Starter', challengeFocus: 'Logic', gameName: 'Tic Tac Toe', onGameComplete: ({required int accuracy, required int completionTime, required String challengeFocus, required String gameName, required String difficulty}) {});
+      return TicTacToeGameScreen(
+        difficulty: 'Starter',
+        challengeFocus: 'Logic',
+        gameName: 'Tic Tac Toe',
+        onGameComplete:
+            ({
+              required int accuracy,
+              required int completionTime,
+              required String challengeFocus,
+              required String gameName,
+              required String difficulty,
+            }) {},
+      );
     } else if (gameWidget is ObjectHuntGame) {
       return ObjectHuntGame(difficulty: 'Starter', onGameComplete: null);
     }
@@ -563,6 +689,151 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   }
 }
 
+class _PSPGameCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final VoidCallback onTap;
+  final bool isSelected;
+  final bool large;
+
+  const _PSPGameCard({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onTap,
+    required this.isSelected,
+    this.large = false,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final double cornerRadius = large ? 28 : 24;
+    final double iconSize = large ? 100 : 80;
+    final double labelFont = large ? 32 : 24;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(cornerRadius),
+          boxShadow: [
+            if (isSelected) ...[
+              BoxShadow(
+                color: Colors.white.withOpacity(0.3),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+              BoxShadow(
+                color: iconColor.withOpacity(0.4),
+                blurRadius: 30,
+                spreadRadius: 2,
+              ),
+            ] else ...[
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? Colors.white.withOpacity(0.95)
+                : Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(cornerRadius),
+            border: isSelected 
+                ? Border.all(color: iconColor, width: 3)
+                : Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated icon container
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: iconSize + (isSelected ? 40 : 30),
+                height: iconSize + (isSelected ? 40 : 30),
+                decoration: BoxDecoration(
+                  color: iconColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: iconColor.withOpacity(0.4),
+                      blurRadius: isSelected ? 20 : 10,
+                      spreadRadius: isSelected ? 2 : 0,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 4),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: iconSize,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Game title
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: GoogleFonts.luckiestGuy(
+                  fontSize: labelFont,
+                  color: isSelected ? Colors.black87 : Colors.black54,
+                  shadows: isSelected ? [
+                    Shadow(
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                      color: iconColor.withOpacity(0.3),
+                    ),
+                  ] : [],
+                ),
+                child: Text(
+                  label.toUpperCase(),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              
+              // Selection indicator
+              if (isSelected) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: 60,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: iconColor,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Keep the old GameCard for backward compatibility
 class _GameCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;

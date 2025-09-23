@@ -45,7 +45,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   int attempts = 0;
   int matches = 0;
   bool gameStarted = false;
-  
+
   // App color scheme
   final Color primaryColor = const Color(0xFF5B6F4A);
   final Color accentColor = const Color(0xFFFFD740);
@@ -135,7 +135,8 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   }
 
   void _onCardTap(int idx) async {
-    if (!gameStarted || waiting || cards[idx].isMatched || cards[idx].isFaceUp) return;
+    if (!gameStarted || waiting || cards[idx].isMatched || cards[idx].isFaceUp)
+      return;
     setState(() => cards[idx].isFaceUp = true);
     if (firstFlipped == null) {
       firstFlipped = idx;
@@ -355,17 +356,20 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
                               child: GridView.builder(
                                 shrinkWrap: true,
                                 itemCount: cards.length,
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: gridCols,
-                                  mainAxisSpacing: 16,
-                                  crossAxisSpacing: 16,
-                                ),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: gridCols,
+                                      mainAxisSpacing: 16,
+                                      crossAxisSpacing: 16,
+                                    ),
                                 itemBuilder: (context, idx) {
                                   final card = cards[idx];
                                   return GestureDetector(
                                     onTap: () => _onCardTap(idx),
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 250),
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
                                       width: 90,
                                       height: 90,
                                       decoration: BoxDecoration(
@@ -377,7 +381,9 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.1),
+                                            color: Colors.black.withOpacity(
+                                              0.1,
+                                            ),
                                             blurRadius: 4,
                                             offset: const Offset(0, 2),
                                           ),
@@ -387,7 +393,9 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
                                         child: card.isFaceUp || card.isMatched
                                             ? Icon(
                                                 card.icon,
-                                                color: card.isMatched ? primaryColor : primaryColor,
+                                                color: card.isMatched
+                                                    ? primaryColor
+                                                    : primaryColor,
                                                 size: 40,
                                               )
                                             : const Text(

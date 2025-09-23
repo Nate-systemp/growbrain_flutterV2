@@ -27,278 +27,176 @@ class ObjectHuntGame extends StatefulWidget {
   _ObjectHuntGameState createState() => _ObjectHuntGameState();
 }
 
-class SceneObject {
-  final String emoji;
-  final String name;
-  final Offset position;
+class GridCell {
+  final int row;
+  final int col;
+  String? fruit;
+  bool isRevealed;
+  bool isShaking;
   bool isTarget;
-  bool isFound;
-  bool isHighlighted;
-  bool isDistractor;
 
-  SceneObject({
-    required this.emoji,
-    required this.name,
-    required this.position,
+  GridCell({
+    required this.row,
+    required this.col,
+    this.fruit,
+    this.isRevealed = false,
+    this.isShaking = false,
     this.isTarget = false,
-    this.isFound = false,
-    this.isHighlighted = false,
-    this.isDistractor = false,
   });
 }
 
-class _ObjectHuntGameState extends State<ObjectHuntGame> {
-  List<SceneObject> sceneObjects = [];
-  List<SceneObject> targetObjects = [];
+class _ObjectHuntGameState extends State<ObjectHuntGame>
+    with TickerProviderStateMixin {
+  List<List<GridCell>> grid = [];
+  List<String> availableFruits = [
+    '🍎',
+    '🍊',
+    '🍌',
+    '🍇',
+    '🍓',
+    '🍑',
+    '🥝',
+    '🍉',
+    '🥭',
+    '🍍',
+    '🥥',
+    '🍒',
+    '🍈',
+    '🍋',
+    '🍐',
+    '🫐',
+  ];
+  List<String> targetFruits = [];
   int score = 0;
-  int correctFinds = 0;
-  int wrongTaps = 0;
+  int foundCount = 0;
   int totalTargets = 0;
   bool gameStarted = false;
-  bool memorizationPhase = true;
-  bool searchPhase = false;
   bool gameActive = false;
+  int currentCol = 0; // Track which column player should guess next (0-4)
   late DateTime gameStartTime;
   Timer? gameTimer;
-  Timer? phaseTimer;
   int timeLeft = 0;
-  int memorizationTime = 0;
-  String currentScene = 'Living Room';
-
   Random random = Random();
   String _normalizedDifficulty = 'easy';
-  
-  // App color scheme
-  final Color primaryColor = const Color(0xFF5B6F4A);
-  final Color accentColor = const Color(0xFFFFD740);
 
-  // Scene configurations with objects
-  final Map<String, Map<String, dynamic>> scenes = {
-    'Living Room': {
-      'background': '🏠',
-      'objects': [
-        {'emoji': '📺', 'name': 'TV'},
-        {'emoji': '🛋️', 'name': 'Sofa'},
-        {'emoji': '📚', 'name': 'Books'},
-        {'emoji': '🕯️', 'name': 'Candle'},
-        {'emoji': '🪴', 'name': 'Plant'},
-        {'emoji': '🖼️', 'name': 'Picture'},
-        {'emoji': '⏰', 'name': 'Clock'},
-        {'emoji': '💡', 'name': 'Lamp'},
-        {'emoji': '🎮', 'name': 'Game'},
-        {'emoji': '☕', 'name': 'Coffee'},
-        {'emoji': '📱', 'name': 'Phone'},
-        {'emoji': '🗞️', 'name': 'Paper'},
-        {'emoji': '🎵', 'name': 'Music'},
-        {'emoji': '🧸', 'name': 'Toy'},
-        {'emoji': '🕶️', 'name': 'Glasses'},
-      ],
-    },
-    'Park': {
-      'background': '🏞️',
-      'objects': [
-        {'emoji': '🌳', 'name': 'Tree'},
-        {'emoji': '🌸', 'name': 'Flower'},
-        {'emoji': '🦋', 'name': 'Butterfly'},
-        {'emoji': '🐦', 'name': 'Bird'},
-        {'emoji': '⚽', 'name': 'Ball'},
-        {'emoji': '🪁', 'name': 'Kite'},
-        {'emoji': '🎪', 'name': 'Tent'},
-        {'emoji': '🚲', 'name': 'Bike'},
-        {'emoji': '🦆', 'name': 'Duck'},
-        {'emoji': '🌻', 'name': 'Sunflower'},
-        {'emoji': '🍃', 'name': 'Leaf'},
-        {'emoji': '🏃', 'name': 'Runner'},
-        {'emoji': '🐕', 'name': 'Dog'},
-        {'emoji': '🦴', 'name': 'Bone'},
-        {'emoji': '🌿', 'name': 'Grass'},
-      ],
-    },
-    'Kitchen': {
-      'background': '🏡',
-      'objects': [
-        {'emoji': '🍎', 'name': 'Apple'},
-        {'emoji': '🥛', 'name': 'Milk'},
-        {'emoji': '🍞', 'name': 'Bread'},
-        {'emoji': '🔪', 'name': 'Knife'},
-        {'emoji': '🍳', 'name': 'Pan'},
-        {'emoji': '☕', 'name': 'Coffee'},
-        {'emoji': '🧂', 'name': 'Salt'},
-        {'emoji': '🥄', 'name': 'Spoon'},
-        {'emoji': '🍽️', 'name': 'Plate'},
-        {'emoji': '🥗', 'name': 'Salad'},
-        {'emoji': '🍯', 'name': 'Honey'},
-        {'emoji': '🧄', 'name': 'Garlic'},
-        {'emoji': '🥕', 'name': 'Carrot'},
-        {'emoji': '🍌', 'name': 'Banana'},
-        {'emoji': '🧊', 'name': 'Ice'},
-      ],
-    },
-  };
+  // Animation controllers
+  late AnimationController _shakeController;
+  late AnimationController _revealController;
+  late Animation<double> _shakeAnimation;
+  late Animation<double> _revealAnimation;
 
-  // App color scheme for UI
-  final Color backgroundColor = const Color(0xFFF5F5DC);
-  final Color targetHighlight = const Color(0xFFFFD740); // Accent yellow
-  final Color foundColor = const Color(0xFF81C784); // Soft green
-  final Color wrongColor = const Color(0xFFEF9A9A); // Soft red
+  // App color scheme - Green theme
+  final Color primaryColor = const Color(0xFF2E7D32); // Dark green
+  final Color accentColor = const Color(0xFF4CAF50); // Medium green
+  final Color successColor = const Color(0xFF66BB6A); // Light green
+  final Color errorColor = const Color(0xFFE57373); // Light red
+  final Color backgroundColor = const Color(0xFFE8F5E8); // Very light green
+  final Color cardColor = const Color(0xFFFFFFFF); // White
+  final Color borderColor = const Color(0xFFC8E6C9); // Light green border
 
   @override
   void initState() {
     super.initState();
-    // Start background music for this game
-    BackgroundMusicManager().startGameMusic('Object Hunt');
+    BackgroundMusicManager().startGameMusic('Memory Grid');
     _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
       widget.difficulty,
     ).toLowerCase();
+
+    // Initialize animation controllers
+    _shakeController = AnimationController(
+      duration: Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _revealController = AnimationController(
+      duration: Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
+
+    _revealAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _revealController, curve: Curves.easeInOut),
+    );
+
     _initializeGame();
   }
 
   void _initializeGame() {
-    // Set difficulty parameters based on normalized difficulty
+    // Set difficulty parameters
     switch (_normalizedDifficulty) {
       case 'easy':
-        totalTargets = 3;
-        memorizationTime = 15; // 15 seconds
-        timeLeft = 60; // 1 minute search time
+        totalTargets = 5; // All 5 columns
+        timeLeft = 120; // 2 minutes
         break;
       case 'medium':
-        totalTargets = 5;
-        memorizationTime = 10; // 10 seconds
-        timeLeft = 45; // 45 seconds search time
+        totalTargets = 5; // All 5 columns
+        timeLeft = 150; // 2.5 minutes
         break;
       case 'hard':
-        totalTargets = 8;
-        memorizationTime = 8; // 8 seconds
-        timeLeft = 30; // 30 seconds search time
+        totalTargets = 5; // All 5 columns
+        timeLeft = 180; // 3 minutes
         break;
       default:
-        totalTargets = 3;
-        memorizationTime = 15;
-        timeLeft = 60;
+        totalTargets = 5;
+        timeLeft = 120;
     }
 
-    _setupScene();
+    _setupGrid();
   }
 
-  void _setupScene() {
-    sceneObjects.clear();
-    targetObjects.clear();
+  void _setupGrid() {
+    // Create 4x5 grid
+    grid.clear();
+    targetFruits.clear();
 
-    // Select random scene
-    List<String> sceneNames = scenes.keys.toList();
-    currentScene = sceneNames[random.nextInt(sceneNames.length)];
-
-    var sceneData = scenes[currentScene]!;
-    List<Map<String, dynamic>> availableObjects = List.from(
-      sceneData['objects'],
-    );
-    availableObjects.shuffle();
-
-    // Calculate number of objects based on difficulty
-    int totalObjects;
-    switch (_normalizedDifficulty) {
-      case 'easy':
-        totalObjects = 8; // 3 targets + 5 distractors
-        break;
-      case 'medium':
-        totalObjects = 12; // 5 targets + 7 distractors
-        break;
-      case 'hard':
-        totalObjects = 15; // 8 targets + 7 distractors
-        break;
-      default:
-        totalObjects = 8;
+    for (int row = 0; row < 4; row++) {
+      List<GridCell> rowCells = [];
+      for (int col = 0; col < 5; col++) {
+        rowCells.add(GridCell(row: row, col: col));
+      }
+      grid.add(rowCells);
     }
 
-    // Take required number of objects
-    var selectedObjects = availableObjects.take(totalObjects).toList();
+    // Select random target fruits
+    availableFruits.shuffle();
+    targetFruits = availableFruits.take(totalTargets).toList();
 
-    // Create scene objects with random positions
-    for (int i = 0; i < selectedObjects.length; i++) {
-      var obj = selectedObjects[i];
-      sceneObjects.add(
-        SceneObject(
-          emoji: obj['emoji'],
-          name: obj['name'],
-          position: _generateRandomPosition(i),
-          isTarget: i < totalTargets, // First objects are targets
-          isHighlighted:
-              i < totalTargets, // Start highlighted during memorization
-        ),
-      );
-    }
+    // Place fruits randomly in each column (one fruit per column)
+    List<String> fruitsToPlace = List.from(targetFruits);
+    fruitsToPlace.shuffle();
 
-    // Store target objects for reference
-    targetObjects = sceneObjects.where((obj) => obj.isTarget).toList();
-
-    // Add some distractors for medium/hard
-    if (_normalizedDifficulty != 'easy') {
-      _addDistractors();
+    // Place one fruit in each column
+    for (int col = 0; col < 5; col++) {
+      // Place one fruit in this column at random row
+      int row = random.nextInt(4);
+      grid[row][col].fruit = fruitsToPlace[col % fruitsToPlace.length];
+      grid[row][col].isTarget = true;
     }
 
     setState(() {});
   }
 
-  Offset _generateRandomPosition(int index) {
-    // Generate positions in a grid-like pattern with some randomness
-    double gridSize = 80.0;
-    int columns = 4;
-    int row = index ~/ columns;
-    int col = index % columns;
-
-    double x = 50 + col * gridSize + random.nextDouble() * 20;
-    double y = 100 + row * gridSize + random.nextDouble() * 20;
-
-    return Offset(x, y);
-  }
-
-  void _addDistractors() {
-    // Add extra objects that appear during search phase for confusion
-    var sceneData = scenes[currentScene]!;
-    List<Map<String, dynamic>> availableObjects = List.from(
-      sceneData['objects'],
-    );
-
-    // Remove already used objects
-    for (var sceneObj in sceneObjects) {
-      availableObjects.removeWhere((obj) => obj['emoji'] == sceneObj.emoji);
-    }
-
-    // Add 2-3 distractors for medium/hard
-    int distractorCount = _normalizedDifficulty == 'medium' ? 2 : 3;
-    availableObjects.shuffle();
-
-    for (int i = 0; i < distractorCount && i < availableObjects.length; i++) {
-      var obj = availableObjects[i];
-      sceneObjects.add(
-        SceneObject(
-          emoji: obj['emoji'],
-          name: obj['name'],
-          position: _generateRandomPosition(sceneObjects.length),
-          isDistractor: true,
-        ),
-      );
-    }
-  }
-
   void _startGame() {
     setState(() {
       gameStarted = true;
-      gameActive = false; // Will be set to true after instructions
-      memorizationPhase = false; // Will start after instructions
-      searchPhase = false;
-      gameStartTime = DateTime.now();
+      gameActive = true;
+      foundCount = 0;
       score = 0;
-      correctFinds = 0;
-      wrongTaps = 0;
+      currentCol = 0; // Start from column 0
+      gameStartTime = DateTime.now();
 
-      // Reset all objects
-      for (var obj in sceneObjects) {
-        obj.isFound = false;
-        obj.isHighlighted = false; // Start with no highlights
+      // Reset all cells
+      for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 5; col++) {
+          grid[row][col].isRevealed = false;
+          grid[row][col].isShaking = false;
+        }
       }
     });
 
+    _startTimer();
     _showInstructions();
   }
 
@@ -307,38 +205,37 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFFF8F9FA),
+        backgroundColor: backgroundColor,
         title: Text(
-          'Object Hunt Instructions',
-          style: TextStyle(color: Color(0xFF2C3E50)),
+          'Memory Grid Challenge',
+          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Memorize the highlighted objects!',
-              style: TextStyle(color: Color(0xFF2C3E50), fontSize: 16),
+              'Find these $totalTargets fruits:',
+              style: TextStyle(color: primaryColor, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12),
-            Text(
-              '• Study the ${totalTargets} highlighted objects\n• Memorize their positions\n• Then find them when highlights disappear\n• Avoid tapping wrong objects!',
-              style: TextStyle(color: Color(0xFF2C3E50)),
-              textAlign: TextAlign.left,
+            Wrap(
+              spacing: 8,
+              children: targetFruits
+                  .map((fruit) => Text(fruit, style: TextStyle(fontSize: 24)))
+                  .toList(),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Scene: $currentScene',
-              style: TextStyle(
-                color: Color(0xFF2C3E50),
-                fontWeight: FontWeight.bold,
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ),
-            Text(
-              'Memorization time: ${memorizationTime}s',
-              style: TextStyle(
-                color: Color(0xFFE57373),
-                fontWeight: FontWeight.bold,
+              child: Text(
+                '• Guess column by column starting from column 1\n• Found fruits reveal immediately\n• Empty boxes shake then restart from column 1\n• Continue until time expires or game completed',
+                style: TextStyle(color: primaryColor, fontSize: 14),
+                textAlign: TextAlign.left,
               ),
             ),
           ],
@@ -347,11 +244,13 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _startMemorizationPhase();
             },
             child: Text(
-              'Start Memorizing!',
-              style: TextStyle(color: Color(0xFF81C784)),
+              'Start Game!',
+              style: TextStyle(
+                color: successColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -359,44 +258,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     );
   }
 
-  void _startMemorizationPhase() {
-    setState(() {
-      gameActive = true; // Now the game is truly active
-      memorizationPhase = true;
-      searchPhase = false;
-      
-      // Show highlights on target objects only
-      for (var obj in sceneObjects) {
-        obj.isHighlighted = obj.isTarget;
-        obj.isFound = false;
-      }
-    });
-
-    // Start memorization timer with visual countdown
-    phaseTimer = Timer(Duration(seconds: memorizationTime), () {
-      _startSearchPhase();
-    });
-  }
-
-  void _startSearchPhase() {
-    setState(() {
-      memorizationPhase = false;
-      searchPhase = true;
-
-      // Hide all highlights
-      for (var obj in sceneObjects) {
-        obj.isHighlighted = false;
-      }
-
-      // Show distractors (they were hidden during memorization)
-      // This adds to the challenge
-    });
-
-    // Start search timer
-    _startSearchTimer();
-  }
-
-  void _startSearchTimer() {
+  void _startTimer() {
     gameTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         timeLeft--;
@@ -404,58 +266,80 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
 
       if (timeLeft <= 0) {
         timer.cancel();
-        _timeUp();
+        _endGame();
       }
     });
   }
 
-  void _timeUp() {
-    setState(() {
-      gameActive = false;
-    });
-    _endGame();
-  }
+  void _onCellTapped(int row, int col) {
+    if (!gameActive || grid[row][col].isRevealed) return;
 
-  void _onObjectTapped(SceneObject object) {
-    if (!searchPhase || !gameActive || object.isFound) return;
+    // Only allow clicking on the current column
+    if (col != currentCol) return;
 
     HapticFeedback.lightImpact();
+    _revealCell(row, col);
+  }
 
-    if (object.isTarget) {
-      // Correct target found!
+  void _revealCell(int row, int col) {
+    if (grid[row][col].fruit != null) {
+      // Found a fruit!
       setState(() {
-        object.isFound = true;
-        correctFinds++;
-        score += 15 + (timeLeft ~/ 5); // Bonus for remaining time
+        grid[row][col].isRevealed = true;
+        foundCount++;
+        score += 20;
+        currentCol++; // Move to next column
+      });
+
+      _revealController.forward().then((_) {
+        _revealController.reset();
       });
 
       HapticFeedback.mediumImpact();
-
-      // Play success sound with voice effect
       SoundEffectsManager().playSuccessWithVoice();
 
-      if (correctFinds == totalTargets) {
+      // Check if all columns are completed
+      if (currentCol >= 5) {
         gameTimer?.cancel();
         _endGame();
       }
     } else {
-      // Wrong object tapped
-      wrongTaps++;
-      score = (score - 5).clamp(0, score); // Penalty
-
-      // Flash red briefly
+      // Empty box - shake animation then restart
       setState(() {
-        object.isHighlighted = true;
+        grid[row][col].isShaking = true;
       });
 
-      Timer(Duration(milliseconds: 300), () {
-        setState(() {
-          object.isHighlighted = false;
-        });
+      _shakeController.forward().then((_) {
+        _shakeController.reset();
+        if (mounted) {
+          setState(() {
+            grid[row][col].isShaking = false;
+          });
+          // Restart after shake animation
+          _restartGame();
+        }
       });
 
       HapticFeedback.lightImpact();
     }
+  }
+
+  void _restartGame() {
+    setState(() {
+      currentCol = 0;
+      foundCount = 0; // Reset the count to 0
+
+      // Hide all revealed boxes
+      for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 5; col++) {
+          grid[row][col].isRevealed = false;
+          grid[row][col].isShaking = false;
+        }
+      }
+    });
+
+    HapticFeedback.heavyImpact();
+    // No modal dialog - just silent restart
   }
 
   void _endGame() {
@@ -464,11 +348,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     });
 
     gameTimer?.cancel();
-    phaseTimer?.cancel();
 
     // Calculate game statistics
-    double accuracyDouble = (correctFinds + wrongTaps) > 0
-        ? (correctFinds / (correctFinds + wrongTaps)) * 100
+    double accuracyDouble = foundCount > 0
+        ? (foundCount / totalTargets) * 100
         : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
@@ -478,18 +361,27 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       widget.onGameComplete!(
         accuracy: accuracy,
         completionTime: completionTime,
-        challengeFocus: 'Memory',
-        gameName: 'Object Hunt',
+        challengeFocus: 'Memory & Attention',
+        gameName: 'Memory Grid',
         difficulty: _normalizedDifficulty,
       );
+    }
+
+    // Show completion dialog after calling onGameComplete
+    if (foundCount >= 5) {
+      // Game completed successfully
+      _showGameOverDialog(true);
+    } else {
+      // Time up
+      _showGameOverDialog(false);
     }
   }
 
   @override
   void dispose() {
     gameTimer?.cancel();
-    phaseTimer?.cancel();
-    // Stop background music when leaving the game
+    _shakeController.dispose();
+    _revealController.dispose();
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
@@ -497,10 +389,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+          'Memory Grid - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
@@ -508,118 +399,226 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Score and Status Display
-            Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        'Score: $score',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      Text(
-                        'Wrong: $wrongTaps',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Text(
-                        'Found: $correctFinds/$totalTargets',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      Text(
-                        'Scene: $currentScene',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (searchPhase)
-                    Column(
-                      children: [
-                        Text(
-                          'Time: ${timeLeft}s',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: timeLeft <= 10
-                                ? Color(0xFFE57373)
-                                : Color(0xFF2C3E50),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/background.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Score and Timer Display
+              Container(
+                margin: EdgeInsets.all(20),
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.1),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Score
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star, size: 18, color: Color(0xFFFFB300)),
+                          SizedBox(width: 6),
+                          Text(
+                            '$score',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Found Count
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: successColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: successColor, width: 2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search, size: 18, color: successColor),
+                          SizedBox(width: 6),
+                          Text(
+                            '$foundCount/5',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: successColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Timer
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: timeLeft <= 30
+                            ? errorColor.withOpacity(0.1)
+                            : Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: timeLeft <= 30
+                              ? errorColor.withOpacity(0.3)
+                              : Color(0xFFE9ECEF),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.timer,
+                            size: 18,
+                            color: timeLeft <= 30 ? errorColor : primaryColor,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            '${timeLeft}s',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: timeLeft <= 30 ? errorColor : primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Game Area
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: gameStarted ? _buildGrid() : _buildStartScreen(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartScreen() {
+    return Center(
+      child: Container(
+        padding: EdgeInsets.all(30),
+        margin: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.grid_view, size: 80, color: Colors.white),
+            SizedBox(height: 20),
+            Text(
+              'Memory Grid',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.8),
+                    offset: Offset(2, 2),
+                    blurRadius: 4,
+                  ),
                 ],
               ),
             ),
-
-            // Phase Indicator
-            if (memorizationPhase)
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accentColor, width: 2),
-                ),
-                child: Text(
-                  'MEMORIZATION PHASE - Study the highlighted objects!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
+            SizedBox(height: 20),
+            Text(
+              'Memory Challenge',
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.8),
+                    offset: Offset(1, 1),
+                    blurRadius: 3,
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                ],
               ),
-
-            if (searchPhase)
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryColor, width: 2),
-                ),
-                child: Text(
-                  'SEARCH PHASE - Find the objects you memorized!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
+            ),
+            SizedBox(height: 15),
+            Text(
+              'Complete all 5 columns before time runs out',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.8),
+                    offset: Offset(1, 1),
+                    blurRadius: 3,
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                ],
               ),
-
-            // Game Area
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: _startGame,
+              child: Text('Start Game'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -628,79 +627,8 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
     );
   }
 
-  Widget _buildStartScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          scenes[currentScene]?['background'] ?? '🏠',
-          style: TextStyle(fontSize: 80),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Object Hunt',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
-          ),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Difficulty: ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Find $totalTargets objects in $currentScene',
-          style: TextStyle(fontSize: 18, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _startGame,
-          child: Text('Start Hunt'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGameArea() {
-    // If game is started but not active, show waiting screen
-    if (gameStarted && !gameActive) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.visibility, size: 60, color: primaryColor),
-            SizedBox(height: 20),
-            Text(
-              'Get Ready!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'The memorization phase will begin shortly...',
-              style: TextStyle(fontSize: 16, color: Colors.black87),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (!gameActive && correctFinds == totalTargets) {
+  Widget _buildGrid() {
+    if (!gameActive && foundCount == totalTargets) {
       return _buildWinScreen();
     }
 
@@ -708,191 +636,287 @@ class _ObjectHuntGameState extends State<ObjectHuntGame> {
       return _buildTimeUpScreen();
     }
 
-    return Stack(
-      children: [
-        // Scene background
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            color: Color(0xFFF0F7FF),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Color(0xFFE0E0E0)),
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.15),
+            blurRadius: 12,
+            offset: Offset(0, 6),
           ),
-          child: Stack(
-            children: sceneObjects
-                .map((object) => _buildObjectWidget(object))
-                .toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildObjectWidget(SceneObject object) {
-    // Don't show distractors during memorization phase
-    if (memorizationPhase && object.isDistractor) {
-      return Container();
-    }
-
-    Color backgroundColor = Colors.transparent;
-    Color borderColor = Colors.transparent;
-
-    if (object.isHighlighted && memorizationPhase) {
-      backgroundColor = targetHighlight.withOpacity(0.3);
-      borderColor = targetHighlight;
-    } else if (object.isFound) {
-      backgroundColor = foundColor.withOpacity(0.3);
-      borderColor = foundColor;
-    } else if (object.isHighlighted && searchPhase) {
-      backgroundColor = wrongColor.withOpacity(0.3);
-      borderColor = wrongColor;
-    }
-
-    return Positioned(
-      left: object.position.dx,
-      top: object.position.dy,
-      child: GestureDetector(
-        onTap: () => _onObjectTapped(object),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 300),
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor, width: 2),
-          ),
-          child: Center(
-            child: Text(object.emoji, style: TextStyle(fontSize: 32)),
-          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Grid
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: 5 / 4,
+                child: Column(
+                  children: List.generate(4, (row) {
+                    return Expanded(
+                      child: Row(
+                        children: List.generate(5, (col) {
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.all(2),
+                              child: _buildCell(row, col),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildWinScreen() {
-    double accuracy = (correctFinds + wrongTaps) > 0
-        ? (correctFinds / (correctFinds + wrongTaps)) * 100
-        : 100;
+  Widget _buildCell(int row, int col) {
+    GridCell cell = grid[row][col];
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.search, size: 80, color: Color(0xFF81C784)),
-        SizedBox(height: 20),
-        Text(
-          'Excellent Hunt!',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
-          ),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'All $totalTargets objects found!',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Accuracy: ${accuracy.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Hunt Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () => _onCellTapped(row, col),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_shakeAnimation, _revealAnimation]),
+        builder: (context, child) {
+          double shakeOffset = 0;
+          if (cell.isShaking) {
+            shakeOffset = _shakeAnimation.value * (random.nextBool() ? 1 : -1);
+          }
+
+          return Transform.translate(
+            offset: Offset(shakeOffset, 0),
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: _getCellColor(row, col),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _getBorderColor(row, col), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(child: _buildCellContent(row, col)),
             ),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF90CAF9),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 
+  Color _getCellColor(int row, int col) {
+    GridCell cell = grid[row][col];
+
+    // Red background when shaking (wrong guess)
+    if (cell.isShaking) {
+      return Color(0xFFFFEBEE); // Light red for wrong guess
+    }
+
+    // Highlight current column with a subtle green color
+    if (col == currentCol && !cell.isRevealed) {
+      return Color(0xFFE8F5E8); // Light green for current column
+    }
+
+    if (cell.isRevealed) {
+      return cell.fruit != null ? Color(0xFFE8F5E8) : Color(0xFFFFEBEE);
+    }
+    return Color(0xFFFFFFFF);
+  }
+
+  Color _getBorderColor(int row, int col) {
+    GridCell cell = grid[row][col];
+
+    // Red border when shaking (wrong guess)
+    if (cell.isShaking) {
+      return Color(0xFFD32F2F); // Red border for wrong guess
+    }
+
+    // Highlight current column border
+    if (col == currentCol && !cell.isRevealed) {
+      return Color(0xFF4CAF50); // Green border for current column
+    }
+
+    if (cell.isRevealed) {
+      return cell.fruit != null ? successColor : errorColor;
+    }
+    return borderColor;
+  }
+
+  Widget _buildCellContent(int row, int col) {
+    GridCell cell = grid[row][col];
+
+    if (cell.isRevealed && cell.fruit != null) {
+      // Show the fruit with bigger size
+      return Text(cell.fruit!, style: TextStyle(fontSize: 66));
+    } else {
+      // Box is not revealed - show question mark
+      return Text(
+        '?',
+        style: TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF666666),
+        ),
+      );
+    }
+  }
+
+  Widget _buildWinScreen() {
+    return Container(); // Return empty container since dialog is handled in _endGame()
+  }
+
   Widget _buildTimeUpScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Container(); // Return empty container since dialog is handled in _endGame()
+  }
+
+  void _showGameOverDialog(bool isCompletion) {
+    final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  isCompletion ? Icons.emoji_events : Icons.timer_off,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isCompletion ? 'Excellent Memory! 🧠✨' : 'Time\'s Up! ⏰',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: backgroundColor.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatRow(Icons.star_rounded, 'Final Score', '$score points'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.grid_view, 'Columns Completed', isCompletion ? '5/5' : '$foundCount/5'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.track_changes, 'Accuracy', '${((foundCount / 5) * 100).round()}%'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
+              ],
+            ),
+          ),
+          actions: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop(); // Close the game and return to session
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
       children: [
-        Icon(Icons.timer_off, size: 80, color: Color(0xFFE57373)),
-        SizedBox(height: 20),
-        Text(
-          'Time\'s Up!',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Icon(icon, color: primaryColor, size: 18),
         ),
-        SizedBox(height: 20),
-        Text(
-          'Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF2C3E50)),
-        ),
-        Text(
-          'Found: $correctFinds/$totalTargets objects',
-          style: TextStyle(fontSize: 20, color: Color(0xFF2C3E50)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Try Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF81C784),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
+        const SizedBox(width: 12),
+        Expanded(
           child: Text(
-            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF90CAF9),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            label,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],

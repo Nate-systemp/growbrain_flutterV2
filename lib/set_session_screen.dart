@@ -632,15 +632,6 @@ Widget build(BuildContext context) {
                                   color: Colors.grey[600],
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Tap on selected games to set difficulty',
-                                  style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black38,
-                                  fontStyle: FontStyle.italic,
-                                  ),
-                                ),
                                 const SizedBox(height: 20),
                                 // Game slots - 2x2 grid layout for selected games
                                 Expanded(
@@ -696,6 +687,21 @@ Widget build(BuildContext context) {
                                       ),
                                     ),
                                 ),
+                                // Move the instruction text to bottom
+                                if (selectedGames.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Tap on selected games to set difficulty',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.visible,
+                                    style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
                                 ],
                               ),
                               ),
@@ -753,8 +759,8 @@ Widget build(BuildContext context) {
                                   children: [
                                     Icon(
                                       _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
-                                        ? Icons.volume_up 
-                                        : Icons.volume_off,
+                                        ? Icons.music_note 
+                                        : Icons.music_off,
                                       color: _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
                                         ? const Color(0xFF5B6F4A) 
                                         : Colors.grey,
@@ -846,8 +852,8 @@ Widget build(BuildContext context) {
                       Expanded(
                         child: Center(
                           child: SizedBox(
-                            width: 650,
-                            height: 650,
+                            width: 600,
+                            height: 600,
                             child: GridView.count(
                               crossAxisCount: 2,
                               mainAxisSpacing: 20,
@@ -1085,9 +1091,12 @@ Widget build(BuildContext context) {
               const SizedBox(height: 4),
               const Text(
                 'Tap on selected games to set difficulty',
+                maxLines: 1,
+                overflow: TextOverflow.visible,
                 style: TextStyle(
-                  fontSize: 9,
-                  color: Colors.black38,
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
                   fontStyle: FontStyle.italic,
                 ),
               ),

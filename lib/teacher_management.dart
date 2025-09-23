@@ -18,8 +18,7 @@ class TeacherManagementScreen extends StatefulWidget {
 
 class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  int _selectedIndex =
-      2; // 0: Back, 1: Profile, 2: Student List, 3: Analysis
+  int _selectedIndex = 2; // 0: Back, 1: Profile, 2: Student List, 3: Analysis
   int _previousIndex = 2; // Track previous index for animation direction
   List<Map<String, dynamic>> students = [];
   bool _loadingStudents = false;
@@ -33,6 +32,41 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   late AnimationController _tabAnimationController;
+  String _selectedMonth = 'All'; // Filter for performance trends
+
+  String _getInitials(String? fullName) {
+    if (fullName == null || fullName.isEmpty) return 'ST';
+    final names = fullName.trim().split(' ');
+    if (names.length >= 2) {
+      return '${names[0][0]}${names[1][0]}'.toUpperCase();
+    }
+    return names[0].substring(0, names[0].length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  Widget _buildActionButton(
+    String text,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        shadowColor: color.withOpacity(0.3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: Icon(icon, size: 16),
+      label: Text(
+        text,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
   late Animation<double> _tabAnimation;
   Timer? _refreshTimer;
   DateTime? _lastRefreshTime;
@@ -42,29 +76,25 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     super.initState();
     // Add lifecycle observer for automatic refresh
     WidgetsBinding.instance.addObserver(this);
-    
+
     _tabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _tabAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _tabAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _tabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _tabAnimationController, curve: Curves.easeInOut),
+    );
     _tabAnimationController.forward();
     _previousIndex = _selectedIndex; // Initialize previous index
-    
+
     // Initial data fetch
     _fetchStudents();
     _fetchTeacherProfile();
     _lastRefreshTime = DateTime.now();
-    
+
     // Start periodic refresh timer (every 5 minutes)
     _startPeriodicRefresh();
-    
+
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim();
@@ -84,7 +114,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // Refresh data when app comes back into focus
     if (state == AppLifecycleState.resumed) {
       _refreshDataIfNeeded();
@@ -101,7 +131,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
 
   void _refreshDataIfNeeded() {
     final now = DateTime.now();
-    if (_lastRefreshTime == null || 
+    if (_lastRefreshTime == null ||
         now.difference(_lastRefreshTime!).inMinutes >= 2) {
       _refreshAllData();
       _lastRefreshTime = now;
@@ -110,18 +140,18 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
 
   Future<void> _refreshAllData() async {
     if (!mounted) return;
-    
+
     // Refresh both students and teacher profile
     final futures = <Future>[];
-    
+
     if (_selectedIndex == 1 || _selectedIndex == 2) {
       futures.add(_fetchTeacherProfile());
     }
-    
+
     if (_selectedIndex == 2 || _selectedIndex == 4) {
       futures.add(_fetchStudents());
     }
-    
+
     await Future.wait(futures);
   }
 
@@ -135,7 +165,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         _selectedIndex = newIndex;
       });
       _tabAnimationController.forward();
-      
+
       // Refresh data when switching to specific tabs
       _refreshDataOnTabSwitch(newIndex);
     }
@@ -171,10 +201,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         data['id'] = d.id; // Include the document ID
         return data;
       }).toList();
-  // Update students count and derived stats
-  _studentsCount = students.length;
-  // Recompute sessions and games counts when students list changes
-  unawaited(_computeProfileCounts());
+      // Update students count and derived stats
+      _studentsCount = students.length;
+      // Recompute sessions and games counts when students list changes
+      unawaited(_computeProfileCounts());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +256,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       final allRecords = await _fetchAllStudentRecords();
       final games = <String>{};
       for (final r in allRecords) {
-        final game = (r['game'] ?? r['lastPlayed'] ?? r['lastPlayed'])?.toString() ?? '';
+        final game =
+            (r['game'] ?? r['lastPlayed'])?.toString() ?? '';
         if (game.isNotEmpty) games.add(game);
       }
       if (mounted) {
@@ -296,19 +327,144 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
               onLogout: () async {
                 final shouldLogout = await showDialog<bool>(
                   context: context,
+                  barrierDismissible: false,
                   builder: (context) => AlertDialog(
-                    title: const Text('Log out'),
-                    content: const Text('Are you sure you want to log out?'),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 20,
+                    backgroundColor: Colors.white,
+                    title: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.logout,
+                            color: Color(0xFFD32F2F),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Log Out',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Are you sure you want to log out?',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF424242),
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E5F5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFE1BEE7),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: const Color(0xFF7B1FA2),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'You will need to log in again to access the teacher dashboard.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF7B1FA2),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('Log out'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(
+                                    color: Color(0xFF4CAF50),
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF4CAF50),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFD32F2F),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 3,
+                                shadowColor: const Color(
+                                  0xFFD32F2F,
+                                ).withOpacity(0.3),
+                              ),
+                              child: const Text(
+                                'Log Out',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
+                    contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                    titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                   ),
                 );
                 if (shouldLogout == true) {
@@ -347,28 +503,90 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.only(bottom: 24, top: 20),
               child: Center(
-                child: SizedBox(
-                  width: 280,
+                child: Container(
+                  width: 400,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2E7D32).withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search student name...',
-                      hintStyle: const TextStyle(fontSize: 14),
-                      prefixIcon: const Icon(Icons.search, size: 20),
+                      hintStyle: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w400,
+                      ),
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: 24,
+                          color: const Color(0xFF4CAF50),
+                        ),
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear_rounded,
+                                color: Colors.grey[600],
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(width: 1.2),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: const Color(0xFFE8F5E8),
+                          width: 2,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: const Color(0xFFE8F5E8),
+                          width: 2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4CAF50),
+                          width: 3,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 12,
+                        vertical: 16,
+                        horizontal: 20,
                       ),
                     ),
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF2E7D32),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
                   ),
                 ),
               ),
@@ -403,117 +621,91 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             itemCount: validStudents.length,
                             itemBuilder: (context, index) {
                               final student = validStudents[index];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.circle,
-                                      size: 10,
-                                      color: Color(0xFF484F5C),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        student['fullName'] ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Color(0xFF393C48),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 24),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: const Color(0xFF393C48),
-                                      elevation: 1,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      setState(() => _viewingStudent = student);
-                                    },
-                                    child: const Text('View Profile'),
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: const Color(0xFFE8F5E8),
+                                    width: 2,
                                   ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: const Color(0xFF393C48),
-                                      elevation: 1,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF2E7D32,
+                                      ).withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => SetSessionScreen(
-                                            student: student,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text('Set Session'),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: const Color(0xFF393C48),
-                                      elevation: 1,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      _showRecordsModal(student);
-                                    },
-                                    child: const Text('Records'),
-                                  ),
                                   ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      // Student Name
+                                      Expanded(
+                                        child: Text(
+                                          student['fullName'] ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            color: Color(0xFF2E7D32),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 20),
+                                      // Action Buttons
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _buildActionButton(
+                                            'View Profile',
+                                            Icons.person_outline,
+                                            const Color(0xFF4CAF50),
+                                            () => setState(
+                                              () => _viewingStudent = student,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          _buildActionButton(
+                                            'Records',
+                                            Icons.assessment,
+                                            const Color(0xFFFF9800),
+                                            () => _showRecordsModal(student),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          _buildActionButton(
+                                            'Set Session',
+                                            Icons.schedule,
+                                            const Color(0xFF2196F3),
+                                            () => Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    SetSessionScreen(
+                                                      student: student,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
                           ),
                         ),
                       ),
-                ),
               ),
-            ],
-          ),
-        );
+            ),
+          ],
+        ),
+      );
     } else if (_selectedIndex == 4) {
       // ANALYTICS DASHBOARD FOR ALL STUDENTS
       content = Padding(
@@ -672,22 +864,28 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
             // Calculate additional analytics
             // Game performance analysis
             final gamePerformance = <String, Map<String, double>>{};
+            
             for (final record in allRecords) {
-              final game = record['lastPlayed'] ?? 'Unknown';
+              final game = record['game'] ?? record['lastPlayed'] ?? 'Unknown';
               final accuracy = (record['accuracy'] as num?)?.toDouble() ?? 0.0;
-              final completionTime = (record['completionTime'] as num?)?.toDouble() ?? 0.0;
-              
+              final completionTime =
+                  (record['completionTime'] as num?)?.toDouble() ?? 0.0;
+
               if (!gamePerformance.containsKey(game)) {
-                gamePerformance[game] = {'totalAccuracy': 0, 'totalTime': 0, 'count': 0};
+                gamePerformance[game] = {
+                  'totalAccuracy': 0,
+                  'totalTime': 0,
+                  'count': 0,
+                };
               }
-              gamePerformance[game]!['totalAccuracy'] = 
+              gamePerformance[game]!['totalAccuracy'] =
                   (gamePerformance[game]!['totalAccuracy'] ?? 0) + accuracy;
-              gamePerformance[game]!['totalTime'] = 
+              gamePerformance[game]!['totalTime'] =
                   (gamePerformance[game]!['totalTime'] ?? 0) + completionTime;
-              gamePerformance[game]!['count'] = 
+              gamePerformance[game]!['count'] =
                   (gamePerformance[game]!['count'] ?? 0) + 1;
             }
-            
+
             // Calculate averages for each game
             final gameAverages = <String, Map<String, double>>{};
             gamePerformance.forEach((game, data) {
@@ -697,33 +895,47 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 'avgTime': (data['totalTime'] ?? 0) / count,
               };
             });
-            
+
             // Difficulty analysis
             final difficultyPerformance = <String, Map<String, double>>{};
             for (final record in allRecords) {
               final difficulty = record['difficulty'] ?? 'Unknown';
               final accuracy = (record['accuracy'] as num?)?.toDouble() ?? 0.0;
-              
+
               if (!difficultyPerformance.containsKey(difficulty)) {
-                difficultyPerformance[difficulty] = {'totalAccuracy': 0, 'count': 0};
+                difficultyPerformance[difficulty] = {
+                  'totalAccuracy': 0,
+                  'count': 0,
+                };
               }
-              difficultyPerformance[difficulty]!['totalAccuracy'] = 
-                  (difficultyPerformance[difficulty]!['totalAccuracy'] ?? 0) + accuracy;
-              difficultyPerformance[difficulty]!['count'] = 
+              difficultyPerformance[difficulty]!['totalAccuracy'] =
+                  (difficultyPerformance[difficulty]!['totalAccuracy'] ?? 0) +
+                  accuracy;
+              difficultyPerformance[difficulty]!['count'] =
                   (difficultyPerformance[difficulty]!['count'] ?? 0) + 1;
             }
-            
+
             // Overall statistics
             final totalSessions = allRecords.length;
-            final avgOverallAccuracy = allRecords.isNotEmpty 
-                ? allRecords.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
-                    .reduce((a, b) => a + b) / allRecords.length
+            final avgOverallAccuracy = allRecords.isNotEmpty
+                ? allRecords
+                          .map(
+                            (r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0,
+                          )
+                          .reduce((a, b) => a + b) /
+                      allRecords.length
                 : 0.0;
-            final avgOverallTime = allRecords.isNotEmpty 
-                ? allRecords.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
-                    .reduce((a, b) => a + b) / allRecords.length
+            final avgOverallTime = allRecords.isNotEmpty
+                ? allRecords
+                          .map(
+                            (r) =>
+                                (r['completionTime'] as num?)?.toDouble() ??
+                                0.0,
+                          )
+                          .reduce((a, b) => a + b) /
+                      allRecords.length
                 : 0.0;
-            
+
             // Find best performing game
             String? bestGame;
             double bestGameAccuracy = 0;
@@ -733,7 +945,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 bestGame = game;
               }
             });
-            
+
             // Find most challenging game (lowest accuracy)
             String? challengingGame;
             double lowestAccuracy = 100;
@@ -781,7 +993,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             ],
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // Simple Stats Grid
                           Row(
                             children: [
@@ -825,10 +1037,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
-                    // Performance Trends
+
+                    // Performance Trends with Month Filter
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -855,32 +1067,72 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                   color: Color(0xFF111827),
                                 ),
                               ),
+                              const Spacer(),
+                              // Month Filter Dropdown
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFF9FAFB),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Color(0xFFE5E7EB)),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _selectedMonth,
+                                    isDense: true,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF374151),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    items: _getAvailableMonths(accuracyTrend).map((String month) {
+                                      return DropdownMenuItem<String>(
+                                        value: month,
+                                        child: Text(month),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        _selectedMonth = newValue ?? 'All';
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          MinimalTrendChart(
-                            values: trendValues,
-                            xLabels: [
-                              for (final r in accuracyTrend)
-                                (r['date'] is Timestamp)
-                                    ? (r['date'] as Timestamp)
-                                          .toDate()
-                                          .toString()
-                                          .substring(5, 10)
-                                    : (r['date'] is String)
-                                    ? (DateTime.tryParse(
-                                            r['date'],
-                                          )?.toString().substring(5, 10) ??
-                                            '')
-                                    : '',
-                            ],
+                          Builder(
+                            builder: (context) {
+                              final filteredData = _filterTrendData(accuracyTrend, _selectedMonth);
+                              final filteredValues = filteredData
+                                  .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+                                  .toList();
+                              final filteredLabels = filteredData.map((r) {
+                                if (r['date'] is Timestamp) {
+                                  final date = (r['date'] as Timestamp).toDate();
+                                  return '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                                } else if (r['date'] is String) {
+                                  final date = DateTime.tryParse(r['date']);
+                                  if (date != null) {
+                                    return '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                                  }
+                                }
+                                return '';
+                              }).toList();
+                              
+                              return MinimalTrendChart(
+                                values: filteredValues,
+                                xLabels: filteredLabels,
+                              );
+                            },
                           ),
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Student Performance
                     Row(
                       children: [
@@ -916,12 +1168,14 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                 const SizedBox(height: 16),
                                 MinimalBarChart(
                                   data: {
-                                    for (final entry in recordsByStudent.entries)
+                                    for (final entry
+                                        in recordsByStudent.entries)
                                       entry.key: entry.value.isNotEmpty
                                           ? entry.value
                                                     .map(
                                                       (r) =>
-                                                          (r['accuracy'] as num?)
+                                                          (r['accuracy']
+                                                                  as num?)
                                                               ?.toDouble() ??
                                                           0.0,
                                                     )
@@ -970,12 +1224,14 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                 const SizedBox(height: 16),
                                 MinimalBarChart(
                                   data: {
-                                    for (final entry in recordsByStudent.entries)
+                                    for (final entry
+                                        in recordsByStudent.entries)
                                       entry.key: entry.value.isNotEmpty
                                           ? entry.value
                                                     .map(
                                                       (r) =>
-                                                          (r['completionTime'] as num?)
+                                                          (r['completionTime']
+                                                                  as num?)
                                                               ?.toDouble() ??
                                                           0.0,
                                                     )
@@ -993,9 +1249,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Game Performance Analysis
                     if (gameAverages.isNotEmpty)
                       Container(
@@ -1027,16 +1283,18 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               ],
                             ),
                             const SizedBox(height: 16),
-                            MinimalGameChart(gameData: {
-                              for (final entry in gameAverages.entries)
-                                entry.key: entry.value['accuracy'] ?? 0.0,
-                            }),
+                            MinimalGameChart(
+                              gameData: {
+                                for (final entry in gameAverages.entries)
+                                  entry.key: entry.value['avgAccuracy'] ?? 0.0,
+                              },
+                            ),
                           ],
                         ),
                       ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Key Insights
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -1067,7 +1325,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             ],
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Insight Cards
                           Row(
                             children: [
@@ -1116,9 +1374,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                 ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Student Progress List
                           Text(
                             'Student Overview',
@@ -1129,7 +1387,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             ),
                           ),
                           const SizedBox(height: 12),
-                          
+
                           ...recordsByStudent.entries.map((entry) {
                             final name = entry.key;
                             final records = entry.value;
@@ -1155,19 +1413,30 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                           .reduce((a, b) => a + b) /
                                       records.length
                                 : 0.0;
-                            
+
                             // Calculate trend for this student
                             String trendText = 'Stable';
                             Color trendColor = Color(0xFF6B7280);
                             IconData trendIcon = Icons.trending_flat;
                             if (records.length >= 2) {
-                              final sorted = List.from(records)..sort((a, b) {
-                                final aDate = DateTime.tryParse(a['date'] ?? '') ?? DateTime(1970);
-                                final bDate = DateTime.tryParse(b['date'] ?? '') ?? DateTime(1970);
-                                return aDate.compareTo(bDate);
-                              });
-                              final firstAcc = (sorted.first['accuracy'] as num?)?.toDouble() ?? 0.0;
-                              final lastAcc = (sorted.last['accuracy'] as num?)?.toDouble() ?? 0.0;
+                              final sorted = List.from(records)
+                                ..sort((a, b) {
+                                  final aDate =
+                                      DateTime.tryParse(a['date'] ?? '') ??
+                                      DateTime(1970);
+                                  final bDate =
+                                      DateTime.tryParse(b['date'] ?? '') ??
+                                      DateTime(1970);
+                                  return aDate.compareTo(bDate);
+                                });
+                              final firstAcc =
+                                  (sorted.first['accuracy'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
+                              final lastAcc =
+                                  (sorted.last['accuracy'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
                               if (lastAcc > firstAcc + 5) {
                                 trendText = 'Improving';
                                 trendColor = Color(0xFF10B981);
@@ -1178,7 +1447,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                 trendIcon = Icons.trending_down;
                               }
                             }
-                            
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(16),
@@ -1198,7 +1467,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     ),
                                     child: Center(
                                       child: Text(
-                                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                        name.isNotEmpty
+                                            ? name[0].toUpperCase()
+                                            : '?',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -1208,10 +1479,11 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  
+
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           name,
@@ -1231,10 +1503,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                       ],
                                     ),
                                   ),
-                                  
+
                                   // Metrics
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Color(0xFF10B981).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(6),
@@ -1250,7 +1525,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Color(0xFF8B5CF6).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(6),
@@ -1265,11 +1543,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Icon(
-                                    trendIcon,
-                                    size: 16,
-                                    color: trendColor,
-                                  ),
+                                  Icon(trendIcon, size: 16, color: trendColor),
                                 ],
                               ),
                             );
@@ -1277,7 +1551,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -1369,21 +1643,27 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
               return FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.03), // Subtle vertical slide
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutQuart,
-                  )),
+                  position:
+                      Tween<Offset>(
+                        begin: const Offset(0.0, 0.03), // Subtle vertical slide
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutQuart,
+                        ),
+                      ),
                   child: ScaleTransition(
-                    scale: Tween<double>(
-                      begin: 0.98, // Very subtle scale
-                      end: 1.0,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutQuart,
-                    )),
+                    scale:
+                        Tween<double>(
+                          begin: 0.98, // Very subtle scale
+                          end: 1.0,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutQuart,
+                          ),
+                        ),
                     child: child,
                   ),
                 ),
@@ -1398,24 +1678,24 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: 32),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _NavCircleIconButton(
-                    icon: Icons.person,
+                    icon: Icons.person_outline,
                     selected: _selectedIndex == 1,
                     onTap: () => _switchTab(1),
                   ),
-                  const SizedBox(width: 36),
+                  const SizedBox(width: 40),
                   _NavCircleIconButton(
-                    icon: Icons.list,
+                    icon: Icons.list_alt,
                     selected: _selectedIndex == 2,
                     onTap: () => _switchTab(2),
                   ),
-                  const SizedBox(width: 36),
+                  const SizedBox(width: 40),
                   _NavCircleIconButton(
-                    icon: Icons.bar_chart,
+                    icon: Icons.analytics_outlined,
                     selected: _selectedIndex == 4,
                     onTap: () => _switchTab(4),
                   ),
@@ -1434,11 +1714,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     final studentId = student['id']; // Use the document ID
     if (studentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot load records: Student ID not found.')),
+        const SnackBar(
+          content: Text('Cannot load records: Student ID not found.'),
+        ),
       );
       return;
     }
-    
+
     // Fetch all records for history
     final recordsSnap = await FirebaseFirestore.instance
         .collection('teachers')
@@ -1449,7 +1731,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         .orderBy('date', descending: true)
         .get();
     final records = recordsSnap.docs.map((d) => d.data()).toList();
-    
+
     if (records.isEmpty) {
       showDialog(
         context: context,
@@ -1475,33 +1757,49 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     _showCompactRecordsModal(student, records);
   }
 
-  void _showCompactRecordsModal(Map<String, dynamic> student, List<Map<String, dynamic>> records) {
+  void _showCompactRecordsModal(
+    Map<String, dynamic> student,
+    List<Map<String, dynamic>> records,
+  ) {
     String filterType = 'All'; // All, Game, Date, Focus
     String? selectedFilter;
     DateTime? selectedDate;
 
     void showModalWithFilters() {
       // Calculate summary statistics
-      final avgAccuracy = records.isNotEmpty 
-          ? records.map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
-              .reduce((a, b) => a + b) / records.length
+      final avgAccuracy = records.isNotEmpty
+          ? records
+                    .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+                    .reduce((a, b) => a + b) /
+                records.length
           : 0.0;
-      
-      final avgTime = records.isNotEmpty 
-          ? records.map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
-              .reduce((a, b) => a + b) / records.length
+
+      final avgTime = records.isNotEmpty
+          ? records
+                    .map(
+                      (r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0,
+                    )
+                    .reduce((a, b) => a + b) /
+                records.length
           : 0.0;
 
       final totalGames = records.length;
-      final uniqueGames = records.map((r) => r['lastPlayed'] ?? 'Unknown').toSet().length;
+      final uniqueGames = records
+          .map((r) => r['lastPlayed'] ?? 'Unknown')
+          .toSet()
+          .length;
 
       // Filter records based on selected filter
       List<Map<String, dynamic>> filteredRecords = records;
-      
+
       if (filterType == 'Game' && selectedFilter != null) {
-        filteredRecords = records.where((r) => r['lastPlayed'] == selectedFilter).toList();
+        filteredRecords = records
+            .where((r) => r['lastPlayed'] == selectedFilter)
+            .toList();
       } else if (filterType == 'Focus' && selectedFilter != null) {
-        filteredRecords = records.where((r) => r['challengeFocus'] == selectedFilter).toList();
+        filteredRecords = records
+            .where((r) => r['challengeFocus'] == selectedFilter)
+            .toList();
       } else if (filterType == 'Date' && selectedDate != null) {
         filteredRecords = records.where((r) {
           final d = DateTime.tryParse(r['date'] ?? '')?.toLocal();
@@ -1524,7 +1822,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         // Group by date if filtering by specific criteria
         for (final record in filteredRecords) {
           final date = DateTime.tryParse(record['date'] ?? '')?.toLocal();
-          final dateKey = date != null 
+          final dateKey = date != null
               ? '${date.day}/${date.month}/${date.year}'
               : 'Unknown Date';
           groupedRecords.putIfAbsent(dateKey, () => []).add(record);
@@ -1535,7 +1833,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         context: context,
         builder: (ctx) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 40,
+          ),
           child: Container(
             width: 600,
             constraints: const BoxConstraints(maxHeight: 700),
@@ -1587,7 +1888,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             showChartModal(filteredRecords, records);
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Color(0xFF3B82F6),
                               borderRadius: BorderRadius.circular(8),
@@ -1596,7 +1900,11 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.bar_chart_outlined, color: Colors.white, size: 18),
+                                Icon(
+                                  Icons.bar_chart_outlined,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                                 SizedBox(width: 6),
                                 Text(
                                   'View Charts',
@@ -1621,19 +1929,39 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                   child: Row(
                     children: [
                       Expanded(
-                        child: _buildStatCard('Total Games', totalGames.toString(), Icons.games, Colors.green),
+                        child: _buildStatCard(
+                          'Total Games',
+                          totalGames.toString(),
+                          Icons.games,
+                          Colors.green,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard('Avg Accuracy', '${avgAccuracy.toStringAsFixed(1)}%', Icons.track_changes, Colors.orange),
+                        child: _buildStatCard(
+                          'Avg Accuracy',
+                          '${avgAccuracy.toStringAsFixed(1)}%',
+                          Icons.track_changes,
+                          Colors.orange,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard('Avg Time', _formatCompletionTime(avgTime), Icons.timer, Colors.blue),
+                        child: _buildStatCard(
+                          'Avg Time',
+                          _formatCompletionTime(avgTime),
+                          Icons.timer,
+                          Colors.blue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard('Games Types', uniqueGames.toString(), Icons.category, Colors.purple),
+                        child: _buildStatCard(
+                          'Games Types',
+                          uniqueGames.toString(),
+                          Icons.category,
+                          Colors.purple,
+                        ),
                       ),
                     ],
                   ),
@@ -1641,10 +1969,19 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
 
                 // Filter Section
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
-                      const Text('Filter by:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      const Text(
+                        'Filter by:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       _buildFilterChip('All', filterType == 'All', () {
                         filterType = 'All';
@@ -1696,11 +2033,17 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 // Active Filter Display
                 if (selectedFilter != null || selectedDate != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.blueAccent.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(16),
@@ -1710,7 +2053,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                selectedFilter ?? _formatDateFilter(selectedDate!),
+                                selectedFilter ??
+                                    _formatDateFilter(selectedDate!),
                                 style: const TextStyle(
                                   color: Colors.blueAccent,
                                   fontWeight: FontWeight.w600,
@@ -1753,35 +2097,54 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.search_off, size: 64, color: Colors.grey),
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
                               SizedBox(height: 16),
                               Text(
                                 'No records found',
-                                style: TextStyle(fontSize: 18, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
                           itemCount: groupedRecords.keys.length,
                           itemBuilder: (context, index) {
-                            final groupKey = groupedRecords.keys.elementAt(index);
+                            final groupKey = groupedRecords.keys.elementAt(
+                              index,
+                            );
                             final groupRecords = groupedRecords[groupKey]!;
-                            
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Group Header
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.grey[200],
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Text(
                                           groupKey,
@@ -1802,9 +2165,11 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                     ],
                                   ),
                                 ),
-                                
+
                                 // Compact Records Grid
-                                ...groupRecords.map((record) => _buildCompactRecordCard(record)),
+                                ...groupRecords.map(
+                                  (record) => _buildCompactRecordCard(record),
+                                ),
                                 const SizedBox(height: 16),
                               ],
                             );
@@ -1824,7 +2189,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                         label: const Text('Close'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                     ],
@@ -1840,7 +2208,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     showModalWithFilters();
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1900,16 +2273,19 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
 
   Widget _buildCompactRecordCard(Map<String, dynamic> record) {
     final date = DateTime.tryParse(record['date'] ?? '')?.toLocal();
-    final formattedDate = date != null 
+    final formattedDate = date != null
         ? '${date.day}/${date.month}/${date.year}'
         : 'N/A';
-    final formattedTime = date != null 
+    final formattedTime = date != null
         ? '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
         : '';
 
     final accuracy = record['accuracy'] ?? 0;
-    final accuracyColor = accuracy >= 80 ? Colors.green : 
-                         accuracy >= 60 ? Colors.orange : Colors.red;
+    final accuracyColor = accuracy >= 80
+        ? Colors.green
+        : accuracy >= 60
+        ? Colors.orange
+        : Colors.red;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1937,15 +2313,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 const SizedBox(height: 2),
                 Text(
                   '$formattedDate $formattedTime',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
-          
+
           // Focus & Difficulty
           Expanded(
             flex: 2,
@@ -1953,7 +2326,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(6),
@@ -1978,7 +2354,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
               ],
             ),
           ),
-          
+
           // Performance
           Expanded(
             flex: 2,
@@ -1986,7 +2362,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: accuracyColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -2003,10 +2382,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 const SizedBox(height: 2),
                 Text(
                   _formatCompletionTime(record['completionTime']),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -2016,384 +2392,435 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  void _showFilterOptions(BuildContext context, String filterType, List<Map<String, dynamic>> records, Function(String) onSelected) {
-  List<String> options = [];
-  
-  if (filterType == 'Game') {
-  options = records.map((r) => r['lastPlayed']?.toString() ?? 'Unknown').toSet().toList();
-  } else if (filterType == 'Focus') {
-  options = records.map((r) => r['challengeFocus']?.toString() ?? 'Unknown').toSet().toList();
-  }
-  
-  options.sort();
-  
-  showDialog(
-  context: context,
-  barrierDismissible: true,
-  builder: (ctx) => Dialog(
-  backgroundColor: Colors.transparent,
-  insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-  child: Container(
-  width: 400,
-  constraints: const BoxConstraints(maxHeight: 500),
-  decoration: BoxDecoration(
-  gradient: const LinearGradient(
-  colors: [Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  ),
-  borderRadius: BorderRadius.circular(24),
-  boxShadow: [
-  BoxShadow(
-  color: Colors.black.withOpacity(0.15),
-  blurRadius: 20,
-  offset: const Offset(0, 10),
-  ),
-  ],
-  ),
-  child: Stack(
-  children: [
-  // Main content
-  Padding(
-  padding: const EdgeInsets.all(32),
-  child: Column(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-  // Header with icon and title
-  Row(
-  children: [
-  Container(
-  width: 48,
-  height: 48,
-  decoration: BoxDecoration(
-  color: const Color(0xFF3B82F6),
-  shape: BoxShape.circle,
-  boxShadow: [
-  BoxShadow(
-  color: Colors.black.withOpacity(0.1),
-  blurRadius: 8,
-  offset: const Offset(0, 4),
-  ),
-  ],
-  ),
-  child: Icon(
-  filterType == 'Game' ? Icons.games : Icons.psychology,
-  color: Colors.white,
-  size: 24,
-  ),
-  ),
-  const SizedBox(width: 16),
-  Expanded(
-  child: Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-  Text(
-  'Select $filterType',
-  style: const TextStyle(
-  fontSize: 20,
-  fontWeight: FontWeight.bold,
-  color: Color(0xFF111827),
-  ),
-  ),
-  Text(
-  'Choose from ${options.length} available options',
-  style: TextStyle(
-  fontSize: 14,
-  color: Colors.grey[600],
-  ),
-  ),
-  ],
-  ),
-  ),
-  ],
-  ),
-  
-  const SizedBox(height: 24),
-  
-  // Options list with scroll indicators
-  Flexible(
-  child: Container(
-  decoration: BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(16),
-  border: Border.all(color: const Color(0xFFE5E7EB)),
-  ),
-  child: Stack(
-  children: [
-  // Scrollable content
-  Scrollbar(
-  thumbVisibility: true,
-  thickness: 4,
-  radius: const Radius.circular(2),
-  child: SingleChildScrollView(
-  physics: const BouncingScrollPhysics(),
-  child: Column(
-  children: [
-  // Top scroll indicator
-  if (options.length > 4)
-  Container(
-  width: double.infinity,
-  padding: const EdgeInsets.symmetric(vertical: 8),
-  decoration: BoxDecoration(
-  color: Colors.grey[50],
-  borderRadius: const BorderRadius.only(
-  topLeft: Radius.circular(16),
-  topRight: Radius.circular(16),
-  ),
-  border: const Border(
-  bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-  ),
-  ),
-  child: Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-  Icon(
-  Icons.keyboard_arrow_up,
-  color: Colors.grey[400],
-  size: 20,
-  ),
-  const SizedBox(width: 4),
-  Text(
-  'Scroll to see more options',
-  style: TextStyle(
-  fontSize: 12,
-  color: Colors.grey[600],
-  fontWeight: FontWeight.w500,
-  ),
-  ),
-  const SizedBox(width: 4),
-  Icon(
-  Icons.keyboard_arrow_down,
-  color: Colors.grey[400],
-  size: 20,
-  ),
-  ],
-  ),
-  ),
-  
-  // Options
-  ...options.asMap().entries.map((entry) {
-  final index = entry.key;
-  final option = entry.value;
-  final isLast = index == options.length - 1;
-  final isFirst = index == 0;
-  
-  return Container(
-  decoration: BoxDecoration(
-  border: isLast ? null : const Border(
-  bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-  ),
-  ),
-  child: Material(
-  color: Colors.transparent,
-  child: InkWell(
-  borderRadius: BorderRadius.vertical(
-  top: (isFirst && options.length <= 4) ? const Radius.circular(16) : Radius.zero,
-  bottom: isLast ? const Radius.circular(16) : Radius.zero,
-  ),
-  onTap: () {
-  Navigator.of(ctx).pop();
-  onSelected(option);
-  },
-  child: Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  child: Row(
-  children: [
-  Container(
-  width: 32,
-  height: 32,
-  decoration: BoxDecoration(
-  color: const Color(0xFF3B82F6).withOpacity(0.1),
-  borderRadius: BorderRadius.circular(8),
-  ),
-  child: Icon(
-  _getFilterOptionIcon(filterType, option),
-  color: const Color(0xFF3B82F6),
-  size: 18,
-  ),
-  ),
-  const SizedBox(width: 12),
-  Expanded(
-  child: Text(
-  option,
-  style: const TextStyle(
-  fontSize: 16,
-  fontWeight: FontWeight.w500,
-  color: Color(0xFF111827),
-  ),
-  ),
-  ),
-  const Icon(
-  Icons.arrow_forward_ios,
-  color: Color(0xFF9CA3AF),
-  size: 16,
-  ),
-  ],
-  ),
-  ),
-  ),
-  ),
-  );
-  }).toList(),
-  
-  // Bottom scroll indicator
-  if (options.length > 4)
-  Container(
-  width: double.infinity,
-  padding: const EdgeInsets.symmetric(vertical: 8),
-  decoration: BoxDecoration(
-  color: Colors.grey[50],
-  borderRadius: const BorderRadius.only(
-  bottomLeft: Radius.circular(16),
-  bottomRight: Radius.circular(16),
-  ),
-  ),
-  child: Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-  Icon(
-  Icons.swipe_vertical,
-  color: Colors.grey[400],
-  size: 16,
-  ),
-  const SizedBox(width: 6),
-  Text(
-  'Swipe to scroll',
-  style: TextStyle(
-  fontSize: 11,
-  color: Colors.grey[500],
-  fontWeight: FontWeight.w500,
-  ),
-  ),
-  ],
-  ),
-  ),
-  ],
-  ),
-  ),
-  ),
-  
-  // Fade indicators for scroll
-  if (options.length > 4) ...[
-  // Top fade
-  Positioned(
-  top: 0,
-  left: 0,
-  right: 0,
-  child: Container(
-  height: 20,
-  decoration: BoxDecoration(
-  gradient: LinearGradient(
-  begin: Alignment.topCenter,
-  end: Alignment.bottomCenter,
-  colors: [
-  Colors.white.withOpacity(0.9),
-  Colors.white.withOpacity(0.0),
-  ],
-  ),
-  borderRadius: const BorderRadius.only(
-  topLeft: Radius.circular(16),
-  topRight: Radius.circular(16),
-  ),
-  ),
-  ),
-  ),
-  
-  // Bottom fade
-  Positioned(
-  bottom: 0,
-  left: 0,
-  right: 0,
-  child: Container(
-  height: 20,
-  decoration: BoxDecoration(
-  gradient: LinearGradient(
-  begin: Alignment.bottomCenter,
-  end: Alignment.topCenter,
-  colors: [
-  Colors.white.withOpacity(0.9),
-  Colors.white.withOpacity(0.0),
-  ],
-  ),
-  borderRadius: const BorderRadius.only(
-  bottomLeft: Radius.circular(16),
-  bottomRight: Radius.circular(16),
-  ),
-  ),
-  ),
-  ),
-  ],
-  ],
-  ),
-  ),
-  ),
-  
-  const SizedBox(height: 24),
-  
-  // Cancel button
-  SizedBox(
-  width: double.infinity,
-  child: TextButton(
-  onPressed: () => Navigator.of(ctx).pop(),
-  style: TextButton.styleFrom(
-  backgroundColor: Colors.white,
-  foregroundColor: const Color(0xFF6B7280),
-  padding: const EdgeInsets.symmetric(vertical: 16),
-  shape: RoundedRectangleBorder(
-  borderRadius: BorderRadius.circular(12),
-  side: const BorderSide(color: Color(0xFFE5E7EB)),
-  ),
-  ),
-  child: const Text(
-  'Cancel',
-  style: TextStyle(
-  fontSize: 16,
-  fontWeight: FontWeight.w600,
-  ),
-  ),
-  ),
-  ),
-  ],
-  ),
-  ),
-  
-  // Close button
-  Positioned(
-  top: 16,
-  right: 16,
-  child: Material(
-  color: Colors.transparent,
-  child: InkWell(
-  borderRadius: BorderRadius.circular(20),
-  onTap: () => Navigator.of(ctx).pop(),
-  child: Container(
-  width: 40,
-  height: 40,
-  decoration: BoxDecoration(
-  color: Colors.white.withOpacity(0.9),
-  shape: BoxShape.circle,
-  boxShadow: [
-  BoxShadow(
-  color: Colors.black.withOpacity(0.1),
-  blurRadius: 4,
-  offset: const Offset(0, 2),
-  ),
-  ],
-  ),
-  child: const Icon(
-  Icons.close,
-  color: Color(0xFF6B7280),
-  size: 20,
-  ),
-  ),
-  ),
-  ),
-  ),
-  ],
-  ),
-  ),
-  ),
-  );
+  void _showFilterOptions(
+    BuildContext context,
+    String filterType,
+    List<Map<String, dynamic>> records,
+    Function(String) onSelected,
+  ) {
+    List<String> options = [];
+
+    if (filterType == 'Game') {
+      options = records
+          .map((r) => r['lastPlayed']?.toString() ?? 'Unknown')
+          .toSet()
+          .toList();
+    } else if (filterType == 'Focus') {
+      options = records
+          .map((r) => r['challengeFocus']?.toString() ?? 'Unknown')
+          .toSet()
+          .toList();
+    }
+
+    options.sort();
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: Container(
+          width: 400,
+          constraints: const BoxConstraints(maxHeight: 500),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Main content
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with icon and title
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            filterType == 'Game'
+                                ? Icons.games
+                                : Icons.psychology,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Select $filterType',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              Text(
+                                'Choose from ${options.length} available options',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Options list with scroll indicators
+                    Flexible(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Stack(
+                          children: [
+                            // Scrollable content
+                            Scrollbar(
+                              thumbVisibility: true,
+                              thickness: 4,
+                              radius: const Radius.circular(2),
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                child: Column(
+                                  children: [
+                                    // Top scroll indicator
+                                    if (options.length > 4)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(16),
+                                            topRight: Radius.circular(16),
+                                          ),
+                                          border: const Border(
+                                            bottom: BorderSide(
+                                              color: Color(0xFFE5E7EB),
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.keyboard_arrow_up,
+                                              color: Colors.grey[400],
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Scroll to see more options',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              Icons.keyboard_arrow_down,
+                                              color: Colors.grey[400],
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                    // Options
+                                    ...options.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final option = entry.value;
+                                      final isLast =
+                                          index == options.length - 1;
+                                      final isFirst = index == 0;
+
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          border: isLast
+                                              ? null
+                                              : const Border(
+                                                  bottom: BorderSide(
+                                                    color: Color(0xFFE5E7EB),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                        ),
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.vertical(
+                                              top:
+                                                  (isFirst &&
+                                                      options.length <= 4)
+                                                  ? const Radius.circular(16)
+                                                  : Radius.zero,
+                                              bottom: isLast
+                                                  ? const Radius.circular(16)
+                                                  : Radius.zero,
+                                            ),
+                                            onTap: () {
+                                              Navigator.of(ctx).pop();
+                                              onSelected(option);
+                                            },
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 20,
+                                                    vertical: 16,
+                                                  ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width: 32,
+                                                    height: 32,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFF3B82F6,
+                                                      ).withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Icon(
+                                                      _getFilterOptionIcon(
+                                                        filterType,
+                                                        option,
+                                                      ),
+                                                      color: const Color(
+                                                        0xFF3B82F6,
+                                                      ),
+                                                      size: 18,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      option,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: Color(
+                                                          0xFF111827,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const Icon(
+                                                    Icons.arrow_forward_ios,
+                                                    color: Color(0xFF9CA3AF),
+                                                    size: 16,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+
+                                    // Bottom scroll indicator
+                                    if (options.length > 4)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                          borderRadius: const BorderRadius.only(
+                                            bottomLeft: Radius.circular(16),
+                                            bottomRight: Radius.circular(16),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.swipe_vertical,
+                                              color: Colors.grey[400],
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Swipe to scroll',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[500],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Fade indicators for scroll
+                            if (options.length > 4) ...[
+                              // Top fade
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.white.withOpacity(0.9),
+                                        Colors.white.withOpacity(0.0),
+                                      ],
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Bottom fade
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        Colors.white.withOpacity(0.9),
+                                        Colors.white.withOpacity(0.0),
+                                      ],
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(16),
+                                      bottomRight: Radius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Cancel button
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF6B7280),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Close button
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => Navigator.of(ctx).pop(),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Color(0xFF6B7280),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   IconData _getFilterOptionIcon(String filterType, String option) {
@@ -2444,7 +2871,21 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   }
 
   String _formatDateFilter(DateTime date) {
-    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month]} ${date.day}, ${date.year}';
   }
 
@@ -2488,7 +2929,11 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF6B7280), size: 20),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Color(0xFF6B7280),
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.of(ctx).pop(),
                     padding: EdgeInsets.zero,
                     constraints: BoxConstraints(),
@@ -2496,7 +2941,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              
+
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -2527,7 +2972,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                                                   ?.toDouble() ??
                                                               0.0,
                                                         )
-                                                        .reduce((a, b) => a + b) /
+                                                        .reduce(
+                                                          (a, b) => a + b,
+                                                        ) /
                                                     filteredRecords.length) /
                                                 100.0
                                           : 0.0,
@@ -2611,9 +3058,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Compact Trend Chart
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -2650,9 +3097,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Game Summary
                       if (filteredRecords.isNotEmpty)
                         Container(
@@ -2675,7 +3122,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               ),
                               const SizedBox(height: 8),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Total Sessions:',
@@ -2696,7 +3144,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               ),
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Best Score:',
@@ -2729,7 +3178,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  Widget _buildMinimalStatCard(String value, String label, IconData icon, Color color) {
+  Widget _buildMinimalStatCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2740,11 +3194,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
+          Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
           Text(
             value,
@@ -2768,7 +3218,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  Widget _buildMinimalInsightCard(String title, String name, String value, IconData icon, Color color) {
+  Widget _buildMinimalInsightCard(
+    String title,
+    String name,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2781,11 +3237,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                color: color,
-                size: 16,
-              ),
+              Icon(icon, color: color, size: 16),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -2819,7 +3271,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  Widget _buildInsightCard(String title, String subtitle, IconData icon, Color color) {
+  Widget _buildInsightCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2860,7 +3317,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  Widget _buildModernStatCard(String value, String label, IconData icon, List<Color> gradientColors) {
+  Widget _buildModernStatCard(
+    String value,
+    String label,
+    IconData icon,
+    List<Color> gradientColors,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2873,10 +3335,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.4),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2913,7 +3372,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     );
   }
 
-  Widget _buildModernInsightCard(String title, String name, String value, IconData icon, List<Color> gradientColors) {
+  Widget _buildModernInsightCard(
+    String title,
+    String name,
+    String value,
+    IconData icon,
+    List<Color> gradientColors,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -3029,6 +3494,82 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       }
     }
     return allRecords;
+  }
+
+  // Helper method to get available months from trend data
+  List<String> _getAvailableMonths(List<Map<String, dynamic>> trendData) {
+    final months = <String>{'All'};
+    final monthNames = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    for (final record in trendData) {
+      DateTime? date;
+      if (record['date'] is Timestamp) {
+        date = (record['date'] as Timestamp).toDate();
+      } else if (record['date'] is String) {
+        date = DateTime.tryParse(record['date']);
+      }
+      
+      if (date != null) {
+        final monthYear = '${monthNames[date.month]} ${date.year}';
+        months.add(monthYear);
+      }
+    }
+    
+    final sortedMonths = months.toList();
+    // Keep 'All' at the beginning, sort the rest
+    final monthsWithoutAll = sortedMonths.where((m) => m != 'All').toList();
+    monthsWithoutAll.sort((a, b) {
+      // Extract year and month for proper sorting
+      final aParts = a.split(' ');
+      final bParts = b.split(' ');
+      if (aParts.length == 2 && bParts.length == 2) {
+        final aYear = int.tryParse(aParts[1]) ?? 0;
+        final bYear = int.tryParse(bParts[1]) ?? 0;
+        if (aYear != bYear) return bYear.compareTo(aYear); // Recent years first
+        
+        final aMonth = monthNames.indexOf(aParts[0]);
+        final bMonth = monthNames.indexOf(bParts[0]);
+        return bMonth.compareTo(aMonth); // Recent months first
+      }
+      return 0;
+    });
+    
+    return ['All', ...monthsWithoutAll];
+  }
+
+  // Helper method to filter trend data by selected month
+  List<Map<String, dynamic>> _filterTrendData(List<Map<String, dynamic>> trendData, String selectedMonth) {
+    if (selectedMonth == 'All') {
+      // Limit to last 30 data points for better visualization
+      return trendData.length > 30 ? trendData.sublist(trendData.length - 30) : trendData;
+    }
+    
+    final monthNames = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    final parts = selectedMonth.split(' ');
+    if (parts.length != 2) return [];
+    
+    final targetMonth = monthNames.indexOf(parts[0]);
+    final targetYear = int.tryParse(parts[1]);
+    
+    if (targetMonth == -1 || targetYear == null) return [];
+    
+    return trendData.where((record) {
+      DateTime? date;
+      if (record['date'] is Timestamp) {
+        date = (record['date'] as Timestamp).toDate();
+      } else if (record['date'] is String) {
+        date = DateTime.tryParse(record['date']);
+      }
+      
+      return date != null && date.month == targetMonth && date.year == targetYear;
+    }).toList();
   }
 }
 
@@ -3940,7 +4481,9 @@ class StudentProfileModal extends StatelessWidget {
                               ),
                               _InfoRow(
                                 label: 'Age',
-                                value: student['age']?.toString() ?? 'Not specified',
+                                value:
+                                    student['age']?.toString() ??
+                                    'Not specified',
                                 icon: Icons.cake,
                               ),
                               _InfoRow(
@@ -4408,13 +4951,13 @@ class EnhancedTeacherProfile extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-    // Statistics Cards
+                // Statistics Cards
                 Row(
                   children: [
                     Expanded(
                       child: _StatCard(
-      title: 'Students',
-      value: studentsCount.toString(),
+                        title: 'Students',
+                        value: studentsCount.toString(),
                         icon: Icons.people,
                         color: Colors.orange,
                       ),
@@ -4423,7 +4966,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     Expanded(
                       child: _StatCard(
                         title: 'Sessions',
-      value: sessionsCount.toString(),
+                        value: sessionsCount.toString(),
                         icon: Icons.play_circle,
                         color: Colors.purple,
                       ),
@@ -4432,7 +4975,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     Expanded(
                       child: _StatCard(
                         title: 'Games',
-      value: gamesCount.toString(),
+                        value: gamesCount.toString(),
                         icon: Icons.emoji_events,
                         color: Colors.teal,
                       ),
@@ -5060,20 +5603,12 @@ class _NavCircleIconButtonState extends State<_NavCircleIconButton>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    _glowAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -5107,29 +5642,50 @@ class _NavCircleIconButtonState extends State<_NavCircleIconButton>
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              width: 56,
-              height: 56,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: widget.selected ? const Color(0xFF484F5C) : Colors.white,
+                gradient: widget.selected
+                    ? LinearGradient(
+                        colors: [
+                          const Color(0xFF4CAF50),
+                          const Color(0xFF2E7D32),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: widget.selected ? null : Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   if (widget.selected)
                     BoxShadow(
-                      color: const Color(0xFF484F5C).withOpacity(0.18 + (_glowAnimation.value * 0.12)),
-                      blurRadius: 8 + (_glowAnimation.value * 4),
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFF4CAF50).withOpacity(0.3),
+                      blurRadius: 12 + (_glowAnimation.value * 6),
+                      offset: const Offset(0, 4),
                     ),
                   // Additional glow effect when selected
                   if (widget.selected)
                     BoxShadow(
-                      color: const Color(0xFF484F5C).withOpacity(0.1 * _glowAnimation.value),
-                      blurRadius: 20,
+                      color: const Color(
+                        0xFF4CAF50,
+                      ).withOpacity(0.15 * _glowAnimation.value),
+                      blurRadius: 24,
                       offset: const Offset(0, 0),
+                    ),
+                  // Subtle shadow for unselected state
+                  if (!widget.selected)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                 ],
                 border: Border.all(
-                  color: widget.selected ? const Color(0xFF484F5C) : const Color(0xFFB0B0B0),
-                  width: 2,
+                  color: widget.selected
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFE8F5E8),
+                  width: widget.selected ? 3 : 2,
                 ),
               ),
               child: Center(
@@ -5138,8 +5694,10 @@ class _NavCircleIconButtonState extends State<_NavCircleIconButton>
                   child: Icon(
                     widget.icon,
                     key: ValueKey(widget.selected),
-                    size: 30,
-                    color: widget.selected ? Colors.white : const Color(0xFF393C48),
+                    size: 28,
+                    color: widget.selected
+                        ? Colors.white
+                        : const Color(0xFF666666),
                   ),
                 ),
               ),
@@ -5506,7 +6064,10 @@ class ModernTrendChart extends StatelessWidget {
       return Container(
         height: 200,
         child: const Center(
-          child: Text('No data available', style: TextStyle(color: Colors.grey)),
+          child: Text(
+            'No data available',
+            style: TextStyle(color: Colors.grey),
+          ),
         ),
       );
     }
@@ -5553,11 +6114,15 @@ class ModernTrendChartPainter extends CustomPainter {
 
     final path = Path();
     final gradientPath = Path();
-    
+
     for (int i = 0; i < values.length; i++) {
-      final x = padding + (i * (size.width - 2 * padding) / (values.length - 1));
+      final x =
+          padding + (i * (size.width - 2 * padding) / (values.length - 1));
       final normalizedValue = range > 0 ? (values[i] - minValue) / range : 0.5;
-      final y = size.height - padding - (normalizedValue * (size.height - 2 * padding));
+      final y =
+          size.height -
+          padding -
+          (normalizedValue * (size.height - 2 * padding));
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -5572,9 +6137,9 @@ class ModernTrendChartPainter extends CustomPainter {
       final pointPaint = Paint()
         ..color = Color(0xFF667eea)
         ..style = PaintingStyle.fill;
-      
+
       canvas.drawCircle(Offset(x, y), 6, pointPaint);
-      
+
       // Draw white center
       final whitePaint = Paint()
         ..color = Colors.white
@@ -5596,13 +6161,12 @@ class ModernTrendChartPainter extends CustomPainter {
     canvas.drawPath(path, paint);
 
     // Draw labels
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int i = 0; i < xLabels.length && i < values.length; i++) {
-      final x = padding + (i * (size.width - 2 * padding) / (values.length - 1));
-      
+      final x =
+          padding + (i * (size.width - 2 * padding) / (values.length - 1));
+
       textPainter.text = TextSpan(
         text: xLabels[i],
         style: const TextStyle(
@@ -5612,7 +6176,10 @@ class ModernTrendChartPainter extends CustomPainter {
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 20));
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, size.height - 20),
+      );
     }
   }
 
@@ -5640,7 +6207,10 @@ class ModernStudentChart extends StatelessWidget {
       return Container(
         height: 200,
         child: const Center(
-          child: Text('No data available', style: TextStyle(color: Colors.grey)),
+          child: Text(
+            'No data available',
+            style: TextStyle(color: Colors.grey),
+          ),
         ),
       );
     }
@@ -5654,7 +6224,7 @@ class ModernStudentChart extends StatelessWidget {
         child: Column(
           children: sortedEntries.map((entry) {
             final percentage = (entry.value / maxValue).clamp(0.0, 1.0);
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: Row(
@@ -5725,11 +6295,8 @@ class ModernStudentChart extends StatelessWidget {
 
 class ModernGameChart extends StatelessWidget {
   final Map<String, Map<String, double>> gameData;
-  
-  const ModernGameChart({
-    required this.gameData,
-    Key? key,
-  }) : super(key: key);
+
+  const ModernGameChart({required this.gameData, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -5737,13 +6304,18 @@ class ModernGameChart extends StatelessWidget {
       return Container(
         height: 200,
         child: const Center(
-          child: Text('No game data available', style: TextStyle(color: Colors.grey)),
+          child: Text(
+            'No game data available',
+            style: TextStyle(color: Colors.grey),
+          ),
         ),
       );
     }
 
     final sortedGames = gameData.entries.toList()
-      ..sort((a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!));
+      ..sort(
+        (a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!),
+      );
 
     return Column(
       children: [
@@ -5763,21 +6335,22 @@ class ModernGameChart extends StatelessWidget {
             Expanded(
               child: _buildGameMetricCard(
                 'Fastest Time',
-                sortedGames.reduce((a, b) => 
-                  a.value['avgTime']! < b.value['avgTime']! ? a : b
-                ).key,
-                '${sortedGames.reduce((a, b) => 
-                  a.value['avgTime']! < b.value['avgTime']! ? a : b
-                ).value['avgTime']!.toStringAsFixed(1)}s',
+                sortedGames
+                    .reduce(
+                      (a, b) =>
+                          a.value['avgTime']! < b.value['avgTime']! ? a : b,
+                    )
+                    .key,
+                '${sortedGames.reduce((a, b) => a.value['avgTime']! < b.value['avgTime']! ? a : b).value['avgTime']!.toStringAsFixed(1)}s',
                 [Color(0xFF667eea), Color(0xFF764ba2)],
                 Icons.speed_rounded,
               ),
             ),
           ],
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Detailed game breakdown
         Container(
           height: 400,
@@ -5789,7 +6362,7 @@ class ModernGameChart extends StatelessWidget {
                 final time = gameEntry.value['avgTime']!;
                 final accuracyPercent = (accuracy / 100).clamp(0.0, 1.0);
                 final timePercent = (time / 60).clamp(0.0, 1.0);
-                
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 20),
                   padding: const EdgeInsets.all(20),
@@ -5797,10 +6370,7 @@ class ModernGameChart extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white,
-                        Color(0xFFF8F9FA),
-                      ],
+                      colors: [Colors.white, Color(0xFFF8F9FA)],
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -5847,13 +6417,17 @@ class ModernGameChart extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Accuracy metric
                       Row(
                         children: [
-                          Icon(Icons.track_changes, color: Color(0xFF11998e), size: 16),
+                          Icon(
+                            Icons.track_changes,
+                            color: Color(0xFF11998e),
+                            size: 16,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'Accuracy:',
@@ -5874,9 +6448,9 @@ class ModernGameChart extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Container(
                         height: 8,
                         decoration: BoxDecoration(
@@ -5896,13 +6470,17 @@ class ModernGameChart extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Time metric
                       Row(
                         children: [
-                          Icon(Icons.timer_rounded, color: Color(0xFF667eea), size: 16),
+                          Icon(
+                            Icons.timer_rounded,
+                            color: Color(0xFF667eea),
+                            size: 16,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'Avg Time:',
@@ -5923,9 +6501,9 @@ class ModernGameChart extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Container(
                         height: 8,
                         decoration: BoxDecoration(
@@ -5955,8 +6533,14 @@ class ModernGameChart extends StatelessWidget {
       ],
     );
   }
-  
-  Widget _buildGameMetricCard(String title, String gameName, String value, List<Color> gradientColors, IconData icon) {
+
+  Widget _buildGameMetricCard(
+    String title,
+    String gameName,
+    String value,
+    List<Color> gradientColors,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -6021,11 +6605,9 @@ class ModernGameChart extends StatelessWidget {
 
 class GamePerformanceChart extends StatelessWidget {
   final Map<String, Map<String, double>> gameData;
-  
-  const GamePerformanceChart({
-    required this.gameData,
-    Key? key,
-  }) : super(key: key);
+
+  const GamePerformanceChart({required this.gameData, Key? key})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -6042,7 +6624,9 @@ class GamePerformanceChart extends StatelessWidget {
     }
 
     final sortedGames = gameData.entries.toList()
-      ..sort((a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!));
+      ..sort(
+        (a, b) => b.value['avgAccuracy']!.compareTo(a.value['avgAccuracy']!),
+      );
 
     return Column(
       children: [
@@ -6061,12 +6645,13 @@ class GamePerformanceChart extends StatelessWidget {
             Expanded(
               child: _buildGameMetricCard(
                 'Fastest Average Game',
-                sortedGames.reduce((a, b) => 
-                  a.value['avgTime']! < b.value['avgTime']! ? a : b
-                ).key,
-                '${sortedGames.reduce((a, b) => 
-                  a.value['avgTime']! < b.value['avgTime']! ? a : b
-                ).value['avgTime']!.toStringAsFixed(1)}s',
+                sortedGames
+                    .reduce(
+                      (a, b) =>
+                          a.value['avgTime']! < b.value['avgTime']! ? a : b,
+                    )
+                    .key,
+                '${sortedGames.reduce((a, b) => a.value['avgTime']! < b.value['avgTime']! ? a : b).value['avgTime']!.toStringAsFixed(1)}s',
                 Colors.blue,
                 Icons.speed,
               ),
@@ -6083,8 +6668,11 @@ class GamePerformanceChart extends StatelessWidget {
                 final accuracy = gameEntry.value['avgAccuracy']!;
                 final time = gameEntry.value['avgTime']!;
                 final accuracyPercent = (accuracy / 100).clamp(0.0, 1.0);
-                final timePercent = (time / 60).clamp(0.0, 1.0); // Assuming 60s max time
-                
+                final timePercent = (time / 60).clamp(
+                  0.0,
+                  1.0,
+                ); // Assuming 60s max time
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(16),
@@ -6105,7 +6693,7 @@ class GamePerformanceChart extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Accuracy bar
                       Row(
                         children: [
@@ -6113,7 +6701,10 @@ class GamePerformanceChart extends StatelessWidget {
                             width: 70,
                             child: Text(
                               'Accuracy:',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -6149,9 +6740,9 @@ class GamePerformanceChart extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Time bar
                       Row(
                         children: [
@@ -6159,7 +6750,10 @@ class GamePerformanceChart extends StatelessWidget {
                             width: 70,
                             child: Text(
                               'Avg Time:',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -6205,8 +6799,14 @@ class GamePerformanceChart extends StatelessWidget {
       ],
     );
   }
-  
-  Widget _buildGameMetricCard(String title, String gameName, String value, Color color, IconData icon) {
+
+  Widget _buildGameMetricCard(
+    String title,
+    String gameName,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -6313,7 +6913,10 @@ class MinimalTrendPainter extends CustomPainter {
     final path = Path();
     for (int i = 0; i < values.length; i++) {
       final x = (i / (values.length - 1)) * size.width;
-      final y = size.height - 40 - ((values[i] - minValue) / range) * (size.height - 60);
+      final y =
+          size.height -
+          40 -
+          ((values[i] - minValue) / range) * (size.height - 60);
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -6331,7 +6934,10 @@ class MinimalTrendPainter extends CustomPainter {
           style: TextStyle(color: Color(0xFF6B7280), fontSize: 10),
         );
         textPainter.layout();
-        textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 20));
+        textPainter.paint(
+          canvas,
+          Offset(x - textPainter.width / 2, size.height - 20),
+        );
       }
     }
 
@@ -6402,31 +7008,46 @@ class MinimalBarPainter extends CustomPainter {
       // Draw bar
       final rect = Rect.fromLTWH(x, y, barWidth * 0.8, barHeight);
       final paint = Paint()..color = color;
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(4)), paint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(4)),
+        paint,
+      );
 
       // Draw value text
       final valuePainter = TextPainter(
         text: TextSpan(
           text: '${entry.value.toStringAsFixed(1)}$suffix',
-          style: TextStyle(color: Color(0xFF374151), fontSize: 10, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Color(0xFF374151),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
       );
       valuePainter.layout();
-      valuePainter.paint(canvas, Offset(x + barWidth * 0.4 - valuePainter.width / 2, y - 15));
+      valuePainter.paint(
+        canvas,
+        Offset(x + barWidth * 0.4 - valuePainter.width / 2, y - 15),
+      );
 
       // Draw label
       final labelPainter = TextPainter(
         text: TextSpan(
-          text: entry.key.length > 8 ? '${entry.key.substring(0, 8)}...' : entry.key,
+          text: entry.key.length > 8
+              ? '${entry.key.substring(0, 8)}...'
+              : entry.key,
           style: TextStyle(color: Color(0xFF6B7280), fontSize: 9),
         ),
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
       );
       labelPainter.layout();
-      labelPainter.paint(canvas, Offset(x + barWidth * 0.4 - labelPainter.width / 2, size.height - 20));
+      labelPainter.paint(
+        canvas,
+        Offset(x + barWidth * 0.4 - labelPainter.width / 2, size.height - 20),
+      );
     }
   }
 
@@ -6437,15 +7058,21 @@ class MinimalBarPainter extends CustomPainter {
 class MinimalGameChart extends StatelessWidget {
   final Map<String, double> gameData;
 
-  const MinimalGameChart({
-    Key? key,
-    required this.gameData,
-  }) : super(key: key);
+  const MinimalGameChart({Key? key, required this.gameData}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Calculate dynamic height based on number of games
+    final itemHeight = 40.0; // Increased for better spacing
+    final topPadding = 15.0;
+    final bottomPadding = 15.0;
+    final calculatedHeight = (gameData.length * itemHeight) + topPadding + bottomPadding;
+    final maxHeight = 500.0; // Increased max height
+    final finalHeight = calculatedHeight > maxHeight ? maxHeight : calculatedHeight;
+    
     return Container(
-      height: 300,
+      height: finalHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: CustomPaint(
         size: Size.infinite,
         painter: MinimalGamePainter(gameData: gameData),
@@ -6464,46 +7091,92 @@ class MinimalGamePainter extends CustomPainter {
     if (gameData.isEmpty) return;
 
     final entries = gameData.entries.toList();
-    final barHeight = (size.height - 40) / entries.length;
+    final itemHeight = 40.0; // Match the container's itemHeight
+    final topPadding = 15.0;
+    final nameWidth = 95.0; // Slightly wider for game names
+    final percentWidth = 55.0; // Slightly wider for percentages
+    final barStartX = nameWidth + 12;
+    final barWidth = size.width - barStartX - percentWidth - 25;
 
     for (int i = 0; i < entries.length; i++) {
       final entry = entries[i];
-      final barWidth = (entry.value / 100) * (size.width - 120);
-      final y = 20 + i * barHeight;
+      final fillWidth = (entry.value / 100) * barWidth;
+      final y = topPadding + i * itemHeight;
 
       // Draw bar background
-      final bgRect = Rect.fromLTWH(100, y + barHeight * 0.2, size.width - 120, barHeight * 0.6);
+      final bgRect = Rect.fromLTWH(
+        barStartX,
+        y + 11, // Centered vertically in the 40px item
+        barWidth,
+        18,
+      );
       final bgPaint = Paint()..color = Color(0xFFF3F4F6);
-      canvas.drawRRect(RRect.fromRectAndRadius(bgRect, Radius.circular(8)), bgPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bgRect, Radius.circular(9)),
+        bgPaint,
+      );
 
-      // Draw bar
-      final rect = Rect.fromLTWH(100, y + barHeight * 0.2, barWidth, barHeight * 0.6);
-      final paint = Paint()..color = Color(0xFF3B82F6);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(8)), paint);
+      // Draw bar fill
+      if (fillWidth > 0) {
+        final rect = Rect.fromLTWH(
+          barStartX,
+          y + 11,
+          fillWidth,
+          18,
+        );
+        final paint = Paint()..color = Color(0xFF3B82F6);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, Radius.circular(9)),
+          paint,
+        );
+      }
 
-      // Draw game name
+      // Draw game name (shortened)
+      String gameName = entry.key;
+      if (gameName.length > 11) {
+        gameName = '${gameName.substring(0, 11)}...';
+      }
+      
       final namePainter = TextPainter(
         text: TextSpan(
-          text: entry.key.length > 12 ? '${entry.key.substring(0, 12)}...' : entry.key,
-          style: TextStyle(color: Color(0xFF111827), fontSize: 12, fontWeight: FontWeight.w600),
+          text: gameName,
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 12, // Slightly larger font
+            fontWeight: FontWeight.w500,
+          ),
         ),
         textAlign: TextAlign.left,
         textDirection: TextDirection.ltr,
+        maxLines: 1,
       );
-      namePainter.layout();
-      namePainter.paint(canvas, Offset(10, y + barHeight * 0.5 - namePainter.height / 2));
+      namePainter.layout(maxWidth: nameWidth);
+      namePainter.paint(
+        canvas,
+        Offset(8, y + 15), // Centered vertically
+      );
 
       // Draw percentage
       final percentPainter = TextPainter(
         text: TextSpan(
           text: '${entry.value.toStringAsFixed(1)}%',
-          style: TextStyle(color: Color(0xFF374151), fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Color(0xFF374151),
+            fontSize: 11, // Slightly larger font
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        textAlign: TextAlign.left,
+        textAlign: TextAlign.right,
         textDirection: TextDirection.ltr,
       );
       percentPainter.layout();
-      percentPainter.paint(canvas, Offset(105 + barWidth + 8, y + barHeight * 0.5 - percentPainter.height / 2));
+      percentPainter.paint(
+        canvas,
+        Offset(
+          size.width - percentWidth + 5,
+          y + 15, // Centered vertically
+        ),
+      );
     }
   }
 
@@ -6515,10 +7188,7 @@ class MinimalGamePainter extends CustomPainter {
 class CompactDonutChart extends StatelessWidget {
   final double percent;
 
-  const CompactDonutChart({
-    Key? key,
-    required this.percent,
-  }) : super(key: key);
+  const CompactDonutChart({Key? key, required this.percent}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -6583,10 +7253,7 @@ class CompactProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.infinite,
-      painter: CompactProgressPainter(
-        value: value,
-        maxValue: maxValue,
-      ),
+      painter: CompactProgressPainter(value: value, maxValue: maxValue),
     );
   }
 }
@@ -6595,10 +7262,7 @@ class CompactProgressPainter extends CustomPainter {
   final double value;
   final double maxValue;
 
-  CompactProgressPainter({
-    required this.value,
-    required this.maxValue,
-  });
+  CompactProgressPainter({required this.value, required this.maxValue});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -6644,10 +7308,7 @@ class CompactLineChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.infinite,
-      painter: CompactLinePainter(
-        values: values,
-        maxValue: maxValue,
-      ),
+      painter: CompactLinePainter(values: values, maxValue: maxValue),
     );
   }
 }
@@ -6656,10 +7317,7 @@ class CompactLinePainter extends CustomPainter {
   final List<double> values;
   final double maxValue;
 
-  CompactLinePainter({
-    required this.values,
-    required this.maxValue,
-  });
+  CompactLinePainter({required this.values, required this.maxValue});
 
   @override
   void paint(Canvas canvas, Size size) {

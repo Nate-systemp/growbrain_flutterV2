@@ -413,7 +413,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     } else {
       // No match - reset selection
       HapticFeedback.lightImpact();
-      
+
       // Play wrong sound effect
       SoundEffectsManager().playWrong();
 
@@ -599,66 +599,209 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Round and Correct counters
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Round',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '1/1',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Correct',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$correctMatches',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+        // Game icon and title
         Container(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.menu_book,
+            size: 60,
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: Offset(0, 5),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5B6F4A), // Dark olive green background
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.menu_book, size: 60, color: Colors.white),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Picture Words Game',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF5B6F4A), // Dark olive green text
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Match words with pictures!',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-              ),
-            ],
+          child: const Text(
+            'Match carefully!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
         ),
-        SizedBox(height: 32),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Text(
+            'Match words with pictures!',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 40),
         ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 40,
+              vertical: 16,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            elevation: 4,
+          ),
           onPressed: () {
             setState(() {
               gameStarted = true;
             });
             _startGame();
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF5B6F4A), // Dark olive green button
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+          child: const Text(
+            'Start !',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            elevation: 5,
-          ),
-          child: Text(
-            'Start Game',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -667,7 +810,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
   Widget _buildGameArea() {
     if (!gameActive && correctMatches == totalPairs) {
-      return _buildEndScreen();
+      return _buildCompletionScreen();
     }
 
     if (!gameActive && timeLeft <= 0) {
@@ -1029,128 +1172,158 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     );
   }
 
-  Widget _buildEndScreen() {
-    double accuracyDouble = wrongAttempts > 0
+  Widget _buildCompletionScreen() {
+    // Schedule dialog to show after build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showGameOverDialog(true);
+    });
+    return Container(); // Return empty container since dialog handles the UI
+  }
+
+  void _showGameOverDialog(bool isCompletion) {
+    final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
+    final double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
         : 100;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.celebration, size: 80, color: Color(0xFF5B6F4A)),
-        SizedBox(height: 20),
-        Text(
-          'Excellent Matching!',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5B6F4A),
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        SizedBox(height: 20),
-        Text(
-          'Final Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF5B6F4A)),
-        ),
-        Text(
-          'All $totalPairs pairs matched!',
-          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
-        ),
-        Text(
-          'Accuracy: ${accuracyDouble.toStringAsFixed(1)}%',
-          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Play Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF5B6F4A),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
+          title: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B6F4A),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5B6F4A).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  isCompletion ? Icons.celebration : Icons.timer_off,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isCompletion ? 'Perfect Match! 🎯✨' : 'Time\'s Up! ⏰',
+                style: TextStyle(
+                  color: const Color(0xFF5B6F4A),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5DC).withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFFFD740),
-            foregroundColor: Color(0xFF5B6F4A),
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatRow(Icons.star_rounded, 'Final Score', '$score points'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.favorite_rounded, 'Pairs Matched', '$correctMatches/$totalPairs'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.track_changes, 'Accuracy', '${accuracyDouble.toStringAsFixed(1)}%'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
+              ],
             ),
           ),
-        ),
-      ],
+          actions: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Just close the dialog
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B6F4A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildTimeUpScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    // Schedule dialog to show after build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showGameOverDialog(false);
+    });
+    return Container(); // Return empty container since dialog handles the UI
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
       children: [
-        Icon(Icons.timer_off, size: 80, color: Color(0xFF5B6F4A)),
-        SizedBox(height: 20),
-        Text(
-          'Time\'s Up!',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5B6F4A),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD740).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Icon(icon, color: const Color(0xFF5B6F4A), size: 18),
         ),
-        SizedBox(height: 20),
-        Text(
-          'Score: $score',
-          style: TextStyle(fontSize: 24, color: Color(0xFF5B6F4A)),
-        ),
-        Text(
-          'Pairs matched: $correctMatches/$totalPairs',
-          style: TextStyle(fontSize: 20, color: Color(0xFF5B6F4A)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: () {
-            _initializeGame();
-            setState(() {
-              gameStarted = false;
-            });
-          },
-          child: Text('Try Again'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF5B6F4A),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
+        const SizedBox(width: 12),
+        Expanded(
           child: Text(
-            widget.onGameComplete != null ? 'Next Game' : 'Back to Menu',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFFFD740),
-            foregroundColor: Color(0xFF5B6F4A),
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            label,
+            style: TextStyle(
+              color: const Color(0xFF5B6F4A),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: const Color(0xFF5B6F4A),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],

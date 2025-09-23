@@ -79,6 +79,8 @@ flutter:
     - assets/verbal.png
     - assets/memory.png
     - assets/logic.png
+    - assets/hear.png
+    - assets/soundfxforsoundmatch/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

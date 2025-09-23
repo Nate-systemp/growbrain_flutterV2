@@ -41,6 +41,8 @@ class _LightTapGameState extends State<LightTapGame>
   bool isWaitingForInput = false;
   bool gameStarted = false;
   bool gameOver = false;
+  bool showingCountdown = false;
+  int countdownNumber = 3;
   int score = 0;
   int correctSequences = 0;
   int wrongTaps = 0;
@@ -57,6 +59,7 @@ class _LightTapGameState extends State<LightTapGame>
 
   // UI state
   List<bool> lightStates = [];
+  List<bool> tapStates = []; // For tap animation feedback
   List<AnimationController> animationControllers = [];
   List<Animation<double>> scaleAnimations = [];
 
@@ -139,6 +142,7 @@ class _LightTapGameState extends State<LightTapGame>
 
     // Initialize light states
     lightStates = List.generate(gridSize, (index) => false);
+    tapStates = List.generate(gridSize, (index) => false);
 
     // Set total rounds per session according to difficulty
     switch (_normalizedDifficulty) {
@@ -156,45 +160,65 @@ class _LightTapGameState extends State<LightTapGame>
         break;
     }
 
-    // Initialize animations
-    // ...existing code...
-    // In _initializeGame()
+    // Initialize animations for color transitions only
     animationControllers = List.generate(
       gridSize,
       (index) => AnimationController(
-        duration: Duration(milliseconds: 220), // smoother, slightly longer
+        duration: Duration(milliseconds: 300), // smooth color transition
         vsync: this,
       ),
     );
 
     scaleAnimations = animationControllers
         .map(
-          (controller) => Tween<double>(begin: 1.0, end: 1.2).animate(
+          (controller) => Tween<double>(begin: 1.0, end: 1.0).animate(
             CurvedAnimation(
               parent: controller,
               curve: Curves.easeInOut,
-            ), // smoother curve
+            ),
           ),
         )
         .toList();
-    // ...existing code...
   }
 
   void _startGame() {
     setState(() {
-      gameStarted = true;
-      gameOver = false;
-      currentLevel = 1;
-      roundsPlayed = 0;
-      score = 0;
-      correctSequences = 0;
-      wrongTaps = 0;
-      gameStartTime = DateTime.now();
-      sequence.clear();
-      userSequence.clear();
+      showingCountdown = true;
+      countdownNumber = 3;
     });
+    
+    _showCountdown();
+  }
 
-    _nextLevel();
+  void _showCountdown() async {
+    for (int i = 3; i >= 1; i--) {
+      if (!mounted) return;
+      
+      setState(() {
+        countdownNumber = i;
+      });
+      
+      await Future.delayed(Duration(milliseconds: 1000));
+    }
+    
+    // After countdown, start the actual game
+    if (mounted) {
+      setState(() {
+        showingCountdown = false;
+        gameStarted = true;
+        gameOver = false;
+        currentLevel = 1;
+        roundsPlayed = 0;
+        score = 0;
+        correctSequences = 0;
+        wrongTaps = 0;
+        gameStartTime = DateTime.now();
+        sequence.clear();
+        userSequence.clear();
+      });
+
+      _nextLevel();
+    }
   }
 
   void _nextLevel() {
@@ -241,7 +265,6 @@ class _LightTapGameState extends State<LightTapGame>
       setState(() {
         lightStates[lightIndex] = true;
       });
-      animationControllers[lightIndex].forward();
 
       await Future.delayed(Duration(milliseconds: sequenceSpeed ~/ 2));
 
@@ -249,7 +272,6 @@ class _LightTapGameState extends State<LightTapGame>
       setState(() {
         lightStates[lightIndex] = false;
       });
-      animationControllers[lightIndex].reverse();
 
       await Future.delayed(Duration(milliseconds: sequenceSpeed ~/ 2));
     }
@@ -264,20 +286,21 @@ class _LightTapGameState extends State<LightTapGame>
   void _onLightTap(int index) {
     if (!isWaitingForInput || isShowingSequence) return;
 
+    // Trigger tap animation
+    _animateTap(index);
+
     // Light up immediately on tap
     setState(() {
       lightStates[index] = true;
     });
 
-    animationControllers[index].forward().then((_) {
-      animationControllers[index].reverse().then((_) {
-        // Turn off light after animation
-        if (mounted) {
-          setState(() {
-            lightStates[index] = false;
-          });
-        }
-      });
+    // Turn off light after a short delay
+    Future.delayed(Duration(milliseconds: 200), () {
+      if (mounted) {
+        setState(() {
+          lightStates[index] = false;
+        });
+      }
     });
 
     userSequence.add(index);
@@ -423,49 +446,133 @@ class _LightTapGameState extends State<LightTapGame>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: surfaceColor,
-        title: Text(
-          'Nice Job! ',
-          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        title: Column(
           children: [
-            if (completed)
-              Icon(Icons.celebration, color: accentColor, size: 64)
-            else
-              Icon(Icons.lightbulb_outline, color: primaryColor, size: 64),
-            SizedBox(height: 16),
-            Text(
-              'Score: $score',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: primaryColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                completed ? Icons.celebration : Icons.lightbulb_outline,
+                color: Colors.white,
+                size: 40,
+              ),
             ),
-            Text('Accuracy: $accuracy%'),
-            Text('Time: ${completionTime}s'),
-            Text('Level Reached: $currentLevel'),
+            const SizedBox(height: 16),
+            Text(
+              completed ? 'Amazing! 🌟' : 'Great Effort! 💡',
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
-            },
-            child: Text('Back to Menu', style: TextStyle(color: primaryColor)),
+        content: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: backgroundColor.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(); // Close game and return to session
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildStatRow(Icons.star_rounded, 'Score', '$score points'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.timer, 'Time', '${completionTime}s'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.trending_up, 'Level Reached', '$currentLevel'),
+            ],
+          ),
+        ),
+        actions: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Just close the dialog
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.arrow_forward_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Next Game',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Text('Continue'),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: primaryColor, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -663,7 +770,9 @@ class _LightTapGameState extends State<LightTapGame>
 
                 // Game grid
                 Expanded(
-                  child: gameStarted ? _buildGameGrid() : _buildStartScreen(),
+                  child: showingCountdown 
+                      ? _buildCountdownScreen()
+                      : (gameStarted ? _buildGameGrid() : _buildStartScreen()),
                 ),
               ],
             ),
@@ -683,6 +792,59 @@ class _LightTapGameState extends State<LightTapGame>
     } else {
       return 'Get ready for the next sequence...';
     }
+  }
+
+  Widget _buildCountdownScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Get Ready!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          SizedBox(height: 40),
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accentColor,
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$countdownNumber',
+                style: TextStyle(
+                  fontSize: 80,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 40),
+          Text(
+            'The game will start soon...',
+            style: TextStyle(
+              fontSize: 18,
+              color: primaryColor.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildStartScreen() {
@@ -782,46 +944,116 @@ class _LightTapGameState extends State<LightTapGame>
               ),
               itemCount: this.gridSize,
               itemBuilder: (context, index) {
-                return AnimatedBuilder(
-                  animation: scaleAnimations[index],
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: scaleAnimations[index].value,
-                      child: GestureDetector(
-                        onTap: () => _onLightTap(index),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: lightStates[index]
-                                ? lightColors[index % lightColors.length]
-                                : inactiveLightColor,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: lightStates[index]
-                                    ? lightColors[index % lightColors.length]
-                                          .withOpacity(0.5)
-                                    : Colors.black.withOpacity(0.1),
-                                blurRadius: lightStates[index] ? 8 : 4,
-                                offset: Offset(0, lightStates[index] ? 4 : 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                fontSize: buttonSize * 0.2,
-                                fontWeight: FontWeight.bold,
-                                color: lightStates[index]
-                                    ? Colors.white
-                                    : primaryColor,
+                return GestureDetector(
+                  onTap: () => _onLightTap(index),
+                  child: AnimatedScale(
+                    scale: tapStates[index] ? 0.95 : (lightStates[index] ? 1.05 : 1.0),
+                    duration: Duration(milliseconds: 150),
+                    curve: Curves.easeInOut,
+                    child: AnimatedContainer(
+                    duration: Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    decoration: BoxDecoration(
+                      gradient: lightStates[index]
+                          ? LinearGradient(
+                              colors: [
+                                lightColors[index % lightColors.length],
+                                lightColors[index % lightColors.length].withOpacity(0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : LinearGradient(
+                              colors: [
+                                Colors.white,
+                                Color(0xFFF5F5F5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: lightStates[index]
+                            ? lightColors[index % lightColors.length].withOpacity(0.3)
+                            : Color(0xFFE0E0E0),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: lightStates[index]
+                              ? lightColors[index % lightColors.length].withOpacity(0.4)
+                              : Colors.black.withOpacity(0.08),
+                          blurRadius: lightStates[index] ? 12 : 6,
+                          offset: Offset(0, lightStates[index] ? 6 : 3),
+                          spreadRadius: lightStates[index] ? 2 : 0,
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Background pattern
+                        if (lightStates[index])
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.3),
+                                    Colors.transparent,
+                                  ],
+                                  center: Alignment.topLeft,
+                                  radius: 1.0,
+                                ),
                               ),
                             ),
                           ),
+                        // Main content
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Icon based on index
+                              Icon(
+                                _getLightIcon(index),
+                                size: buttonSize * 0.25,
+                                color: lightStates[index]
+                                    ? Colors.white
+                                    : primaryColor.withOpacity(0.7),
+                              ),
+                              SizedBox(height: 4),
+                              // Light name
+                              Text(
+                                _getLightName(index),
+                                style: TextStyle(
+                                  fontSize: buttonSize * 0.12,
+                                  fontWeight: FontWeight.w600,
+                                  color: lightStates[index]
+                                      ? Colors.white
+                                      : primaryColor.withOpacity(0.8),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                        // Pulse effect when active
+                        if (lightStates[index])
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.6),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    ),
+                  ),
                 );
               },
             ),
@@ -829,6 +1061,54 @@ class _LightTapGameState extends State<LightTapGame>
         );
       },
     );
+  }
+
+  // Method to animate tap feedback
+  void _animateTap(int index) {
+    setState(() {
+      tapStates[index] = true;
+    });
+    
+    // Reset tap state after animation
+    Future.delayed(Duration(milliseconds: 150), () {
+      if (mounted) {
+        setState(() {
+          tapStates[index] = false;
+        });
+      }
+    });
+  }
+
+  // Helper method to get icon for each light position
+  IconData _getLightIcon(int index) {
+    final icons = [
+      Icons.star,           // 0 - Star
+      Icons.favorite,       // 1 - Heart  
+      Icons.flash_on,       // 2 - Lightning
+      Icons.brightness_high, // 3 - Sun
+      Icons.nightlight,     // 4 - Moon
+      Icons.local_fire_department, // 5 - Fire
+      Icons.water_drop,     // 6 - Water
+      Icons.eco,            // 7 - Leaf
+      Icons.diamond,        // 8 - Diamond
+    ];
+    return icons[index % icons.length];
+  }
+
+  // Helper method to get name for each light position
+  String _getLightName(int index) {
+    final names = [
+      'Star',      // 0
+      'Heart',     // 1
+      'Lightning', // 2
+      'Sun',       // 3
+      'Moon',      // 4
+      'Fire',      // 5
+      'Water',     // 6
+      'Leaf',      // 7
+      'Diamond',   // 8
+    ];
+    return names[index % names.length];
   }
 }
 
