@@ -375,27 +375,28 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     });
   }
 
-  Future<void> _showGoOverlay() async {
-    if (!mounted) return;
-    // Stop/reset shake to avoid concurrent heavy animations
-    if (_shakeController.isAnimating) {
-      _shakeController.stop();
-      _shakeController.reset();
-    }
-    // ensure shapes stop moving while overlay shows (keeps shapes visible but static)
-    setState(() {
-      showingAnimation = false;
-      showingGo = true;
-    });
-    // smooth animate GO overlay
-    await _goController.forward();
-    await Future.delayed(const Duration(milliseconds: 450));
-    if (!mounted) return;
-    await _goController.reverse();
-    if (!mounted) return;
-    setState(() => showingGo = false);
-  }
+Future<void> _showGoOverlay() async {
+  if (!mounted) return;
 
+  // Ensure shapes remain visible but static during the "GO!" overlay
+  setState(() {
+    showingAnimation = false;
+    showingGo = true;
+  });
+
+  // Smoothly animate the "GO!" overlay
+  await _goController.forward();
+  await Future.delayed(const Duration(milliseconds: 450));
+  if (!mounted) return;
+  await _goController.reverse();
+  if (!mounted) return;
+
+  // Hide the "GO!" overlay and enable selection
+  setState(() {
+    showingGo = false;
+    canSelect = true;
+  });
+}
   void _selectShape(int index) {
     if (!canSelect) return;
 
@@ -442,33 +443,33 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _nextRound() {
-    setState(() {
-      roundsPlayed++;
-    });
+  setState(() {
+    roundsPlayed++;
+  });
 
-    if (roundsPlayed >= totalRounds) {
-      _endGame();
-      return;
-    }
-
-    _shakeController.reset();
-    // Prepare next round and start it immediately (don't show intro again)
-    setState(() {
-      timer = 0;
-    });
-
-    _initializeGame();
-
-    // Small delay to allow UI to settle, then start the next round automatically
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        // DEBUG: auto-starting next round
-        // ignore: avoid_print
-        print('[WhoMoved] auto-starting next round ${roundsPlayed + 1}');
-        _startGame();
-      }
-    });
+  if (roundsPlayed >= totalRounds) {
+    _endGame();
+    return;
   }
+
+  // Reset only necessary states
+  _shakeController.reset();
+  _resultAnimationController.reset();
+
+  // Prepare next round and start it immediately
+  setState(() {
+    timer = 0;
+  });
+
+  _initializeGame();
+
+  // Small delay to allow UI to settle, then start the next round automatically
+  Future.delayed(const Duration(milliseconds: 400), () {
+    if (mounted) {
+      _startGame();
+    }
+  });
+}
 
   void _endGame() {
     setState(() {
@@ -723,7 +724,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         Text(
           label,
           style: TextStyle(
-            color: Colors.white70,
+            color: const Color.fromARGB(255, 255, 255, 255),
             fontSize: labelFontSize,
             fontWeight: FontWeight.bold,
           ),
@@ -965,152 +966,93 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _handleBackButton(context);
-        }
-      },
-      child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/background.png'),
-              fit: BoxFit.cover,
-            ),
+ @override
+Widget build(BuildContext context) {
+  return PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, result) {
+      if (!didPop) {
+        _handleBackButton(context);
+      }
+    },
+    child: Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/background.png'),
+            fit: BoxFit.cover,
           ),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor, headerGradientEnd],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+        ),
+        child: Scaffold(
+          backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+          appBar: null, // Removed the AppBar
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0), // Adjusted padding
+              child: Column(
+                children: [
+                  const SizedBox(height: 70),
+                  // Three equal circular badges: Score / Round / Time
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _infoCircle(
+                        label: 'Score',
+                        value: '$score',
+                        circleSize: 110,
+                        valueFontSize: 30,
+                        labelFontSize: 26,
+                      ),
+                      _infoCircle(
+                        label: 'Round',
+                        value: '${roundsPlayed + 1}/$totalRounds',
+                        circleSize: 110,
+                        valueFontSize: 30,
+                        labelFontSize: 26,
+                      ),
+                      _infoCircle(
+                        label: 'Time',
+                        value: canSelect && timer > 0
+                            ? '${timer}s'
+                            : showingAnimation
+                            ? '...'
+                            : '${timer}s',
+                        circleSize: 110,
+                        valueFontSize: 30,
+                        labelFontSize: 26,
+                        valueColor: timer <= 5 && canSelect
+                            ? Colors.red
+                            : primaryColor,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              foregroundColor: Colors.white,
-              title: Text(
-                'Who Moved? - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              elevation: 0,
-              centerTitle: true,
-              automaticallyImplyLeading: false,
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    // Three equal circular badges: Score / Round / Time
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _infoCircle(
-                          label: 'Score',
-                          value: '$score',
-                          circleSize: 110,
-                          valueFontSize: 30,
-                          labelFontSize: 26,
-                        ),
-                        _infoCircle(
-                          label: 'Round',
-                          value: '${roundsPlayed + 1}/$totalRounds',
-                          circleSize: 110,
-                          valueFontSize: 30,
-                          labelFontSize: 26,
-                        ),
-                        _infoCircle(
-                          label: 'Time',
-                          value: canSelect && timer > 0
-                              ? '${timer}s'
-                              : showingAnimation
-                              ? '...'
-                              : '${timer}s',
-                          circleSize: 110,
-                          valueFontSize: 30,
-                          labelFontSize: 26,
-                          valueColor: timer <= 5 && canSelect
-                              ? Colors.red
-                              : primaryColor,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-                    // ...existing code...
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            if (!gameStarted) ...[
-                              Expanded(
-                                child: _buildStartScreenWithInstruction(),
-                              ),
-                            ] else ...[
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          if (!gameStarted) ...[
+                            Expanded(
+                              child: _buildStartScreenWithInstruction(),
+                            ),
+                          ] else ...[
                                 // show status box only when NOT in countdown (removes white "Get ready..." box)
-                              if (!showingCountdown)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        spreadRadius: 1,
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    showingAnimation
-                                        ? 'Watch the shaking shape!'
-                                        : canSelect
-                                            ? 'Which shape was shaking?'
-                                            : 'Memorize the positions...',
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF5B6F4A),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
-                              else
-                                const SizedBox(height: 48),
-
-
+                            
                               const SizedBox(height: 10),
                               Expanded(
                                 child: Stack(
                                   children: [
                                     // Show shapes during countdown animation (shaking), or when selectable, or when showing result
                                     // Show shapes during shaking, while GO overlay is visible (freeze), when selectable, or when showing result
-                                    if (showingAnimation ||
-                                        showingGo ||
-                                        canSelect ||
-                                        showingResult)
-                                      Center(
-                                        child: RepaintBoundary(
-                                          child: _buildShapeGrid(),
-                                        ),
-                                      )
-                                    else
-                                      const SizedBox.shrink(),
+                                   if (showingAnimation || showingGo || canSelect || showingResult)
+                                    Center(
+                                      child: RepaintBoundary(
+                                        child: _buildShapeGrid(),
+                                      ),
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
                                    if (showingCountdown)
                                       Center(
                                         child: Column(
