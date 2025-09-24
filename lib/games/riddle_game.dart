@@ -542,77 +542,55 @@ class _RiddleGameState extends State<RiddleGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/verbalbg.png'),
+            fit: BoxFit.cover,
+          ),
         ),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SafeArea(
         child: Column(
           children: [
-            // Score and Progress Display
+            // AppBar equivalent
             Container(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5B6F4A),
+              ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    children: [
-                      Text(
-                        'Score: $score',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      Text(
-                        'Correct: $correctAnswers',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
                   ),
-                  Text(
-                    'Riddle: ${currentRiddleIndex + 1}/$totalRiddles',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
+                  Expanded(
+                    child: Text(
+                      'Riddle Game - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  if (timePerRiddle > 0 && gameActive && !riddleAnswered)
-                    Column(
-                      children: [
-                        Text(
-                          'Time: ${timeLeft}s',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: timeLeft <= 5
-                                ? Color(0xFFE57373)
-                                : Color(0xFF2C3E50),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(width: 48), // Balance the back button
                 ],
               ),
             ),
-
-            // Game Area
+            // Body content
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+              child: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                ),
               ),
             ),
           ],

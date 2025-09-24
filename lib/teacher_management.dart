@@ -1632,7 +1632,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                   context,
                 ).pushNamedAndRemoveUntil('/home', (route) => false);
               },
-              child: const Text('Back to games'),
+              child: const Text('Back to home'),
             ),
           ),
           // Animated content area with improved transitions

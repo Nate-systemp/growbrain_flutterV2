@@ -76,6 +76,9 @@ flutter:
     - assets/save.png
     - assets/play.png
     - assets/background.png
+    - assets/verbalbg.png
+    - assets/memorybg.png
+    - assets/logicbg.png
     - assets/verbal.png
     - assets/memory.png
     - assets/logic.png

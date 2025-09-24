@@ -425,8 +425,15 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF64744B), // Muted green background
-      body: Stack(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/memorybg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(
         children: [
           // Main game content (lower layer)
           Column(
@@ -483,33 +490,6 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
                       ),
                     ),
 
-                    // Help button
-                    Positioned(
-                      top: 32,
-                      right: 24,
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Need Help?',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.help, color: Colors.blue, size: 24),
-                          ),
-                        ],
-                      ),
-                    ),
 
                     // Main game content
                     Center(
@@ -845,6 +825,7 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
               ),
             ),
         ],
+        ),
       ),
     );
   }

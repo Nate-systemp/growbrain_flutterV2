@@ -742,19 +742,51 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
         }
       },
       child: Scaffold(
-        backgroundColor: backgroundColor,
-        appBar: AppBar(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          title: Text(
-            'Sliding Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-            style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/logicbg.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-          elevation: 0,
-          centerTitle: true,
-          automaticallyImplyLeading: false,
-        ),
-        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom AppBar
+              Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top,
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Sliding Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 48), // Balance the back button
+                  ],
+                ),
+              ),
+              // Body content
+              Expanded(
+                child: SafeArea(
           child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Column(
@@ -766,6 +798,10 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
                 ),
               ],
             ),
+          ),
+        ),
+        ),
+            ],
           ),
         ),
       ),

@@ -540,26 +540,104 @@ Widget build(BuildContext context) {
                             Expanded(
                               child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white,
+                                    Colors.grey[50]!,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.white.withOpacity(0.8),
+                                    blurRadius: 8,
+                                    offset: const Offset(-2, -2),
+                                  ),
+                                ],
+                                border: Border.all(
+                                  color: Colors.grey[200]!,
+                                  width: 1,
+                                ),
                               ),
                               child: Column(
                                 children: [
-                                Text(
-                                  'Selected Games',
-                                  style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
+                                // Header with icon
+                                Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              const Color(0xFF5B6F4A),
+                                              const Color(0xFF6B7F5A),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF5B6F4A).withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.games,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Selected Games',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[800],
+                                            ),
+                                          ),
+                                          Text(
+                                            'for ${studentName.split(' ').first}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: const Color(0xFF5B6F4A),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  'for ${studentName.split(' ').first}',
-                                  style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
+                                const SizedBox(height: 16),
+                                // Divider line after header
+                                Container(
+                                  height: 1,
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.grey[300]!,
+                                        Colors.transparent,
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 20),
@@ -567,13 +645,46 @@ Widget build(BuildContext context) {
                                 Expanded(
                                   child: selectedGames.isEmpty
                                     ? Center(
-                                      child: Text(
-                                      'No games selected',
-                                      style: TextStyle(
-                                        color: Colors.grey[500],
-                                        fontSize: 14,
-                                        fontStyle: FontStyle.italic,
-                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[100],
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.grey[300]!,
+                                                width: 2,
+                                                strokeAlign: BorderSide.strokeAlignInside,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.videogame_asset_outlined,
+                                              size: 40,
+                                              color: Colors.grey[400],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No games selected',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Tap on game categories\nto add games',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: Colors.grey[500],
+                                              fontSize: 12,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     )
                                     : Padding(
@@ -596,6 +707,10 @@ Widget build(BuildContext context) {
                                           decoration: BoxDecoration(
                                           color: const Color(0xFF5B6F4A),
                                           shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: _getDifficultyBorderColor(game),
+                                            width: 5,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
                                             color: Colors.black.withOpacity(0.1),
@@ -619,6 +734,21 @@ Widget build(BuildContext context) {
                                 ),
                                 // Move the instruction text to bottom
                                 if (selectedGames.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  // Divider line before instructions
+                                  Container(
+                                    height: 1,
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.grey[300]!,
+                                          Colors.transparent,
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                   const SizedBox(height: 12),
                                   const Text(
                                     'Tap on selected games to set difficulty',
@@ -631,6 +761,18 @@ Widget build(BuildContext context) {
                                     fontStyle: FontStyle.italic,
                                     ),
                                   ),
+                                  const SizedBox(height: 12),
+                                  // Difficulty indicators
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildDifficultyIndicator('Starter', Colors.green),
+                                      const SizedBox(width: 12),
+                                      _buildDifficultyIndicator('Growing', Colors.orange),
+                                      const SizedBox(width: 12),
+                                      _buildDifficultyIndicator('Challenged', Colors.red),
+                                    ],
+                                  ),
                                 ],
                                 ],
                               ),
@@ -640,30 +782,53 @@ Widget build(BuildContext context) {
                             // Clear All button
                             Container(
                               width: double.infinity,
-                              height: 50,
+                              height: 54,
                               decoration: BoxDecoration(
-                              color: const Color(0xFFE57373), // Red
-                              borderRadius: BorderRadius.circular(25),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFFE57373),
+                                    const Color(0xFFEF5350),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(27),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE57373).withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: MaterialButton(
-                              onPressed: () {
-                                setState(() {
-                                selectedGames.clear();
-                                gameDifficulties.clear();
-                                // Don't reset background music setting - it's independent
-                                });
-                              },
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Text(
-                                'Clear All',
-                                style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                                onPressed: () {
+                                  setState(() {
+                                    selectedGames.clear();
+                                    gameDifficulties.clear();
+                                    // Don't reset background music setting - it's independent
+                                  });
+                                },
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(27),
                                 ),
-                              ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.clear_all,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Clear All',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -858,15 +1023,19 @@ Widget build(BuildContext context) {
   Widget _buildCategoryCard(String category) {
     final games = categoryGames[category] ?? [];
     final isSelected = selectedGames.any((game) => games.contains(game));
+    final isEnabled = availableGames.contains(category);
     
     return GestureDetector(
-      onTap: () => _openCategoryModal(category),
+      onTap: isEnabled ? () => _openCategoryModal(category) : null,
       child: Stack(
         children: [
           // Just the image - no background, no text
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: _getCategoryIcon(category),
+            child: Opacity(
+              opacity: isEnabled ? 1.0 : 0.3,
+              child: _getCategoryIcon(category),
+            ),
           ),
           // Selected indicator (optional)
           if (isSelected)
@@ -981,6 +1150,49 @@ Widget build(BuildContext context) {
     }
   }
 
+  Color _getDifficultyBorderColor(String game) {
+    String difficulty = gameDifficulties[game] ?? 'Starter';
+    switch (difficulty.toLowerCase()) {
+      case 'starter':
+        return Colors.green;
+      case 'growing':
+        return Colors.orange;
+      case 'challenged':
+        return Colors.red;
+      default:
+        return Colors.green; // Default to green for Starter
+    }
+  }
+
+  Widget _buildDifficultyIndicator(String difficulty, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        difficulty,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildCompactSelectedGamesPanel(String studentName) {
     return Column(
       children: [
@@ -1044,6 +1256,9 @@ Widget build(BuildContext context) {
                       _CompactGameSlot(
                         game: selectedGames.length > i
                             ? selectedGames.elementAt(i)
+                            : null,
+                        difficulty: selectedGames.length > i
+                            ? gameDifficulties[selectedGames.elementAt(i)] ?? 'Starter'
                             : null,
                         onTap: selectedGames.length > i
                             ? () => _showSetDifficultyModal(selectedGames.elementAt(i))
@@ -1178,9 +1393,10 @@ class _GameCard extends StatefulWidget {
 // Compact Game Slot widget for selected games panel
 class _CompactGameSlot extends StatelessWidget {
   final String? game;
+  final String? difficulty;
   final VoidCallback? onTap;
 
-  const _CompactGameSlot({Key? key, this.game, this.onTap}) : super(key: key);
+  const _CompactGameSlot({Key? key, this.game, this.difficulty, this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -1191,6 +1407,10 @@ class _CompactGameSlot extends StatelessWidget {
         decoration: BoxDecoration(
           color: hasGame ? const Color(0xFF5B6F4A) : Colors.grey[300],
           shape: BoxShape.circle,
+          border: hasGame ? Border.all(
+            color: _getDifficultyBorderColorFromString(difficulty ?? 'Starter'),
+            width: 4,
+          ) : null,
           boxShadow: hasGame ? [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),
@@ -3821,5 +4041,19 @@ class _ModernSuccessDialogState extends State<ModernSuccessDialog>
         ),
       ),
     );
+  }
+}
+
+// Helper function for getting difficulty border color
+Color _getDifficultyBorderColorFromString(String difficulty) {
+  switch (difficulty.toLowerCase()) {
+    case 'starter':
+      return Colors.green;
+    case 'growing':
+      return Colors.orange;
+    case 'challenged':
+      return Colors.red;
+    default:
+      return Colors.green; // Default to green for Starter
   }
 }

@@ -511,10 +511,15 @@ class _PictureWordsGameState extends State<PictureWordsGame>
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(
-          0xFFFDFBEF,
-        ), // Light creamy yellow background
-        body: SafeArea(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/verbalbg.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: SafeArea(
           child: Column(
             children: [
               // Header bar - Dark olive green style
@@ -588,6 +593,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
               ),
             ],
           ),
+        ),
         ),
       ),
     );

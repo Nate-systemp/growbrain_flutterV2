@@ -56,6 +56,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
   bool _showingCountdown = false;
   int _countdownNumber = 3;
   bool _showingHearIcon = false;
+  bool _hearIconAnimating = false;
   bool _showPlayButton = false;
   
   // App color scheme
@@ -158,6 +159,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     setState(() {
       _showingCountdown = true;
       _countdownNumber = 3;
+      _showPlayButton = false;
     });
 
     Timer.periodic(Duration(seconds: 1), (timer) {
@@ -181,8 +183,17 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
     
     // Show hear icon, hide play button
     setState(() {
-      _showingHearIcon = true;
+      _hearIconAnimating = true;
       _showPlayButton = false;
+    });
+    
+    // Small delay to ensure widget is rendered before starting slide up animation
+    Future.delayed(Duration(milliseconds: 50), () {
+      if (mounted) {
+        setState(() {
+          _showingHearIcon = true;
+        });
+      }
     });
     
     try {
@@ -191,12 +202,20 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       String soundPath = _currentSound.soundPath.replaceFirst('assets/', '');
       await _audioPlayer.play(AssetSource(soundPath));
       
-      // Hide hear icon and show play button after 2 seconds
-      Future.delayed(Duration(seconds: 2), () {
+      // Hide hear icon and show play button after 5 seconds
+      Future.delayed(Duration(seconds: 5), () {
         if (mounted) {
           setState(() {
             _showingHearIcon = false;
-            _showPlayButton = true;
+          });
+          // Wait for slide down animation to complete before hiding completely
+          Future.delayed(Duration(milliseconds: 600), () {
+            if (mounted) {
+              setState(() {
+                _hearIconAnimating = false;
+                _showPlayButton = true;
+              });
+            }
           });
         }
       });
@@ -205,6 +224,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       // Hide hear icon and show play button on error
       setState(() {
         _showingHearIcon = false;
+        _hearIconAnimating = false;
         _showPlayButton = true;
       });
       // Only show error snackbar if there's an actual error
@@ -311,6 +331,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       _gameStarted = false;
       _showPlayButton = true;
       _showingHearIcon = false;
+      _hearIconAnimating = false;
       _showingCountdown = false;
       _isAnswering = false;
     });
@@ -571,10 +592,16 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(
-          0xFFFDFBEF,
-        ), // Light creamy yellow background
-        body: SafeArea(child: _buildGameContent()),
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/memorybg.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: SafeArea(child: _buildGameContent()),
+        ),
       ),
     );
   }
@@ -865,40 +892,65 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Play sound button - only show when _showPlayButton is true AND hear icon is hidden
-                          if (_showPlayButton && !_showingHearIcon)
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(25),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: accentColor.withOpacity(0.3),
-                                    spreadRadius: 2,
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
+                          // Enhanced Play sound button with animations
+                          if (_showPlayButton && !_showingHearIcon && !_showingCountdown)
+                            AnimatedScale(
+                              scale: _showPlayButton ? 1.0 : 0.8,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.elasticOut,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      accentColor,
+                                      accentColor.withOpacity(0.8),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                ],
-                              ),
-                              child: ElevatedButton.icon(
-                                onPressed: _onPlayButtonPressed,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: accentColor,
-                                  foregroundColor: primaryColor,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  elevation: 0,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accentColor.withOpacity(0.4),
+                                      spreadRadius: 3,
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, -2),
+                                    ),
+                                  ],
                                 ),
-                                icon: const Icon(Icons.volume_up, size: 24),
-                                label: const Text(
-                                  'Play Sound',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  shape: const CircleBorder(),
+                                  child: InkWell(
+                                    onTap: _onPlayButtonPressed,
+                                    customBorder: const CircleBorder(),
+                                    splashColor: Colors.white.withOpacity(0.3),
+                                    highlightColor: Colors.white.withOpacity(0.1),
+                                    child: Container(
+                                      width: 120,
+                                      height: 120,
+                                      child: Center(
+                                        child: Text(
+                                          'Play\nSound',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: primaryColor,
+                                            letterSpacing: 0.5,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -921,37 +973,21 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
                               ),
                             ),
                           )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // First row
-                              if (_currentOptions.length >= 2)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildSoundOption(_currentOptions[0]),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildSoundOption(_currentOptions[1]),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: 16),
-                              // Second row
-                              if (_currentOptions.length >= 4)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildSoundOption(_currentOptions[2]),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildSoundOption(_currentOptions[3]),
-                                    ),
-                                  ],
-                                ),
-                            ],
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Row(
+                              children: _currentOptions.map((option) {
+                                int index = _currentOptions.indexOf(option);
+                                return Padding(
+                                  padding: EdgeInsets.only(
+                                    left: index == 0 ? 0 : 8,
+                                    right: 8,
+                                  ),
+                                  child: _buildSoundOption(option),
+                                );
+                              }).toList(),
+                            ),
                           ),
                   ),
               ],
@@ -964,21 +1000,30 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
                     style: const TextStyle(
                       fontSize: 120,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5B6F4A),
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              // Hear icon overlay
-              if (_showingHearIcon)
+              // Hear icon overlay with slide animation
+              if (_hearIconAnimating)
                 Center(
-                  child: AnimatedOpacity(
-                    opacity: _showingHearIcon ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 500),
-                    child: Image.asset(
-                      'assets/hear.png',
-                      width: 400,
-                      height: 400,
-                      fit: BoxFit.contain,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeInOut,
+                    transform: Matrix4.translationValues(
+                      0, 
+                      _showingHearIcon ? 0 : 100, // Slide up when showing, slide down when hiding
+                      0
+                    ),
+                    child: AnimatedOpacity(
+                      opacity: _showingHearIcon ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 400),
+                      child: Image.asset(
+                        'assets/hear.png',
+                        width: 400,
+                        height: 400,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
@@ -1003,61 +1048,68 @@ class _SoundMatchGameState extends State<SoundMatchGame> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _selectOption(item),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(50),
         child: Container(
-          height: 70, // Slightly taller for better touch target
-          decoration: BoxDecoration(
-            color: shapeColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.4),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+          width: 120, // Reduced width since no card background
+          height: 130, // Keep same height
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Larger Enhanced Emoji with background
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: isCorrect 
+                      ? const Color(0xFF8FBC8F).withOpacity(0.3)
+                      : Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isCorrect 
+                        ? const Color(0xFF8FBC8F)
+                        : Colors.white.withOpacity(0.4),
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    item.emoji,
+                    style: const TextStyle(
+                      fontSize: 40,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
+              const SizedBox(height: 8),
+              // Text
+              Text(
+                item.name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isCorrect 
+                      ? const Color(0xFF8FBC8F)
+                      : Colors.white,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Emoji with fixed width for alignment
-                SizedBox(
-                  width: 30,
-                  child: Center(
-                    child: Text(
-                      item.emoji,
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Text taking remaining space
-                Expanded(
-                  child: Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.left,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

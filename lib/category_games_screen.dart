@@ -721,24 +721,11 @@ class _PSPGameCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(cornerRadius),
           boxShadow: [
-            if (isSelected) ...[
-              BoxShadow(
-                color: Colors.white.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-              BoxShadow(
-                color: iconColor.withOpacity(0.4),
-                blurRadius: 30,
-                spreadRadius: 2,
-              ),
-            ] else ...[
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
         child: Container(
@@ -763,11 +750,6 @@ class _PSPGameCard extends StatelessWidget {
                   color: iconColor,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(
-                      color: iconColor.withOpacity(0.4),
-                      blurRadius: isSelected ? 20 : 10,
-                      spreadRadius: isSelected ? 2 : 0,
-                    ),
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
                       offset: const Offset(0, 4),
@@ -817,9 +799,9 @@ class _PSPGameCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(2),
                     boxShadow: [
                       BoxShadow(
-                        color: iconColor.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 1,
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),

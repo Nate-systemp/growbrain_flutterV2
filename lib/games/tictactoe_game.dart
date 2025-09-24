@@ -450,18 +450,55 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Tic Tac Toe - ${widget.difficulty}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/logicbg.png'),
+            fit: BoxFit.cover,
+          ),
         ),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
+        child: Column(
+          children: [
+            // Custom AppBar
+            Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              decoration: BoxDecoration(
+                color: primaryColor,
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Tic Tac Toe - ${widget.difficulty}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(width: 48), // Balance the back button
+                ],
+              ),
+            ),
+            // Body content
+            Expanded(
+              child: !gameStarted ? _buildStartScreen() : _buildGameScreen(),
+            ),
+          ],
+        ),
       ),
-      body: !gameStarted ? _buildStartScreen() : _buildGameScreen(),
     );
   }
 

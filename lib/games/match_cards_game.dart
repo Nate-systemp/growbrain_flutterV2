@@ -431,8 +431,15 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     final screenWidth = MediaQuery.of(context).size.width;
     final gridWidth = (gridCols * 100).toDouble().clamp(320, screenWidth * 0.8);
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Stack(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/memorybg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(
         children: [
           // Decorative icons
           Positioned(
@@ -647,6 +654,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
