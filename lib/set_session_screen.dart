@@ -1166,10 +1166,10 @@ Widget build(BuildContext context) {
 
   Widget _buildDifficultyIndicator(String difficulty, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color,
           width: 2,
@@ -1186,7 +1186,7 @@ Widget build(BuildContext context) {
         difficulty,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
       ),
