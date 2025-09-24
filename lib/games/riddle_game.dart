@@ -65,7 +65,7 @@ class _RiddleGameState extends State<RiddleGame> {
 
   // Riddle sets organized by difficulty
   final Map<String, List<Riddle>> riddleSets = {
-    'easy': [
+    'Starter': [
       Riddle(
         question: "I'm yellow, long, and monkeys love to eat me. What am I?",
         correctAnswer: "Banana",
@@ -110,7 +110,7 @@ class _RiddleGameState extends State<RiddleGame> {
         explanation: "Snow is cold, white, and falls from winter clouds!",
       ),
     ],
-    'medium': [
+    'Growing': [
       Riddle(
         question:
             "I have keys but no locks. I have space but no room. You can enter but not go inside. What am I?",
@@ -159,7 +159,7 @@ class _RiddleGameState extends State<RiddleGame> {
         explanation: "A bottle has a neck (the narrow part) but no head!",
       ),
     ],
-    'hard': [
+    'Challenged': [
       Riddle(
         question:
             "The more you take away from me, the bigger I become. What am I?",
@@ -231,20 +231,18 @@ class _RiddleGameState extends State<RiddleGame> {
 
   void _initializeGame() {
     // Normalize difficulty key and set difficulty parameters
-    final diffKey = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    ).toLowerCase();
+    final diffKey = DifficultyUtils.normalizeDifficulty(widget.difficulty);
     // Set difficulty parameters
     switch (diffKey) {
-      case 'easy':
+      case 'Starter':
         totalRiddles = 5;
-        timePerRiddle = 0; // No timer for easy
+        timePerRiddle = 0; // No timer for Starter
         break;
-      case 'medium':
+      case 'Growing':
         totalRiddles = 6;
         timePerRiddle = 45; // 45 seconds per riddle
         break;
-      case 'hard':
+      case 'Challenged':
         totalRiddles = 8;
         timePerRiddle = 30; // 30 seconds per riddle
         break;
@@ -260,7 +258,7 @@ class _RiddleGameState extends State<RiddleGame> {
     gameRiddles.clear();
 
     List<Riddle> availableRiddles = List.from(
-      riddleSets[difficultyKey] ?? riddleSets['easy']!,
+      riddleSets[difficultyKey] ?? riddleSets['Starter']!,
     );
     availableRiddles.shuffle();
 
@@ -968,6 +966,23 @@ class _RiddleGameState extends State<RiddleGame> {
     return Container(); // Return empty container since dialog handles the UI
   }
 
+  void _resetGame() {
+    setState(() {
+      currentRiddleIndex = 0;
+      correctAnswers = 0;
+      wrongAnswers = 0;
+      selectedAnswer = null;
+      showHint = false;
+      riddleAnswered = false;
+      gameStarted = false;
+      gameActive = false;
+      score = 0;
+    });
+    
+    riddleTimer?.cancel();
+    _startGame();
+  }
+
   void _showGameOverDialog() {
     double accuracy = totalRiddles > 0
         ? (correctAnswers / totalRiddles) * 100
@@ -1037,39 +1052,115 @@ class _RiddleGameState extends State<RiddleGame> {
             ),
           ),
           actions: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                  Navigator.of(context).pop(); // Close the game and return to session
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF81C784),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+            // Different actions for demo mode vs session mode
+            if (widget.onGameComplete == null) ...[
+              // Demo mode: Show Play Again and Exit buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _resetGame();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF81C784),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Play Again',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Exit game
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.exit_to_app, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Exit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Session mode: Show Next Game button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Exit game and return to session screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF81C784),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

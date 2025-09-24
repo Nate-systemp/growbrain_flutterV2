@@ -98,9 +98,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   void initState() {
     super.initState();
     BackgroundMusicManager().startGameMusic('Memory Grid');
-    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    ).toLowerCase();
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
 
     // Initialize animation controllers
     _shakeController = AnimationController(
@@ -126,15 +124,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   void _initializeGame() {
     // Set difficulty parameters
     switch (_normalizedDifficulty) {
-      case 'easy':
+      case 'Starter':
         totalTargets = 5; // All 5 columns
         timeLeft = 120; // 2 minutes
         break;
-      case 'medium':
+      case 'Growing':
         totalTargets = 5; // All 5 columns
         timeLeft = 150; // 2.5 minutes
         break;
-      case 'hard':
+      case 'Challenged':
         totalTargets = 5; // All 5 columns
         timeLeft = 180; // 3 minutes
         break;
@@ -370,10 +368,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     // Show completion dialog after calling onGameComplete
     if (foundCount >= 5) {
       // Game completed successfully
-      _showGameOverDialog(true);
+      _showGameOverDialog(true, accuracy, completionTime);
     } else {
       // Time up
-      _showGameOverDialog(false);
+      _showGameOverDialog(false, accuracy, completionTime);
     }
   }
 
@@ -783,8 +781,20 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     return Container(); // Return empty container since dialog is handled in _endGame()
   }
 
-  void _showGameOverDialog(bool isCompletion) {
-    final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
+  void _resetGame() {
+    setState(() {
+      currentCol = 0;
+      foundCount = 0;
+      gameStarted = false;
+      gameActive = false;
+      score = 0;
+    });
+    
+    gameTimer?.cancel();
+    _setupGrid();
+  }
+
+  void _showGameOverDialog(bool isCompletion, int accuracy, int completionTime) {
     
     showDialog(
       context: context,
@@ -849,39 +859,115 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
             ),
           ),
           actions: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                  Navigator.of(context).pop(); // Close the game and return to session
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+            // Different actions for demo mode vs session mode
+            if (widget.onGameComplete == null) ...[
+              // Demo mode: Show Play Again and Exit buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _resetGame();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Play Again',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Exit game
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.exit_to_app, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Exit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Session mode: Show Next Game button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Exit game and return to session screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

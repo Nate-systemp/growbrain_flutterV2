@@ -56,7 +56,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   int timeLeft = 0;
   bool gameStarted = false;
   bool gameActive = false;
-  String _normalizedDifficulty = 'easy';
+  String _normalizedDifficulty = 'Starter';
 
   // Text-to-speech instance
   late FlutterTts flutterTts;
@@ -68,7 +68,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
 
   // Enhanced rhyme groups organized by difficulty
   final Map<String, List<Map<String, String>>> rhymeGroups = {
-    'easy': [
+    'Starter': [
       {'cat': 'at', 'hat': 'at', 'bat': 'at', 'mat': 'at'},
       {'dog': 'og', 'frog': 'og', 'log': 'og', 'hog': 'og'},
       {'car': 'ar', 'star': 'ar', 'far': 'ar', 'jar': 'ar'},
@@ -82,7 +82,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       {'boat': 'oat', 'coat': 'oat', 'goat': 'oat', 'float': 'oat'},
       {'rain': 'ain', 'pain': 'ain', 'train': 'ain', 'brain': 'ain'},
     ],
-    'medium': [
+    'Growing': [
       {'window': 'indo', 'bingo': 'indo'},
       {'flower': 'ower', 'tower': 'ower', 'power': 'ower', 'shower': 'ower'},
       {'happy': 'appy', 'snappy': 'appy', 'clappy': 'appy'},
@@ -101,7 +101,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       {'purple': 'urple', 'circle': 'ircle', 'hurdle': 'urdle'},
       {'tiger': 'iger', 'finger': 'inger', 'singer': 'inger'},
     ],
-    'hard': [
+    'Challenged': [
       {'enough': 'uff', 'rough': 'uff', 'tough': 'uff', 'stuff': 'uff'},
       {'weight': 'ate', 'straight': 'ate', 'create': 'ate', 'relate': 'ate'},
       {
@@ -178,22 +178,20 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   }
 
   void _initializeGame() {
-    // Normalize difficulty and set parameters
-    final diffKey = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    ).toLowerCase();
+    // Normalize difficulty
+    String diffKey = DifficultyUtils.normalizeDifficulty(widget.difficulty);
     _normalizedDifficulty = diffKey;
     // Set difficulty parameters
     switch (diffKey) {
-      case 'easy':
+      case 'Starter':
         totalPairs = 3; // 3 pairs = 6 words
-        timeLeft = 0; // No timer for easy
+        timeLeft = 0; // No timer for Starter
         break;
-      case 'medium':
+      case 'Growing':
         totalPairs = 4; // 4 pairs = 8 words
         timeLeft = 120; // 2 minutes
         break;
-      case 'hard':
+      case 'Challenged':
         totalPairs = 5; // 5 pairs = 10 words
         timeLeft = 90; // 1.5 minutes
         break;
@@ -208,7 +206,7 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   void _setupWords(String difficultyKey) {
     currentWords.clear();
     List<Map<String, String>> availableGroups =
-        rhymeGroups[difficultyKey] ?? rhymeGroups['easy']!;
+        rhymeGroups[difficultyKey] ?? rhymeGroups['Starter']!;
 
     // Select random rhyme groups
     List<Map<String, String>> selectedGroups = List.from(availableGroups);
@@ -434,9 +432,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             ? 25
             : 0; // Accuracy bonus for few mistakes
         // Use normalized difficulty key already computed in initializer
-        int difficultyBonus = _normalizedDifficulty == 'hard'
+        int difficultyBonus = _normalizedDifficulty == 'Challenged'
             ? 30
-            : _normalizedDifficulty == 'medium'
+            : _normalizedDifficulty == 'Growing'
             ? 20
             : 10;
 
@@ -482,6 +480,29 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
       secondSelectedWord = null;
       canSelect = true;
     });
+  }
+
+  void _resetGame() {
+    setState(() {
+      score = 0;
+      correctMatches = 0;
+      wrongAttempts = 0;
+      gameStarted = false;
+      gameActive = false;
+      canSelect = true;
+      firstSelectedWord = null;
+      secondSelectedWord = null;
+    });
+    
+    gameTimer?.cancel();
+    
+    // Reset all words
+    for (var word in currentWords) {
+      word.isSelected = false;
+      word.isMatched = false;
+    }
+    
+    _initializeGame();
   }
 
   void _endGame() {
@@ -576,38 +597,115 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
             ),
           ),
           actions: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Just close the dialog
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+            // Different actions for demo mode vs session mode
+            if (widget.onGameComplete == null) ...[
+              // Demo mode: Show Play Again and Exit buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _resetGame();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Play Again',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Exit game
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.exit_to_app, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Exit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Session mode: Show Next Game button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Exit game and return to session screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

@@ -37,7 +37,7 @@ class PuzzleTile {
 
 class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   List<PuzzleTile> tiles = [];
-  int gridSize = 3; // 3x3 for easy/Start
+  int gridSize = 3; // 3x3 for Starter
   int moves = 0;
   int timeElapsed = 0;
   bool gameStarted = false;
@@ -47,7 +47,7 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   late DateTime startTime;
   Timer? gameTimer;
   Timer? nextGameTimer; // Timer for showing next game button
-  String _normalizedDifficulty = 'easy';
+  String _normalizedDifficulty = 'Starter';
 
   // Animation controllers
   late AnimationController _slideController;
@@ -94,18 +94,16 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
 
   void _initializeGame() {
     // Normalize difficulty and set parameters
-    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    ).toLowerCase();
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
 
     switch (_normalizedDifficulty) {
-      case 'easy': // Start
+      case 'Starter': // Start
         gridSize = 3; // 3x3 grid (8 tiles + 1 empty)
         break;
-      case 'medium': // Growing
+      case 'Growing': // Growing
         gridSize = 4; // 4x4 grid (15 tiles + 1 empty)
         break;
-      case 'hard': // Challenged
+      case 'Challenged': // Challenged
         gridSize = 5; // 5x5 grid (24 tiles + 1 empty)
         break;
       default:
@@ -139,7 +137,7 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   void _shufflePuzzle() {
     // Perform valid moves to shuffle (ensures puzzle is solvable)
     int shuffleMoves =
-        gridSize * gridSize * 10; // More shuffles for harder difficulty
+        gridSize * gridSize * 10; // More shuffles for more challenging difficulty
 
     for (int i = 0; i < shuffleMoves; i++) {
       List<int> validMoves = _getValidMoves();
@@ -364,44 +362,121 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
             ],
           ),
           actions: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+            // Different actions for demo mode vs session mode
+            if (widget.onGameComplete == null) ...[
+              // Demo mode: Show Play Again and Exit buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _resetGame();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Play Again',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Exit game
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.exit_to_app, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Exit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Session mode: Show Next Game button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Exit game and return to session screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },
     );
   }
+
 
   void _startTimer() {
     gameTimer = Timer.periodic(Duration(seconds: 1), (timer) {

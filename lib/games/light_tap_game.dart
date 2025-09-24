@@ -94,9 +94,7 @@ class _LightTapGameState extends State<LightTapGame>
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Light Tap');
     // Normalize difficulty once
-    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    );
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
     // DEBUG: trace normalized difficulty at init
     // ignore: avoid_print
     print(
@@ -118,17 +116,17 @@ class _LightTapGameState extends State<LightTapGame>
   void _initializeGame() {
     // Configure game based on normalized internal difficulty value
     switch (_normalizedDifficulty) {
-      case 'Easy':
+      case 'Starter':
         gridSize = 4; // 2x2 grid
         maxSequenceLength = 5;
         sequenceSpeed = 1000;
         break;
-      case 'Medium':
+      case 'Growing':
         gridSize = 6; // 2x3 grid
         maxSequenceLength = 7;
         sequenceSpeed = 800;
         break;
-      case 'Hard':
+      case 'Challenged':
         gridSize = 9; // 3x3 grid
         maxSequenceLength = 10;
         sequenceSpeed = 600;
@@ -146,13 +144,13 @@ class _LightTapGameState extends State<LightTapGame>
 
     // Set total rounds per session according to difficulty
     switch (_normalizedDifficulty) {
-      case 'Easy':
+      case 'Starter':
         totalRounds = 3; // Starter
         break;
-      case 'Medium':
+      case 'Growing':
         totalRounds = 5; // Growing
         break;
-      case 'Hard':
+      case 'Challenged':
         totalRounds = 7; // Challenged
         break;
       default:
@@ -441,6 +439,25 @@ class _LightTapGameState extends State<LightTapGame>
     _showGameOverDialog(completed, accuracy, completionTime);
   }
 
+  void _resetGame() {
+    setState(() {
+      currentLevel = 1;
+      score = 0;
+      correctSequences = 0;
+      wrongTaps = 0;
+      roundsPlayed = 0;
+      sequence.clear();
+      userSequence.clear();
+      isShowingSequence = false;
+      isWaitingForInput = false;
+      gameStarted = false;
+      gameOver = false;
+      showingCountdown = false;
+    });
+    
+    _initializeGame();
+  }
+
   void _showGameOverDialog(bool completed, int accuracy, int completionTime) {
     showDialog(
       context: context,
@@ -504,38 +521,115 @@ class _LightTapGameState extends State<LightTapGame>
           ),
         ),
         actions: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Just close the dialog
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 3,
-              ),
+          // Different actions for demo mode vs session mode
+          if (widget.onGameComplete == null) ...[
+            // Demo mode: Show Play Again and Exit buttons
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.arrow_forward_rounded, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Next Game',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _resetGame();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.refresh, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Play Again',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        Navigator.of(context).pop(); // Exit game
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.exit_to_app, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Exit',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          ] else ...[
+            // Session mode: Show Next Game button
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Exit game and return to session screen
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

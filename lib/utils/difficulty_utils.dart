@@ -1,44 +1,33 @@
 /// Utility functions for handling difficulty levels across games
 class DifficultyUtils {
-  /// Converts internal difficulty values to display names
-  static String getDifficultyDisplayName(String difficulty) {
+  /// Normalizes any difficulty input to the standard system
+  static String normalizeDifficulty(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':
+      case 'start':
+      case 'starter':
         return 'Starter';
       case 'medium':
+      case 'grow':
+      case 'growing':
         return 'Growing';
       case 'hard':
+      case 'challenge':
+      case 'challenged':
+      case 'challange': // tolerate common typo
         return 'Challenged';
       default:
         return 'Starter';
     }
   }
 
-  /// Converts display names back to internal values (if needed)
+  /// Gets display name (same as normalize now)
+  static String getDifficultyDisplayName(String difficulty) {
+    return normalizeDifficulty(difficulty);
+  }
+
+  /// Converts from any format to normalized format
   static String getDifficultyInternalValue(String displayName) {
-    switch (displayName.toLowerCase()) {
-      case 'starter':
-      case 'start':
-        return 'Easy';
-      case 'growing':
-      case 'grow':
-        return 'Medium';
-      case 'challenged':
-      case 'challenge':
-      case 'challange': // tolerate common typo
-        return 'Hard';
-      default:
-        // If caller passes internal values already (easy/medium/hard), pass through
-        switch (displayName.toLowerCase()) {
-          case 'easy':
-            return 'Easy';
-          case 'medium':
-            return 'Medium';
-          case 'hard':
-            return 'Hard';
-          default:
-            return 'Easy';
-        }
-    }
+    return normalizeDifficulty(displayName);
   }
 }

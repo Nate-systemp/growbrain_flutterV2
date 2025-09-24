@@ -5,7 +5,7 @@ import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
-enum TicTacToeDifficulty { easy, medium, hard }
+enum TicTacToeDifficulty { starter, growing, challenged }
 
 class TicTacToeGameScreen extends StatefulWidget {
   final String difficulty;
@@ -17,8 +17,7 @@ class TicTacToeGameScreen extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })
-  onGameComplete;
+  })? onGameComplete;
 
   const TicTacToeGameScreen({
     Key? key,
@@ -60,22 +59,20 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('TicTacToe');
     // Normalize incoming/display difficulty and convert to enum
-    final _diff = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    ).toLowerCase();
+    final _diff = DifficultyUtils.normalizeDifficulty(widget.difficulty).toLowerCase();
     // Convert string difficulty to enum
     switch (_diff) {
-      case 'easy':
-        difficulty = TicTacToeDifficulty.easy;
+      case 'starter':
+        difficulty = TicTacToeDifficulty.starter;
         break;
-      case 'medium':
-        difficulty = TicTacToeDifficulty.medium;
+      case 'growing':
+        difficulty = TicTacToeDifficulty.growing;
         break;
-      case 'hard':
-        difficulty = TicTacToeDifficulty.hard;
+      case 'challenged':
+        difficulty = TicTacToeDifficulty.challenged;
         break;
       default:
-        difficulty = TicTacToeDifficulty.easy;
+        difficulty = TicTacToeDifficulty.starter;
     }
     _loadRecords();
   }
@@ -136,6 +133,13 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
     });
   }
 
+  void _resetGame() {
+    _resetMatch();
+    setState(() {
+      gameStarted = false;
+    });
+  }
+
   void _startGame() {
     setState(() {
       gameStarted = true;
@@ -176,7 +180,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
     // Easy: random, Medium: block/win, Hard: minimax
     List<int> empty = [];
     for (int i = 0; i < 9; i++) if (board[i] == '') empty.add(i);
-    if (difficulty == TicTacToeDifficulty.easy) {
+    if (difficulty == TicTacToeDifficulty.starter) {
       empty.shuffle();
       return empty.first;
     }
@@ -197,7 +201,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
       }
       board[i] = '';
     }
-    if (difficulty == TicTacToeDifficulty.medium) {
+    if (difficulty == TicTacToeDifficulty.growing) {
       empty.shuffle();
       return empty.first;
     }
@@ -316,46 +320,122 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> {
               '$result\n\nPlayer: $matchPlayerWins\nAI: $matchAIWins\nDraws: $matchDraws',
             ),
             actions: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).pop();
-                    widget.onGameComplete(
-                      accuracy: 100 * matchPlayerWins ~/ matchGame,
-                      completionTime: 30 * matchGame,
-                      challengeFocus: widget.challengeFocus,
-                      gameName: widget.gameName,
-                      difficulty: widget.difficulty,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 3,
-                  ),
+              // Different actions for demo mode vs session mode
+              if (widget.onGameComplete == null) ...[
+                // Demo mode: Show Play Again and Exit buttons
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Next Game',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _resetGame();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2196F3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.refresh, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Play Again',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop(); // Close dialog
+                            Navigator.of(context).pop(); // Exit game
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.exit_to_app, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Exit',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ] else ...[
+                // Session mode: Show Next Game button
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).pop();
+                      widget.onGameComplete!(
+                        accuracy: 100 * matchPlayerWins ~/ matchGame,
+                        completionTime: 30 * matchGame,
+                        challengeFocus: widget.challengeFocus,
+                        gameName: widget.gameName,
+                        difficulty: widget.difficulty,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2196F3),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.arrow_forward_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Next Game',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );

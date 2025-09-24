@@ -86,9 +86,7 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Fruit Shuffle');
     difficulty = widget.difficulty;
-    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    );
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initializeGame();
@@ -125,10 +123,11 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
   }
 
   void _setupDifficulty() {
-    if (difficulty == 'Easy') {
+    final normalizedDifficulty = DifficultyUtils.normalizeDifficulty(difficulty);
+    if (normalizedDifficulty == 'Starter') {
       totalFruits = 3;
       maxWrongAttempts = 5;
-    } else if (difficulty == 'Medium') {
+    } else if (normalizedDifficulty == 'Growing') {
       totalFruits = 4;
       maxWrongAttempts = 4;
     } else {
@@ -1131,6 +1130,33 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
     );
   }
 
+  void _resetGame() {
+    setState(() {
+      gameStarted = false;
+      shuffling = false;
+      matchingPhase = false;
+      gameCompleted = false;
+      wrongAttempts = 0;
+      hintsUsed = 0;
+      totalAttempts = 0;
+      correctMatchesCount = 0;
+      shuffleAnimationStep = 0;
+      _isAnimating = false;
+      _animatingFruit = null;
+    });
+    
+    stopwatch.reset();
+    shuffleTimer?.cancel();
+    
+    // Reset bags
+    for (var bag in bags) {
+      bag.placedFruit = null;
+      bag.isRevealed = false;
+    }
+    
+    _initializeGame();
+  }
+
   void _showGameOverDialog(bool success) {
     final accuracy = totalAttempts > 0
         ? ((correctMatchesCount / (totalAttempts * totalFruits)) * 100).round()
@@ -1200,39 +1226,115 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
             ),
           ),
           actions: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                  Navigator.of(context).pop(); // Close the game and return to session
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF64744B),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+            // Different actions for demo mode vs session mode
+            if (widget.onGameComplete == null) ...[
+              // Demo mode: Show Play Again and Exit buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _resetGame();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF64744B),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Play Again',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Exit game
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.exit_to_app, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Exit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Session mode: Show Next Game button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Exit game and return to session screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF64744B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Next Game',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

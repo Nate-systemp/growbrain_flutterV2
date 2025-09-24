@@ -283,7 +283,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       );
     }
     if (result == 'play' && selectedGames.contains('Find Me')) {
-      final difficulty = gameDifficulties['Find Me'] ?? 'Easy';
+      final difficulty = gameDifficulties['Find Me'] ?? 'Starter';
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => FindMeGame(
@@ -367,7 +367,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
       barrierDismissible: false,
       builder: (ctx) => SetDifficultyModal(
         game: game,
-        initial: gameDifficulties[game] ?? 'Easy',
+        initial: gameDifficulties[game] ?? 'Starter',
       ),
     );
     if (result != null) {
@@ -403,6 +403,12 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     required String gameName,
     required String difficulty,
   }) async {
+    // Prevent duplicate game records for the same game in this session
+    if (completedGames.contains(gameName)) {
+      print('Game $gameName already completed in this session, skipping duplicate record');
+      return;
+    }
+    
     final user = FirebaseAuth.instance.currentUser;
     final studentId = widget.student['id'] ?? widget.student['fullName'];
     final now = DateTime.now();
@@ -425,11 +431,15 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
         .collection('records')
         .add(record);
 
-    // Track session record
+    // Track session record - only add if not already completed
     setState(() {
       sessionRecords.add(record);
       completedGames.add(gameName);
     });
+
+    print('Session progress: ${completedGames.length}/${selectedGames.length} games completed');
+    print('Completed games: ${completedGames.toList()}');
+    print('Session records count: ${sessionRecords.length}');
 
     // Check if all games are completed
     if (completedGames.length >= selectedGames.length) {
@@ -444,86 +454,6 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
           ),
         );
       }
-      return;
-    }
-
-    // Show individual game completion dialog only if single game
-    if (selectedGames.length == 1) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Game Complete!'),
-          content: Text(
-            'Accuracy: $accuracy%\nCompletion Time: ${completionTime}s',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      await showDialog(
-        context: context,
-        builder: (ctx) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            width: 600,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.blueAccent, width: 2),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Game Records',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Date: ${record['date']}'),
-                          Text('Challenge Focus: ${record['challengeFocus']}'),
-                          Text('Game: ${record['game']}'),
-                          Text('Difficulty: ${record['difficulty']}'),
-                          Text('Accuracy: ${record['accuracy']}'),
-                          Text('Completion Time: ${record['completionTime']}'),
-                          Text('Last Played: ${record['lastPlayed']}'),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: SizedBox(
-                        width: 120,
-                        height: 120,
-                        child: CustomPaint(painter: _PieChartPainter()),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red, size: 32),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
     }
   }
 
@@ -2671,7 +2601,7 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Text(
-                                              DifficultyUtils.getDifficultyDisplayName(widget.gameDifficulties[g] ?? 'Easy'),
+                                              DifficultyUtils.getDifficultyDisplayName(widget.gameDifficulties[g] ?? 'Starter'),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 color: Colors.white,
@@ -2808,11 +2738,11 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
 
   Color _getColorForDifficulty(String difficulty) {
     switch (difficulty) {
-      case 'Easy':
+      case 'Starter':
         return Colors.green;
-      case 'Medium':
+      case 'Growing':
         return Colors.orange;
-      case 'Hard':
+      case 'Challenged':
         return Colors.red;
       default:
         return Colors.grey;
@@ -2821,11 +2751,11 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
 
   IconData _getIconForDifficulty(String difficulty) {
     switch (difficulty) {
-      case 'Easy':
+      case 'Starter':
         return Icons.sentiment_satisfied;
-      case 'Medium':
+      case 'Growing':
         return Icons.sentiment_neutral;
-      case 'Hard':
+      case 'Challenged':
         return Icons.sentiment_very_dissatisfied;
       default:
         return Icons.help_outline;
@@ -2834,11 +2764,11 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
 
   String _getDescriptionForDifficulty(String difficulty) {
     switch (difficulty) {
-      case 'Easy':
+      case 'Starter':
         return 'Perfect for beginners';
-      case 'Medium':
+      case 'Growing':
         return 'Good for developing skills';
-      case 'Hard':
+      case 'Challenged':
         return 'For advanced learners';
       default:
         return '';
@@ -2918,32 +2848,32 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
                 Column(
                   children: [
                     _DifficultyOption(
-                      value: 'Easy',
+                      value: 'Starter',
                       groupValue: _difficulty,
                       title: 'Starter',
-                      description: _getDescriptionForDifficulty('Easy'),
-                      icon: _getIconForDifficulty('Easy'),
-                      color: _getColorForDifficulty('Easy'),
+                      description: _getDescriptionForDifficulty('Starter'),
+                      icon: _getIconForDifficulty('Starter'),
+                      color: _getColorForDifficulty('Starter'),
                       onChanged: (v) => setState(() => _difficulty = v!),
                     ),
                     const SizedBox(height: 10),
                     _DifficultyOption(
-                      value: 'Medium',
+                      value: 'Growing',
                       groupValue: _difficulty,
                       title: 'Growing',
-                      description: _getDescriptionForDifficulty('Medium'),
-                      icon: _getIconForDifficulty('Medium'),
-                      color: _getColorForDifficulty('Medium'),
+                      description: _getDescriptionForDifficulty('Growing'),
+                      icon: _getIconForDifficulty('Growing'),
+                      color: _getColorForDifficulty('Growing'),
                       onChanged: (v) => setState(() => _difficulty = v!),
                     ),
                     const SizedBox(height: 10),
                     _DifficultyOption(
-                      value: 'Hard',
+                      value: 'Challenged',
                       groupValue: _difficulty,
                       title: 'Challenged',
-                      description: _getDescriptionForDifficulty('Hard'),
-                      icon: _getIconForDifficulty('Hard'),
-                      color: _getColorForDifficulty('Hard'),
+                      description: _getDescriptionForDifficulty('Challenged'),
+                      icon: _getIconForDifficulty('Challenged'),
+                      color: _getColorForDifficulty('Challenged'),
                       onChanged: (v) => setState(() => _difficulty = v!),
                     ),
                   ],

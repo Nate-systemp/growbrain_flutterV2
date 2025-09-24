@@ -75,7 +75,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   bool showingResult = false;
   String resultText = '';
   bool isCorrectResult = false;
-  String _normalizedDifficulty = 'Easy';
+  String _normalizedDifficulty = 'Starter';
 
   // App color scheme
   final Color primaryColor = const Color(0xFF5B6F4A);
@@ -89,11 +89,11 @@ class _WhoMovedGameState extends State<WhoMovedGame>
 
   int get numberOfShapes {
     switch (_normalizedDifficulty) {
-      case 'Easy':
+      case 'Starter':
         return 3;
-      case 'Medium':
+      case 'Growing':
         return 5;
-      case 'Hard':
+      case 'Challenged':
         return 8;
       default:
         return 3;
@@ -103,13 +103,13 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   int get timerDuration {
     int baseDuration;
     switch (_normalizedDifficulty) {
-      case 'Easy':
+      case 'Starter':
         baseDuration = 30;
         break;
-      case 'Medium':
+      case 'Growing':
         baseDuration = 25;
         break;
-      case 'Hard':
+      case 'Challenged':
         baseDuration = 20;
         break;
       default:
@@ -122,13 +122,13 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   Duration get shakeDuration {
     double baseDurationSeconds;
     switch (_normalizedDifficulty) {
-      case 'Easy':
+      case 'Starter':
         baseDurationSeconds = 1.0;
         break;
-      case 'Medium':
+      case 'Growing':
         baseDurationSeconds = 0.8;
         break;
-      case 'Hard':
+      case 'Challenged':
         baseDurationSeconds = 0.6;
         break;
       default:
@@ -145,9 +145,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     gameStartTime = DateTime.now();
     BackgroundMusicManager().startGameMusic('Who Moved?');
     // Normalize difficulty (accept display names like "Growing"/"Starter")
-    _normalizedDifficulty = DifficultyUtils.getDifficultyInternalValue(
-      widget.difficulty,
-    );
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
 
     // DEBUG: log normalized difficulty
     // ignore: avoid_print
@@ -513,38 +511,115 @@ class _WhoMovedGameState extends State<WhoMovedGame>
           ),
         ),
         actions: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Just close the dialog
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 3,
-              ),
+          // Different actions for demo mode vs session mode
+          if (widget.onGameComplete == null) ...[
+            // Demo mode: Show Play Again and Exit buttons
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.arrow_forward_rounded, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Next Game',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _resetGame();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.refresh, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Play Again',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        Navigator.of(context).pop(); // Exit game
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.exit_to_app, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Exit',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          ] else ...[
+            // Session mode: Show Next Game button
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Exit game and return to session screen
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Next Game',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
