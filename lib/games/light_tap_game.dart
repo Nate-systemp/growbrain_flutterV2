@@ -1,3 +1,4 @@
+// ...existing code...
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:async';
@@ -49,7 +50,10 @@ class _LightTapGameState extends State<LightTapGame>
   int roundsPlayed = 0;
   int totalRounds = 5;
   DateTime gameStartTime = DateTime.now();
-
+  bool showingGo = false; //bago
+  late final AnimationController _goController;
+  late final Animation<double> _goOpacity;
+  late final Animation<double> _goScale;
   // Game configuration based on difficulty
   int gridSize = 4; // 2x2 grid by default
   int sequenceLength = 1;
@@ -64,37 +68,48 @@ class _LightTapGameState extends State<LightTapGame>
   List<Animation<double>> scaleAnimations = [];
 
   // App color scheme
-  final Color primaryColor = Color(0xFF5B6F4A);
-  final Color accentColor = Color(0xFFFFD740);
-  final Color backgroundColor = Color(0xFFF5F5DC);
+  final Color primaryColor = const Color(0xFF5B6F4A);
+  final Color accentColor = const Color(0xFFFFD740);
+  final Color backgroundColor = const Color(0xFF5B6F4A); // darker game bg
   final Color surfaceColor = Colors.white;
-  final Color errorColor = Color(0xFFE57373);
-  final Color successColor = Color(0xFF81C784);
+  final Color errorColor = const Color(0xFFE57373);
+  final Color successColor = const Color(0xFF81C784);
   // Header gradient end color (matches Find Me)
-  final Color headerGradientEnd = Color(0xFF6B7F5A);
+  final Color headerGradientEnd = const Color(0xFF6B7F5A);
 
   // Light colors for the game
   final List<Color> lightColors = [
-    Color(0xFF4CAF50), // Green
-    Color(0xFF2196F3), // Blue
-    Color(0xFFFF9800), // Orange
-    Color(0xFF9C27B0), // Purple
-    Color(0xFFF44336), // Red
-    Color(0xFFFFEB3B), // Yellow
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFF795548), // Brown
-    Color(0xFFE91E63), // Pink
+    const Color(0xFF4CAF50), // Green
+    const Color(0xFF2196F3), // Blue
+    const Color(0xFFFF9800), // Orange
+    const Color(0xFF9C27B0), // Purple
+    const Color(0xFFF44336), // Red
+    const Color(0xFFFFEB3B), // Yellow
+    const Color(0xFF00BCD4), // Cyan
+    const Color(0xFF795548), // Brown
+    const Color(0xFFE91E63), // Pink
   ];
 
-  final Color inactiveLightColor = Color(0xFFE0E0E0);
+  final Color inactiveLightColor = const Color(0xFFE0E0E0);
 
   @override
   void initState() {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Light Tap');
+//new
+    _goController = AnimationController(
+     vsync: this,
+     duration: const Duration(milliseconds: 350),
+   );
+   _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+   _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
+     CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
+   );
     // Normalize difficulty once
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
+      widget.difficulty,
+    );
     // DEBUG: trace normalized difficulty at init
     // ignore: avoid_print
     print(
@@ -108,6 +123,7 @@ class _LightTapGameState extends State<LightTapGame>
     for (var controller in animationControllers) {
       controller.dispose();
     }
+    _goController.dispose();//bgo
     // Stop background music when leaving the game
     BackgroundMusicManager().stopMusic();
     super.dispose();
@@ -162,7 +178,7 @@ class _LightTapGameState extends State<LightTapGame>
     animationControllers = List.generate(
       gridSize,
       (index) => AnimationController(
-        duration: Duration(milliseconds: 300), // smooth color transition
+        duration: const Duration(milliseconds: 300), // smooth color transition
         vsync: this,
       ),
     );
@@ -170,10 +186,7 @@ class _LightTapGameState extends State<LightTapGame>
     scaleAnimations = animationControllers
         .map(
           (controller) => Tween<double>(begin: 1.0, end: 1.0).animate(
-            CurvedAnimation(
-              parent: controller,
-              curve: Curves.easeInOut,
-            ),
+            CurvedAnimation(parent: controller, curve: Curves.easeInOut),
           ),
         )
         .toList();
@@ -184,21 +197,21 @@ class _LightTapGameState extends State<LightTapGame>
       showingCountdown = true;
       countdownNumber = 3;
     });
-    
+
     _showCountdown();
   }
 
   void _showCountdown() async {
     for (int i = 3; i >= 1; i--) {
       if (!mounted) return;
-      
+
       setState(() {
         countdownNumber = i;
       });
-      
-      await Future.delayed(Duration(milliseconds: 1000));
+
+      await Future.delayed(const Duration(milliseconds: 1000));
     }
-    
+
     // After countdown, start the actual game
     if (mounted) {
       setState(() {
@@ -251,7 +264,7 @@ class _LightTapGameState extends State<LightTapGame>
     });
 
     // Wait a moment before starting
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Show each light in sequence
     for (int i = 0; i < sequence.length; i++) {
@@ -273,12 +286,27 @@ class _LightTapGameState extends State<LightTapGame>
 
       await Future.delayed(Duration(milliseconds: sequenceSpeed ~/ 2));
     }
+    //eto bago sa
+    if (!mounted) return;
+    await _showGoOverlay();
 
     // Ready for user input
     setState(() {
       isShowingSequence = false;
       isWaitingForInput = true;
     });
+  }
+
+  //bago sa baba
+  Future<void> _showGoOverlay() async {
+   if (!mounted) return;
+    setState(() => showingGo = true);
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingGo = false);
   }
 
   void _onLightTap(int index) {
@@ -293,7 +321,7 @@ class _LightTapGameState extends State<LightTapGame>
     });
 
     // Turn off light after a short delay
-    Future.delayed(Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         setState(() {
           lightStates[index] = false;
@@ -329,7 +357,7 @@ class _LightTapGameState extends State<LightTapGame>
           _showFeedback(true);
 
           // If we've completed the required rounds, end session; otherwise continue
-          Future.delayed(Duration(milliseconds: 1500), () {
+          Future.delayed(const Duration(milliseconds: 1500), () {
             if (!mounted) return;
             if (roundsPlayed >= totalRounds) {
               _endGame(true);
@@ -352,7 +380,7 @@ class _LightTapGameState extends State<LightTapGame>
         _showFeedback(false);
 
         // Continue to next round unless we've finished the configured rounds
-        Future.delayed(Duration(milliseconds: 1500), () {
+        Future.delayed(const Duration(milliseconds: 1500), () {
           if (!mounted) return;
           if (roundsPlayed >= totalRounds) {
             _endGame(true);
@@ -379,7 +407,7 @@ class _LightTapGameState extends State<LightTapGame>
               color: isCorrect ? successColor : errorColor,
               size: 64,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               isCorrect ? 'Great Job!' : 'Try Again!',
               style: TextStyle(
@@ -389,9 +417,9 @@ class _LightTapGameState extends State<LightTapGame>
               ),
             ),
             if (isCorrect) ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Level ${currentLevel} Complete!',
+                'Level $currentLevel Complete!',
                 style: TextStyle(fontSize: 16, color: primaryColor),
               ),
             ],
@@ -401,7 +429,7 @@ class _LightTapGameState extends State<LightTapGame>
     );
 
     // Auto-close dialog
-    Future.delayed(Duration(milliseconds: 1000), () {
+    Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -454,7 +482,7 @@ class _LightTapGameState extends State<LightTapGame>
       gameOver = false;
       showingCountdown = false;
     });
-    
+
     _initializeGame();
   }
 
@@ -464,9 +492,7 @@ class _LightTapGameState extends State<LightTapGame>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Column(
           children: [
             Container(
@@ -516,7 +542,11 @@ class _LightTapGameState extends State<LightTapGame>
               const SizedBox(height: 12),
               _buildStatRow(Icons.timer, 'Time', '${completionTime}s'),
               const SizedBox(height: 12),
-              _buildStatRow(Icons.trending_up, 'Level Reached', '$currentLevel'),
+              _buildStatRow(
+                Icons.trending_up,
+                'Level Reached',
+                '$currentLevel',
+              ),
             ],
           ),
         ),
@@ -545,10 +575,10 @@ class _LightTapGameState extends State<LightTapGame>
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.refresh, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
+                        children: const [
+                          Icon(Icons.refresh, size: 20),
+                          SizedBox(width: 8),
+                          Text(
                             'Play Again',
                             style: TextStyle(
                               fontSize: 16,
@@ -567,7 +597,7 @@ class _LightTapGameState extends State<LightTapGame>
                         Navigator.of(context).pop(); // Exit game
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[600],
+                        backgroundColor: Colors.grey,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -577,10 +607,10 @@ class _LightTapGameState extends State<LightTapGame>
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.exit_to_app, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
+                        children: const [
+                          Icon(Icons.exit_to_app, size: 20),
+                          SizedBox(width: 8),
+                          Text(
                             'Exit',
                             style: TextStyle(
                               fontSize: 16,
@@ -602,7 +632,9 @@ class _LightTapGameState extends State<LightTapGame>
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Exit game and return to session screen
+                  Navigator.of(
+                    context,
+                  ).pop(); // Exit game and return to session screen
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
@@ -615,10 +647,10 @@ class _LightTapGameState extends State<LightTapGame>
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
+                  children: const [
+                    Icon(Icons.arrow_forward_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text(
                       'Next Game',
                       style: TextStyle(
                         fontSize: 18,
@@ -727,147 +759,145 @@ class _LightTapGameState extends State<LightTapGame>
     );
   }
 
+  // ---------- NEW: Updated build to match requested circular UI ----------
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _handleBackButton(context);
-        }
+    return WillPopScope(
+      onWillPop: () async {
+        _handleBackButton(context);
+        return false;
       },
-      child: Scaffold(
+      // ...existing code...
+     child: Scaffold(
+        extendBodyBehindAppBar: true,
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          title: Text(
-            'Light Tap - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: primaryColor,
-          iconTheme: IconThemeData(color: Colors.white),
+          // keep title hidden, make app bar transparent so background image shows through
+          title: const SizedBox.shrink(),
+          backgroundColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: Colors.white),
           elevation: 0,
-          automaticallyImplyLeading: false, // This removes the back button
+          automaticallyImplyLeading: false,
         ),
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
+
+        //Use a Container with DecorationImage so assets/background.png is the screen background
+        // ...existing code...
+        //Use a Container with DecorationImage so assets/background.png is the screen background
+        body: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor, // fallback color
+            image: const DecorationImage(
+              image: AssetImage('assets/background.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: SafeArea(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                // Game info (styled to match Find Me theme)
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor, headerGradientEnd],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                // main UI column
+                Column(
+                  children: [
+                    const SizedBox(height: 18),
+                    // Top info row: labels above, larger equal circles for Round / Correct / Level
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _infoCircle(
+                          label: 'Round',
+                          value: '$currentLevel/$totalRounds',
+                          circleSize: 110,
+                          valueFontSize: 30,
+                          labelFontSize: 26,
+                        ),
+                        _infoCircle(
+                          label: 'Correct',
+                          value: '$correctSequences',
+                          circleSize: 110,
+                          valueFontSize: 30,
+                          labelFontSize: 26,
+                        ),
+                        _infoCircle(
+                          label: 'Level',
+                          value: '$currentLevel',
+                          circleSize: 110,
+                          valueFontSize: 30,
+                          labelFontSize: 26,
+                        ),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
-                        children: [
-                          Icon(Icons.flag, color: accentColor, size: 20),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Level',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '$currentLevel',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Icon(Icons.score, color: accentColor, size: 20),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Score',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '$score',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Icon(Icons.list, color: accentColor, size: 20),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Sequence',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '${userSequence.length}/${sequenceLength}',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 4),
+                    // Instruction area (center)
+                    Expanded(
+                      child: showingCountdown
+                          ? _buildCountdownScreen()
+                          : (gameStarted
+                                ? _buildGameGrid()
+                                : _buildStartScreenWithInstruction()),
+                    ),
+                    // bottom spacer (score circle removed)
+                    const SizedBox(height: 8),
+                  ],
                 ),
 
-                SizedBox(height: 24),
-
-                // Status text
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _getStatusText(),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                // "Go!" overlay shown briefly after sequence
+                 if (showingGo)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: FadeTransition(
+                        opacity: _goOpacity,
+                        child: Container(
+                          color: Colors.black.withOpacity(0.12), // gentler dim
+                          child: Center(
+                            child: ScaleTransition(
+                              scale: _goScale,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Get Ready!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Yellow GO circle with solid (no-blur) shadow
+                                  Container(
+                                    width: 140,
+                                    height: 140,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: accentColor, // yellow circle
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.30),
+                                          offset: const Offset(0, 8),
+                                          blurRadius: 0,    // no blur -> solid shadow edge
+                                          spreadRadius: 8,  // thickness of solid shadow
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'GO!',
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontSize: 54,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-
-                SizedBox(height: 24),
-
-                // Game grid
-                Expanded(
-                  child: showingCountdown 
-                      ? _buildCountdownScreen()
-                      : (gameStarted ? _buildGameGrid() : _buildStartScreen()),
-                ),
               ],
             ),
           ),
@@ -876,32 +906,180 @@ class _LightTapGameState extends State<LightTapGame>
     );
   }
 
-  String _getStatusText() {
-    if (!gameStarted) {
-      return 'Tap "Start Game" to begin!';
-    } else if (isShowingSequence) {
-      return 'Watch the sequence carefully...';
-    } else if (isWaitingForInput) {
-      return 'Repeat the sequence by tapping the lights!';
-    } else {
-      return 'Get ready for the next sequence...';
-    }
+  // ...existing code...
+  Widget _buildStartScreenWithInstruction() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // NEW: Game title above the eye icon
+          Text(
+            'Light Tap',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 38,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          const Icon(
+            Icons.remove_red_eye_outlined,
+            size: 80,
+            color: Colors.white70,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Watch carefully!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36.0),
+            child: Text(
+              'You will see $sequenceLength lights. One of them will move briefly. Can you spot which one moved?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.95),
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          ElevatedButton(
+            onPressed: gameStarted ? null : _startGame,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+              elevation: 2,
+            ),
+            child: const Text(
+              'Start !',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+  // ...existing code...
+
+  // ...existing code...
+  Widget _infoCircle({
+    required String label,
+    required String value,
+    double circleSize = 68,
+    double valueFontSize = 18,
+    double labelFontSize = 12,
+  }) {
+    return Column(
+      children: [
+        // Label on top (larger, bold)
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Circle with sharp solid drop shadow (blurRadius = 0)
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 6),
+                blurRadius: 0, // sharp solid shadow
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // ...existing code...
+
+  Widget _bigCircle({required Widget child}) {
+    return Container(
+      width: 140,
+      height: 140,
+      decoration: BoxDecoration(
+        color: headerGradientEnd,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            offset: const Offset(0, 6),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+
+  Widget _smallCircle({required Widget child}) {
+    return Container(
+      width: 84,
+      height: 84,
+      decoration: BoxDecoration(
+        color: primaryColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            offset: const Offset(0, 4),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+
+  // ---------- Existing UI builders reused below ----------
 
   Widget _buildCountdownScreen() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
+          const Text(
             'Get Ready!',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
-              color: primaryColor,
+              color: Colors.white,
             ),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           Container(
             width: 150,
             height: 150,
@@ -927,87 +1105,13 @@ class _LightTapGameState extends State<LightTapGame>
               ),
             ),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           Text(
             'The game will start soon...',
             style: TextStyle(
               fontSize: 18,
-              color: primaryColor.withOpacity(0.7),
+              color: Colors.white.withOpacity(0.9),
               fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStartScreen() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.lightbulb_outline, size: 100, color: accentColor),
-          SizedBox(height: 24),
-          Text(
-            'Light Tap Memory Game',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(16),
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'How to Play:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  '1. Watch the sequence of lights\n'
-                  '2. Memorize the pattern\n'
-                  '3. Tap the lights in the same order\n'
-                  '4. Sequences get longer each level!',
-                  style: TextStyle(fontSize: 14, color: primaryColor),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _startGame,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            child: Text(
-              'Start Game',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1022,130 +1126,127 @@ class _LightTapGameState extends State<LightTapGame>
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxSize = math.min(constraints.maxWidth, constraints.maxHeight);
-        final gridSize = maxSize * 0.8;
-        final buttonSize = (gridSize / math.max(columns, rows)) - 12;
+        final gridSz = maxSize * 0.8;
+        final buttonSize = (gridSz / math.max(columns, rows)) - 12;
 
         return Center(
-          child: Container(
-            width: gridSize,
-            height: gridSize,
+          child: SizedBox(
+            width: gridSz,
+            height: gridSz,
             child: GridView.builder(
-              physics: NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columns,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
-              itemCount: this.gridSize,
+              itemCount: gridSize,
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () => _onLightTap(index),
                   child: AnimatedScale(
-                    scale: tapStates[index] ? 0.95 : (lightStates[index] ? 1.05 : 1.0),
-                    duration: Duration(milliseconds: 150),
+                    scale: tapStates[index]
+                        ? 0.95
+                        : (lightStates[index] ? 1.05 : 1.0),
+                    duration: const Duration(milliseconds: 150),
                     curve: Curves.easeInOut,
                     child: AnimatedContainer(
-                    duration: Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      gradient: lightStates[index]
-                          ? LinearGradient(
-                              colors: [
-                                lightColors[index % lightColors.length],
-                                lightColors[index % lightColors.length].withOpacity(0.8),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : LinearGradient(
-                              colors: [
-                                Colors.white,
-                                Color(0xFFF5F5F5),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: lightStates[index]
-                            ? lightColors[index % lightColors.length].withOpacity(0.3)
-                            : Color(0xFFE0E0E0),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      decoration: BoxDecoration(
+                        gradient: lightStates[index]
+                            ? LinearGradient(
+                                colors: [
+                                  lightColors[index % lightColors.length],
+                                  lightColors[index % lightColors.length]
+                                      .withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : const LinearGradient(
+                                colors: [Colors.white, Color(0xFFF5F5F5)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
                           color: lightStates[index]
-                              ? lightColors[index % lightColors.length].withOpacity(0.4)
-                              : Colors.black.withOpacity(0.08),
-                          blurRadius: lightStates[index] ? 12 : 6,
-                          offset: Offset(0, lightStates[index] ? 6 : 3),
-                          spreadRadius: lightStates[index] ? 2 : 0,
+                              ? lightColors[index % lightColors.length]
+                                    .withOpacity(0.3)
+                              : const Color(0xFFE0E0E0),
+                          width: 2,
                         ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // Background pattern
-                        if (lightStates[index])
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                gradient: RadialGradient(
-                                  colors: [
-                                    Colors.white.withOpacity(0.3),
-                                    Colors.transparent,
-                                  ],
-                                  center: Alignment.topLeft,
-                                  radius: 1.0,
+                        boxShadow: [
+                          BoxShadow(
+                            color: lightStates[index]
+                                ? lightColors[index % lightColors.length]
+                                      .withOpacity(0.4)
+                                : Colors.black.withOpacity(0.08),
+                            blurRadius: lightStates[index] ? 12 : 6,
+                            offset: Offset(0, lightStates[index] ? 6 : 3),
+                            spreadRadius: lightStates[index] ? 2 : 0,
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          if (lightStates[index])
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.white.withOpacity(0.3),
+                                      Colors.transparent,
+                                    ],
+                                    center: Alignment.topLeft,
+                                    radius: 1.0,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        // Main content
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Icon based on index
-                              Icon(
-                                _getLightIcon(index),
-                                size: buttonSize * 0.25,
-                                color: lightStates[index]
-                                    ? Colors.white
-                                    : primaryColor.withOpacity(0.7),
-                              ),
-                              SizedBox(height: 4),
-                              // Light name
-                              Text(
-                                _getLightName(index),
-                                style: TextStyle(
-                                  fontSize: buttonSize * 0.12,
-                                  fontWeight: FontWeight.w600,
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _getLightIcon(index),
+                                  size: buttonSize * 0.25,
                                   color: lightStates[index]
                                       ? Colors.white
-                                      : primaryColor.withOpacity(0.8),
+                                      : primaryColor.withOpacity(0.7),
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  _getLightName(index),
+                                  style: TextStyle(
+                                    fontSize: buttonSize * 0.12,
+                                    fontWeight: FontWeight.w600,
+                                    color: lightStates[index]
+                                        ? Colors.white
+                                        : primaryColor.withOpacity(0.8),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        // Pulse effect when active
-                        if (lightStates[index])
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.6),
-                                  width: 1,
+                          if (lightStates[index])
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.6),
+                                    width: 1,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -1162,9 +1263,9 @@ class _LightTapGameState extends State<LightTapGame>
     setState(() {
       tapStates[index] = true;
     });
-    
+
     // Reset tap state after animation
-    Future.delayed(Duration(milliseconds: 150), () {
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
         setState(() {
           tapStates[index] = false;
@@ -1176,15 +1277,15 @@ class _LightTapGameState extends State<LightTapGame>
   // Helper method to get icon for each light position
   IconData _getLightIcon(int index) {
     final icons = [
-      Icons.star,           // 0 - Star
-      Icons.favorite,       // 1 - Heart  
-      Icons.flash_on,       // 2 - Lightning
+      Icons.star, // 0 - Star
+      Icons.favorite, // 1 - Heart
+      Icons.flash_on, // 2 - Lightning
       Icons.brightness_high, // 3 - Sun
-      Icons.nightlight,     // 4 - Moon
+      Icons.nightlight, // 4 - Moon
       Icons.local_fire_department, // 5 - Fire
-      Icons.water_drop,     // 6 - Water
-      Icons.eco,            // 7 - Leaf
-      Icons.diamond,        // 8 - Diamond
+      Icons.water_drop, // 6 - Water
+      Icons.eco, // 7 - Leaf
+      Icons.diamond, // 8 - Diamond
     ];
     return icons[index % icons.length];
   }
@@ -1192,15 +1293,15 @@ class _LightTapGameState extends State<LightTapGame>
   // Helper method to get name for each light position
   String _getLightName(int index) {
     final names = [
-      'Star',      // 0
-      'Heart',     // 1
+      'Star', // 0
+      'Heart', // 1
       'Lightning', // 2
-      'Sun',       // 3
-      'Moon',      // 4
-      'Fire',      // 5
-      'Water',     // 6
-      'Leaf',      // 7
-      'Diamond',   // 8
+      'Sun', // 3
+      'Moon', // 4
+      'Fire', // 5
+      'Water', // 6
+      'Leaf', // 7
+      'Diamond', // 8
     ];
     return names[index % names.length];
   }
@@ -1297,7 +1398,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           children: [
             Row(
               children: [
-                Icon(Icons.security, color: const Color(0xFF5B6F4A), size: 32),
+                const Icon(Icons.security, color: Color(0xFF5B6F4A), size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1335,12 +1436,12 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                 hintStyle: TextStyle(color: Colors.grey[400], letterSpacing: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: const Color(0xFF5B6F4A)),
+                  borderSide: const BorderSide(color: Color(0xFF5B6F4A)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF5B6F4A),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF5B6F4A),
                     width: 2,
                   ),
                 ),
@@ -1413,3 +1514,4 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
     );
   }
 }
+// ...existing code...
