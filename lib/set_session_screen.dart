@@ -688,12 +688,12 @@ Widget build(BuildContext context) {
                                       ),
                                     )
                                     : Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      padding: const EdgeInsets.symmetric(horizontal: 35),
                                       child: GridView.builder(
                                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                         crossAxisCount: 2,
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 8,
+                                        crossAxisSpacing: 8,
                                         childAspectRatio: 1.0,
                                       ),
                                       itemCount: selectedGames.length,
