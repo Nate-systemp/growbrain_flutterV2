@@ -800,8 +800,8 @@ Widget build(BuildContext context) {
                                             child: Center(
                                               child: Icon(
                                                 _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
-                                                  ? Icons.volume_up 
-                                                  : Icons.volume_off,
+                                                  ? Icons.music_note 
+                                                  : Icons.music_off,
                                                 color: Colors.white,
                                                 size: 22,
                                               ),
