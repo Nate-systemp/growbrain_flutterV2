@@ -572,55 +572,66 @@ Widget build(BuildContext context) {
                                 children: [
                                 // Header with icon
                                 Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                  child: Stack(
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              const Color(0xFF5B6F4A),
-                                              const Color(0xFF6B7F5A),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(12),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF5B6F4A).withOpacity(0.3),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 2),
+                                      // Centered content
+                                      Center(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    const Color(0xFF5B6F4A),
+                                                    const Color(0xFF6B7F5A),
+                                                  ],
+                                                ),
+                                                borderRadius: BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: const Color(0xFF5B6F4A).withOpacity(0.3),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.games,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Flexible(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'Selected Games',
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.grey[800],
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    'for ${studentName.split(' ').first}',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: const Color(0xFF5B6F4A),
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(
-                                          Icons.games,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Selected Games',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey[800],
-                                            ),
-                                          ),
-                                          Text(
-                                            'for ${studentName.split(' ').first}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: const Color(0xFF5B6F4A),
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
                                       ),
                                     ],
                                   ),
@@ -762,6 +773,81 @@ Widget build(BuildContext context) {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
+                                  // Control buttons row
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      // Volume Control button
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF5B6F4A),
+                                          borderRadius: BorderRadius.circular(22),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF5B6F4A).withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(22),
+                                            onTap: _showVolumeControlDialog,
+                                            child: Center(
+                                              child: Icon(
+                                                _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
+                                                  ? Icons.volume_up 
+                                                  : Icons.volume_off,
+                                                color: Colors.white,
+                                                size: 22,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Clear All button (only show when games are selected)
+                                      if (selectedGames.isNotEmpty)
+                                        Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE57373),
+                                            borderRadius: BorderRadius.circular(22),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFFE57373).withOpacity(0.3),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 3),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              borderRadius: BorderRadius.circular(22),
+                                              onTap: () {
+                                                setState(() {
+                                                  selectedGames.clear();
+                                                  gameDifficulties.clear();
+                                                });
+                                              },
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
                                   // Difficulty indicators
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -779,109 +865,6 @@ Widget build(BuildContext context) {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            // Clear All button
-                            Container(
-                              width: double.infinity,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFFE57373),
-                                    const Color(0xFFEF5350),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(27),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFE57373).withOpacity(0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: MaterialButton(
-                                onPressed: () {
-                                  setState(() {
-                                    selectedGames.clear();
-                                    gameDifficulties.clear();
-                                    // Don't reset background music setting - it's independent
-                                  });
-                                },
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(27),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.clear_all,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'Clear All',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // Volume Control Setting
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: InkWell(
-                                onTap: _showVolumeControlDialog,
-                                borderRadius: BorderRadius.circular(20),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
-                                        ? Icons.music_note 
-                                        : Icons.music_off,
-                                      color: _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
-                                        ? const Color(0xFF5B6F4A) 
-                                        : Colors.grey,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Volume Control',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.settings,
-                                      color: Colors.grey[400],
-                                      size: 16,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
                             // Save and Play buttons with images
                             Row(
                               children: [
