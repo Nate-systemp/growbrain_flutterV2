@@ -287,13 +287,18 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
       );
     }
 
-    final avgAccuracy = widget.sessionRecords
-        .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
-        .reduce((a, b) => a + b) / widget.sessionRecords.length;
+    // Safe calculation with division by zero protection
+    final avgAccuracy = widget.sessionRecords.isNotEmpty
+        ? widget.sessionRecords
+            .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+            .reduce((a, b) => a + b) / widget.sessionRecords.length
+        : 0.0;
 
-    final avgCompletionTime = widget.sessionRecords
-        .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
-        .reduce((a, b) => a + b) / widget.sessionRecords.length;
+    final avgCompletionTime = widget.sessionRecords.isNotEmpty
+        ? widget.sessionRecords
+            .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
+            .reduce((a, b) => a + b) / widget.sessionRecords.length
+        : 0.0;
 
     final totalGames = widget.sessionRecords.length;
 

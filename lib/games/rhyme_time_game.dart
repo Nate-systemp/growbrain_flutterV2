@@ -513,9 +513,10 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
     gameTimer?.cancel();
 
     // Calculate game statistics
+    // wrongAttempts actually counts all attempts, not just wrong ones
     double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
-        : 100;
+        : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
 
@@ -1093,9 +1094,10 @@ class _RhymeTimeGameState extends State<RhymeTimeGame>
   // ...existing code...
 
   Widget _buildEndScreen() {
+    // wrongAttempts actually counts all attempts, not just wrong ones
     double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
-        : 100;
+        : 0;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

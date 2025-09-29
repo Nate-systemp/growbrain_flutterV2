@@ -392,10 +392,9 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
     gameCompleted = true;
 
     if (widget.onGameComplete != null) {
-      final int accuracy = totalAttempts > 0
-          ? ((correctMatchesCount / (totalAttempts * totalFruits)) * 100)
-                .round()
-          : 100;
+      final int accuracy = totalFruits > 0
+          ? ((correctMatchesCount / totalFruits) * 100).round()
+          : 0;
       final int completionTime = stopwatch.elapsed.inSeconds;
 
       widget.onGameComplete!(
@@ -1139,9 +1138,9 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
   }
 
   void _showGameOverDialog(bool success) {
-    final accuracy = totalAttempts > 0
-        ? ((correctMatchesCount / (totalAttempts * totalFruits)) * 100).round()
-        : 100;
+    final accuracy = totalFruits > 0
+        ? ((correctMatchesCount / totalFruits) * 100).round()
+        : 0;
     final completionTime = stopwatch.elapsed.inSeconds;
     
     showDialog(

@@ -171,7 +171,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           Future.delayed(const Duration(milliseconds: 500), () {
             final int accuracy = attempts > 0
                 ? ((matches / attempts) * 100).round()
-                : 100;
+                : 0;
             final int completionTime = stopwatch.elapsed.inSeconds;
             
             if (widget.onGameComplete != null) {

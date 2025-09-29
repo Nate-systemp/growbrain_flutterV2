@@ -436,10 +436,11 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
     gameTimer?.cancel();
 
-    // Calculate game statistics
+    // Calculate game statistics  
+    // wrongAttempts actually counts all attempts, not just wrong ones
     double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
-        : 100;
+        : 0;
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
 
@@ -1209,9 +1210,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
   void _showGameOverDialog(bool isCompletion) {
     final completionTime = DateTime.now().difference(gameStartTime).inSeconds;
+    // wrongAttempts actually counts all attempts, not just wrong ones
     final double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
-        : 100;
+        : 0;
     
     showDialog(
       context: context,

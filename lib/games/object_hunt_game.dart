@@ -348,7 +348,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     gameTimer?.cancel();
 
     // Calculate game statistics
-    double accuracyDouble = foundCount > 0
+    double accuracyDouble = totalTargets > 0
         ? (foundCount / totalTargets) * 100
         : 0;
     int accuracy = accuracyDouble.round();

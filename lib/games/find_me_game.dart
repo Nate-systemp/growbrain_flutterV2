@@ -416,8 +416,9 @@ void _endGame() {
 
     // Call completion callback if provided
     if (widget.onGameComplete != null) {
-      // Accuracy is just the number of correct answers (not percent)
-      final int accuracy = correctAnswers;
+      // Calculate accuracy as percentage
+      final roundsPlayed = round > maxRounds ? maxRounds : (round - 1);
+      final int accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
       final timeTaken = 60 - timeLeft;
 
       widget.onGameComplete!(
