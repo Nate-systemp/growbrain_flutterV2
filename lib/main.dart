@@ -41,21 +41,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       initialRoute: user == null ? '/' : '/home',
@@ -99,33 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showTeacherPinModal() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => TeacherPinModal(
-        onSubmit: (pin, isCreate, [password]) {
-          Navigator.of(context).pop();
-          if (!isCreate) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const TeacherManagementScreen(),
-              ),
-            );
-          } else {
-            // Show a snackbar for now
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'PIN created! (demo only) Password: ${password ?? ''}',
-                ),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
+  // old _showTeacherPinModal no longer used because the For Teachers button builds the dialog inline
 
   Future<void> _logout() async {
     final shouldLogout = await showDialog<bool>(
@@ -182,9 +141,9 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.info_outline,
-                    color: const Color(0xFF7B1FA2),
+                    color: Color(0xFF7B1FA2),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -282,8 +241,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Responsive values based on screen size
     final double cardWidth = screenWidth > 1000 ? 300 : screenWidth * 0.28;
-    final double cardHeight = screenHeight > 700 ? 260 : screenHeight * 0.35;
-    final double cardSpacing = screenWidth > 1000 ? 60 : screenWidth * 0.06;
+    final double cardHeight = screenHeight > 900 ? 360 : screenHeight * 0.35;
+    final double cardSpacing = screenWidth > 1100 ? 40 : screenWidth * 0.06;
     final double gridSidePadding = screenWidth * 0.05;
 
     return Scaffold(
@@ -291,77 +250,124 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           // Background image
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage('assets/background.png'),
                 fit: BoxFit.cover,
               ),
             ),
           ),
-          // Logout button - responsive positioning (left side)
-          Positioned(
-            top: screenHeight * 0.05,
-            left: screenWidth * 0.03,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: screenWidth * 0.25,
-                minWidth: 140,
-              ),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  elevation: 2,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.02,
-                    vertical: screenHeight * 0.02,
-                  ),
-                  textStyle: TextStyle(
-                    fontSize: screenWidth > 1000 ? 18 : 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onPressed: _logout,
-                icon: Icon(Icons.logout, size: screenWidth > 1000 ? 24 : 20),
-                label: const Text('Logout'),
-              ),
-            ),
-          ),
-          // For Teachers button - responsive positioning
+          // For Teachers button - with 0-blur shadow
           Positioned(
             top: screenHeight * 0.05,
             right: screenWidth * 0.03,
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: screenWidth * 0.25,
-                minWidth: 180,
+                maxWidth: screenWidth * 0.18,
+                minWidth: 100,
               ),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+              child: DecoratedBox(
+                 decoration: BoxDecoration( borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color.fromARGB(255, 181, 187, 17),
+                      blurRadius: 0,
+                      spreadRadius: 0,
+                      offset: Offset(0, 8),
+                      
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD740),
+                    foregroundColor: const Color(0xFF5B6F4A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0, // disable default soft shadow
+                    shadowColor: const Color.fromARGB(171, 209, 14, 14),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.025,
+                      vertical: screenHeight * 0.02,
+                    ),
+                    textStyle: TextStyle(
+                      fontSize: screenWidth > 1100 ? 20 : 18,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                  elevation: 2,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.02,
-                    vertical: screenHeight * 0.02,
-                  ),
-                  textStyle: TextStyle(
-                    fontSize: screenWidth > 1000 ? 18 : 16,
-                    fontWeight: FontWeight.w600,
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => TeacherPinModal(
+                        onSubmit: (pin, isCreate, [password]) {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const TeacherManagementScreen(),
+                            ),
+                          );
+                        },
+                        showLogout: true,
+                        onLogout: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                              title: const Text('Log Out'),
+                              content: const Text(
+                                  'Are you sure you want to log out?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('Log Out'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            try {
+                              await FirebaseAuth.instance.signOut();
+                              if (context.mounted) {
+                                Navigator.of(context).pushNamedAndRemoveUntil(
+                                    '/', (route) => false);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('Error logging out: $e'),
+                                      backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.school_rounded,
+                        size: screenWidth > 1100 ? 22 : 18,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('For Teachers'),
+                    ],
                   ),
                 ),
-                onPressed: _showTeacherPinModal,
-                icon: Icon(
-                  Icons.person_outline,
-                  size: screenWidth > 1000 ? 24 : 20,
-                ),
-                label: const Text('For Teachers'),
               ),
             ),
           ),
@@ -376,30 +382,29 @@ class _MyHomePageState extends State<MyHomePage> {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          color: Colors.black,
+                          blurRadius: 0,
+                          offset: Offset(50, 50),
                         ),
                       ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFF4CAF50),
-                          ),
+                      children: const [
+                        CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
                           strokeWidth: 3,
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Text(
                           'Loading Games...',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF2E7D32),
+                            color: Color(0xFF2E7D32),
                           ),
                         ),
                       ],
@@ -410,9 +415,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
               return Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: gridSidePadding),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: gridSidePadding),
                   child: Table(
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    defaultVerticalAlignment:
+                        TableCellVerticalAlignment.middle,
                     columnWidths: {
                       0: FixedColumnWidth(cardWidth),
                       1: FixedColumnWidth(cardWidth),
@@ -528,7 +535,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-}
+} // <-- Added missing closing brace for _MyHomePageState
 
 class _HomeCard extends StatefulWidget {
   final String? imagePath;
@@ -603,7 +610,7 @@ class _HomeCardState extends State<_HomeCard>
                 isAntiAlias: true,
                 filterQuality: FilterQuality.high,
               )
-            : Icon(Icons.help, color: Colors.grey, size: 90),
+            : const Icon(Icons.help, color: Colors.grey, size: 90),
       ),
     );
   }
@@ -617,10 +624,10 @@ class TeacherProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF393C48),
-      body: Center(
+      body: const Center(
         child: Text(
           'Teacher Profile (placeholder)',
-          style: const TextStyle(fontSize: 32, color: Colors.white),
+          style: TextStyle(fontSize: 32, color: Colors.white),
         ),
       ),
     );

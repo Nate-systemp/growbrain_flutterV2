@@ -76,6 +76,16 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   late final AnimationController _goController;
   late final Animation<double> _goOpacity;
   late final Animation<double> _goScale;
+  // HUD pop-in animation
+  late final AnimationController _hudController;
+  late final Animation<double> _hudOpacity;
+  late final Animation<double> _hudScale;
+  bool showHud = false;
+  // Status overlay (check/X) state
+  bool showingStatus = false;
+  String overlayText = '';
+  Color overlayColor = Colors.green;
+  Color overlayTextColor = Colors.white;
 
   bool showingResult = false;
   String resultText = '';
@@ -199,6 +209,15 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     _goScale = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
     );
+    // HUD animation init
+    _hudController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _hudOpacity = CurvedAnimation(parent: _hudController, curve: Curves.easeInOut);
+    _hudScale = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _hudController, curve: Curves.easeOutBack),
+    );
     _initializeGame();
   }
 
@@ -207,6 +226,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     _shakeController.dispose();
     _resultAnimationController.dispose();
     _goController.dispose();
+    _hudController.dispose();
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
@@ -351,7 +371,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         setState(() {
           showingCountdown = false;
           showingAnimation = true;
+          showHud = true;
         });
+        _hudController.forward();
 
         Future.delayed(const Duration(milliseconds: 500), () async {
           if (mounted) {
@@ -397,7 +419,30 @@ Future<void> _showGoOverlay() async {
     canSelect = true;
   });
 }
-  void _selectShape(int index) {
+
+// Generic status overlay for correct/wrong feedback
+Future<void> _showStatusOverlay({
+  required String text,
+  required Color color,
+  Color textColor = Colors.white,
+}) async {
+  if (!mounted) return;
+  setState(() {
+    overlayText = text;
+    overlayColor = color;
+    overlayTextColor = textColor;
+    showingStatus = true;
+  });
+  await _goController.forward();
+  await Future.delayed(const Duration(milliseconds: 550));
+  if (!mounted) return;
+  await _goController.reverse();
+  if (!mounted) return;
+  setState(() {
+    showingStatus = false;
+  });
+}
+  void _selectShape(int index) async {
     if (!canSelect) return;
 
     // Trigger tap animation
@@ -412,11 +457,16 @@ Future<void> _showGoOverlay() async {
       score += 10;
       correctAnswers++;
       SoundEffectsManager().playSuccessWithVoice();
-      _showResult(true);
+      // Show green check overlay and wait for it to complete
+      await _showStatusOverlay(text: '✓', color: Colors.green, textColor: Colors.white);
     } else {
       SoundEffectsManager().playWrong();
-      _showResult(false);
+      // Show red "X" overlay and wait for it to complete
+      await _showStatusOverlay(text: 'X', color: Colors.red, textColor: Colors.white);
     }
+
+    if (!mounted) return;
+    _nextRound();
   }
 
   void _showResult(bool correct) {
@@ -499,27 +549,28 @@ Future<void> _showGoOverlay() async {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
         title: Column(
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
                 color: primaryColor,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: primaryColor.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: primaryColor.withOpacity(0.30),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.emoji_events,
                 color: Colors.white,
-                size: 40,
+                size: 48,
               ),
             ),
             const SizedBox(height: 16),
@@ -527,8 +578,8 @@ Future<void> _showGoOverlay() async {
               'Excellent Work! 🎉',
               style: TextStyle(
                 color: primaryColor,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
               ),
               textAlign: TextAlign.center,
             ),
@@ -537,8 +588,15 @@ Future<void> _showGoOverlay() async {
         content: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: backgroundColor.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -562,71 +620,57 @@ Future<void> _showGoOverlay() async {
         actions: [
           // Different actions for demo mode vs session mode
           if (widget.onGameComplete == null) ...[
-            // Demo mode: Show Play Again and Exit buttons
+            // Demo mode: Big, full-width buttons
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop();
                         _resetGame();
                       },
+                      icon: const Icon(Icons.refresh, size: 22),
+                      label: const Text(
+                        'Play Again',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        elevation: 3,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.refresh, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Play Again',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                        elevation: 4,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop(); // Close dialog
                         Navigator.of(context).pop(); // Exit game
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[600],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                      label: Text(
+                        'Exit',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
                         ),
-                        elevation: 3,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.exit_to_app, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Exit',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: primaryColor, width: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
@@ -638,35 +682,27 @@ Future<void> _showGoOverlay() async {
             Container(
               width: double.infinity,
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(
-                    context,
-                  ).pop(); // Exit game and return to session screen
+                  Navigator.of(context).pop(); // Exit game and return to session screen
                 },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                label: const Text(
+                  'Next Game',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  elevation: 3,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Next Game',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                  elevation: 4,
                 ),
               ),
             ),
@@ -759,66 +795,114 @@ Future<void> _showGoOverlay() async {
     );
   }
 
-  // ...existing code...
-  // LightTap-style start / instruction screen for WhoMoved
+  // LightTap-style start / instruction screen for WhoMoved (panel UI)
   Widget _buildStartScreenWithInstruction() {
+    final size = MediaQuery.of(context).size;
+    final bool isTablet = size.shortestSide >= 600;
+    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Who Moved',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Icon(
-            Icons.remove_red_eye_outlined,
-            size: 72,
-            color: Colors.white70,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Watch carefully!',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 36.0),
-            child: Text(
-              'You will see several shapes. One of them will move briefly. Can you spot which one moved?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.95),
-                fontSize: 14,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: math.min(size.width * 0.9, panelMaxWidth),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 12),
+                blurRadius: 24,
+                spreadRadius: 2,
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 18),
-          ElevatedButton(
-            onPressed: _startGame,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF5B6F4A),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Who Moved',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 42 : 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-              elevation: 2,
-            ),
-            child: const Text(
-              'Start !',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-            ),
+              const SizedBox(height: 12),
+              Container(
+                width: isTablet ? 100 : 84,
+                height: isTablet ? 100 : 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accentColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0),
+                      blurRadius: 20,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.remove_red_eye_outlined,
+                  size: isTablet ? 56 : 48,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Watch carefully!',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 22 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You will see several shapes. One of them will move briefly. Can you spot which one moved?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: primaryColor.withOpacity(0.9),
+                  fontSize: isTablet ? 18 : 15,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: primaryColor,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 18 : 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Text(
+                    'START GAME',
+                    style: TextStyle(
+                      fontSize: isTablet ? 22 : 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -839,6 +923,7 @@ Future<void> _showGoOverlay() async {
       showingResult = false;
       resultText = '';
       isCorrectResult = false;
+      showHud = false;
     });
     gameStartTime = DateTime.now();
     _shakeController.reset();
@@ -993,40 +1078,60 @@ Widget build(BuildContext context) {
                 children: [
                   const SizedBox(height: 70),
                   // Three equal circular badges: Score / Round / Time
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _infoCircle(
-                        label: 'Score',
-                        value: '$score',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
-                      ),
-                      _infoCircle(
-                        label: 'Round',
-                        value: '${roundsPlayed + 1}/$totalRounds',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
-                      ),
-                      _infoCircle(
-                        label: 'Time',
-                        value: canSelect && timer > 0
-                            ? '${timer}s'
-                            : showingAnimation
-                            ? '...'
-                            : '${timer}s',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
-                        valueColor: timer <= 5 && canSelect
-                            ? Colors.red
-                            : primaryColor,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                  if (showHud) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        FadeTransition(
+                          opacity: _hudOpacity,
+                          child: ScaleTransition(
+                            scale: _hudScale,
+                            child: _infoCircle(
+                              label: 'Score',
+                              value: '$score',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                            ),
+                          ),
+                        ),
+                        FadeTransition(
+                          opacity: _hudOpacity,
+                          child: ScaleTransition(
+                            scale: _hudScale,
+                            child: _infoCircle(
+                              label: 'Round',
+                              value: '${roundsPlayed + 1}/$totalRounds',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                            ),
+                          ),
+                        ),
+                        FadeTransition(
+                          opacity: _hudOpacity,
+                          child: ScaleTransition(
+                            scale: _hudScale,
+                            child: _infoCircle(
+                              label: 'Time',
+                              value: canSelect && timer > 0
+                                  ? '${timer}s'
+                                  : showingAnimation
+                                  ? '...'
+                                  : '${timer}s',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                              valueColor: timer <= 5 && canSelect
+                                  ? Colors.red
+                                  : primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
@@ -1045,7 +1150,7 @@ Widget build(BuildContext context) {
                                   children: [
                                     // Show shapes during countdown animation (shaking), or when selectable, or when showing result
                                     // Show shapes during shaking, while GO overlay is visible (freeze), when selectable, or when showing result
-                                   if (showingAnimation || showingGo || canSelect || showingResult)
+                                   if (showingAnimation || showingGo || canSelect || showingResult || showingStatus)
                                     Center(
                                       child: RepaintBoundary(
                                         child: _buildShapeGrid(),
@@ -1165,7 +1270,7 @@ Widget build(BuildContext context) {
                                             opacity: _goOpacity,
                                             child: Container(
                                               color: Colors.black.withOpacity(
-                                                0,
+                                                0.12,
                                               ),
                                               child: Center(
                                                 child: ScaleTransition(
@@ -1224,6 +1329,50 @@ Widget build(BuildContext context) {
                                                         ),
                                                       ),
                                                     ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                    // Status overlay for correct/wrong feedback
+                                    if (showingStatus)
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: FadeTransition(
+                                            opacity: _goOpacity,
+                                            child: Container(
+                                              color: Colors.black.withOpacity(0.12),
+                                              child: Center(
+                                                child: ScaleTransition(
+                                                  scale: _goScale,
+                                                  child: Container(
+                                                    width: 140,
+                                                    height: 140,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: overlayColor,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.30),
+                                                          offset: Offset(0, 8),
+                                                          blurRadius: 0,
+                                                          spreadRadius: 8,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Center(
+                                                      child: Text(
+                                                        overlayText,
+                                                        style: TextStyle(
+                                                          color: overlayTextColor,
+                                                          fontSize: 72,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
