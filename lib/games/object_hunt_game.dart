@@ -97,8 +97,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   @override
   void initState() {
     super.initState();
-    BackgroundMusicManager().startGameMusic('Memory Grid');
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    BackgroundMusicManager().startGameMusic('Object Hunt');
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
+      widget.difficulty,
+    );
 
     // Initialize animation controllers
     _shakeController = AnimationController(
@@ -205,7 +207,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
       builder: (context) => AlertDialog(
         backgroundColor: backgroundColor,
         title: Text(
-          'Memory Grid Challenge',
+          'Object Hunt Challenge',
           style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: Column(
@@ -360,7 +362,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
         accuracy: accuracy,
         completionTime: completionTime,
         challengeFocus: 'Memory & Attention',
-        gameName: 'Memory Grid',
+        gameName: 'Object Hunt',
         difficulty: _normalizedDifficulty,
       );
     }
@@ -405,9 +407,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
                 right: 16,
                 bottom: 16,
               ),
-              decoration: BoxDecoration(
-                color: primaryColor,
-              ),
+              decoration: BoxDecoration(color: primaryColor),
               child: Row(
                 children: [
                   IconButton(
@@ -416,7 +416,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
                   ),
                   Expanded(
                     child: Text(
-                      'Memory Grid - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
+                      'Object Hunt - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -437,7 +437,10 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
                     // Score and Timer Display
                     Container(
                       margin: EdgeInsets.all(20),
-                      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
                       decoration: BoxDecoration(
                         color: cardColor,
                         borderRadius: BorderRadius.circular(16),
@@ -451,111 +454,123 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
                         ],
                       ),
                       child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Score
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.star, size: 18, color: Color(0xFFFFB300)),
-                          SizedBox(width: 6),
-                          Text(
-                            '$score',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: primaryColor,
+                          // Score
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: backgroundColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  size: 18,
+                                  color: Color(0xFFFFB300),
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  '$score',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Found Count
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: successColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: successColor, width: 2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.search,
+                                  size: 18,
+                                  color: successColor,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  '$foundCount/5',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: successColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Timer
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: timeLeft <= 30
+                                  ? errorColor.withOpacity(0.1)
+                                  : Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: timeLeft <= 30
+                                    ? errorColor.withOpacity(0.3)
+                                    : Color(0xFFE9ECEF),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.timer,
+                                  size: 18,
+                                  color: timeLeft <= 30
+                                      ? errorColor
+                                      : primaryColor,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  '${timeLeft}s',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: timeLeft <= 30
+                                        ? errorColor
+                                        : primaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    // Found Count
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: successColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: successColor, width: 2),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search, size: 18, color: successColor),
-                          SizedBox(width: 6),
-                          Text(
-                            '$foundCount/5',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: successColor,
-                            ),
-                          ),
-                        ],
+                    // Game Area
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: gameStarted ? _buildGrid() : _buildStartScreen(),
                       ),
                     ),
-
-                    // Timer
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: timeLeft <= 30
-                            ? errorColor.withOpacity(0.1)
-                            : Color(0xFFF8F9FA),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: timeLeft <= 30
-                              ? errorColor.withOpacity(0.3)
-                              : Color(0xFFE9ECEF),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.timer,
-                            size: 18,
-                            color: timeLeft <= 30 ? errorColor : primaryColor,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            '${timeLeft}s',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: timeLeft <= 30 ? errorColor : primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Game Area
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: gameStarted ? _buildGrid() : _buildStartScreen(),
-                ),
-              ),
                   ],
                 ),
               ),
@@ -589,7 +604,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
             Icon(Icons.grid_view, size: 80, color: Colors.white),
             SizedBox(height: 20),
             Text(
-              'Memory Grid',
+              'Object Hunt',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -819,13 +834,16 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
       gameActive = false;
       score = 0;
     });
-    
+
     gameTimer?.cancel();
     _setupGrid();
   }
 
-  void _showGameOverDialog(bool isCompletion, int accuracy, int completionTime) {
-    
+  void _showGameOverDialog(
+    bool isCompletion,
+    int accuracy,
+    int completionTime,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -878,11 +896,23 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildStatRow(Icons.star_rounded, 'Final Score', '$score points'),
+                _buildStatRow(
+                  Icons.star_rounded,
+                  'Final Score',
+                  '$score points',
+                ),
                 const SizedBox(height: 12),
-                _buildStatRow(Icons.grid_view, 'Columns Completed', isCompletion ? '5/5' : '$foundCount/5'),
+                _buildStatRow(
+                  Icons.grid_view,
+                  'Columns Completed',
+                  isCompletion ? '5/5' : '$foundCount/5',
+                ),
                 const SizedBox(height: 12),
-                _buildStatRow(Icons.track_changes, 'Accuracy', '${((foundCount / 5) * 100).round()}%'),
+                _buildStatRow(
+                  Icons.track_changes,
+                  'Accuracy',
+                  '${((foundCount / 5) * 100).round()}%',
+                ),
                 const SizedBox(height: 12),
                 _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
               ],
@@ -970,7 +1000,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Exit game and return to session screen
+                    Navigator.of(
+                      context,
+                    ).pop(); // Exit game and return to session screen
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

@@ -532,17 +532,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
                                 height: 140,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [accentColor, Colors.white],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  color: accentColor,
                                   boxShadow: [
-                                    BoxShadow(color: primaryColor.withOpacity(0.40), offset: const Offset(0, 8), blurRadius: 20, spreadRadius: 4),
-                                    BoxShadow(color: Colors.white.withOpacity(0.3), offset: const Offset(0, -4), blurRadius: 10),
+                                    BoxShadow(color: Colors.black.withOpacity(0.3), offset: const Offset(0, 6), blurRadius: 0, spreadRadius: 0),
                                   ],
                                 ),
-                                child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
+                                child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold))),
                               ),
                             ],
                           ),
@@ -674,13 +669,9 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
                 height: isTablet ? 100 : 84,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [accentColor, primaryColor],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: primaryColor,
                   boxShadow: [
-                    BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 20, spreadRadius: 2),
+                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 0, offset: Offset(0, 4), spreadRadius: 0),
                   ],
                 ),
                 child: Icon(Icons.music_note_rounded, size: isTablet ? 56 : 48, color: Colors.white),
@@ -728,17 +719,12 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
             height: 150,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [accentColor, Colors.white],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: accentColor,
               boxShadow: [
-                BoxShadow(color: primaryColor.withOpacity(0.5), blurRadius: 30, spreadRadius: 5),
-                BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 15, spreadRadius: 2),
+                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 0, offset: Offset(0, 6), spreadRadius: 0),
               ],
             ),
-            child: Center(child: Text('$countdownNumber', style: TextStyle(fontSize: 80, fontWeight: FontWeight.bold, color: primaryColor, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
+            child: Center(child: Text('$countdownNumber', style: TextStyle(fontSize: 80, fontWeight: FontWeight.bold, color: primaryColor))),
           ),
           const SizedBox(height: 40),
           Text('The game will start soon...', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500, shadows: [Shadow(color: Colors.black26, offset: Offset(1, 1), blurRadius: 2)])),

@@ -49,6 +49,22 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   Timer? nextGameTimer; // Timer for showing next game button
   String _normalizedDifficulty = 'Starter';
 
+  // Countdown state
+  bool showingCountdown = false;
+  int countdownNumber = 3;
+
+  // GO overlay
+  bool showingGo = false;
+  late final AnimationController _goController;
+  late final Animation<double> _goOpacity;
+  late final Animation<double> _goScale;
+
+  // Status overlay (✓ or X)
+  bool showingStatus = false;
+  String overlayText = '';
+  Color overlayColor = Colors.green;
+  Color overlayTextColor = Colors.white;
+
   // Animation controllers
   late AnimationController _slideController;
   late Animation<double> _slideAnimation;
@@ -78,6 +94,16 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
       CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
     );
 
+    // Initialize GO animation controller
+    _goController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
+      CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
+    );
+
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Puzzle');
     _initializeGame();
@@ -88,6 +114,7 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
     gameTimer?.cancel();
     nextGameTimer?.cancel();
     _slideController.dispose();
+    _goController.dispose();
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
@@ -280,15 +307,44 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
 
   void _startGame() {
     setState(() {
-      gameStarted = true;
-      gameCompleted = false;
-      startTime = DateTime.now();
-      moves = 0;
-      timeElapsed = 0;
+      showingCountdown = true;
+      countdownNumber = 3;
     });
+    _showCountdown();
+  }
 
-    _initializePuzzle();
-    _startTimer();
+  void _showCountdown() async {
+    for (int i = 3; i >= 1; i--) {
+      if (!mounted) return;
+      setState(() => countdownNumber = i);
+      await Future.delayed(const Duration(milliseconds: 1000));
+    }
+
+    if (mounted) {
+      setState(() {
+        showingCountdown = false;
+        gameStarted = true;
+        gameCompleted = false;
+        startTime = DateTime.now();
+        moves = 0;
+        timeElapsed = 0;
+      });
+
+      _initializePuzzle();
+      await _showGoOverlay();
+      _startTimer();
+    }
+  }
+
+  Future<void> _showGoOverlay() async {
+    if (!mounted) return;
+    setState(() => showingGo = true);
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingGo = false);
   }
 
   void _onPuzzleSolved() {
@@ -315,7 +371,7 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
         accuracy: accuracy,
         completionTime: timeElapsed,
         challengeFocus: 'Problem-solving and spatial reasoning',
-        gameName: 'Sliding Puzzle',
+        gameName: 'Puzzle Game',
         difficulty: _normalizedDifficulty,
       );
     }
@@ -324,111 +380,132 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   }
 
   void _showCompletionDialog() {
+    // Calculate accuracy based on optimal moves
+    int optimalMoves = gridSize * gridSize * 2;
+    int accuracy = ((optimalMoves / moves.clamp(1, double.infinity)) * 100)
+        .clamp(0, 100)
+        .toInt();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Puzzle Solved! 🎉',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          title: Column(
             children: [
-              Icon(Icons.emoji_events, color: accentColor, size: 64),
-              SizedBox(height: 16),
-              Text(
-                'Moves: $moves',
-                style: TextStyle(
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.30),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.celebration,
                   color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  size: 48,
                 ),
               ),
+              const SizedBox(height: 16),
               Text(
-                'Time: ${_formatTime(timeElapsed)}',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                'Amazing! 🌟',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatRow(Icons.touch_app, 'Moves', '$moves'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+                const SizedBox(height: 12),
+                _buildStatRow(Icons.timer, 'Time', _formatTime(timeElapsed)),
+              ],
+            ),
           ),
           actions: [
             // Different actions for demo mode vs session mode
             if (widget.onGameComplete == null) ...[
-              // Demo mode: Show Play Again and Exit buttons
+              // Demo mode: Big, full-width buttons
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop();
                           _resetGame();
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accentColor,
-                          foregroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
+                        icon: const Icon(Icons.refresh, size: 22),
+                        label: const Text(
+                          'Play Again',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.refresh, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Play Again',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 4,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop(); // Close dialog
                           Navigator.of(context).pop(); // Exit game
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                        label: Text(
+                          'Exit',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
                           ),
-                          elevation: 3,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.exit_to_app, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Exit',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor, width: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -440,33 +517,27 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
                     Navigator.of(context).pop(); // Exit game and return to session screen
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                  label: const Text(
+                    'Next Game',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
-                    elevation: 3,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Next Game',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
                   ),
                 ),
               ),
@@ -474,6 +545,41 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: primaryColor, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -593,7 +699,7 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
                           accuracy: accuracy,
                           completionTime: timeElapsed,
                           challengeFocus: 'Problem-solving and spatial reasoning',
-                          gameName: 'Sliding Puzzle',
+                          gameName: 'Puzzle Game',
                           difficulty: _normalizedDifficulty,
                         );
                       }
@@ -750,57 +856,87 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
               fit: BoxFit.cover,
             ),
           ),
-          child: Column(
+          child: Stack(
             children: [
-              // Custom AppBar
-              Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top,
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Sliding Puzzle - ${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 18,
-                        ),
-                        textAlign: TextAlign.center,
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      SizedBox(height: 20),
+                      Expanded(
+                        child: showingCountdown
+                            ? _buildCountdownScreen()
+                            : (gameStarted ? _buildGameArea() : _buildStartScreen()),
                       ),
-                    ),
-                    const SizedBox(width: 48), // Balance the back button
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              // Body content
-              Expanded(
-                child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                _buildHeader(),
-                SizedBox(height: 20),
-                Expanded(
-                  child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+              // GO overlay
+              if (showingGo)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Get Ready!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black26,
+                                        offset: Offset(2, 2),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: 140,
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: accentColor,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.30),
+                                        offset: const Offset(0, 8),
+                                        blurRadius: 0,
+                                        spreadRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'GO!',
+                                      style: TextStyle(
+                                        color: primaryColor,
+                                        fontSize: 54,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          ),
-        ),
-        ),
             ],
           ),
         ),
@@ -808,46 +944,75 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryColor, Color(0xFF6B7F5A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+  Widget _buildCountdownScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildStatItem(
-            icon: Icons.touch_app,
-            label: 'Moves',
-            value: moves.toString(),
+          const Text(
+            'Get Ready!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(2, 2),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
           ),
-          _buildStatItem(
-            icon: Icons.timer,
-            label: 'Time',
-            value: _formatTime(timeElapsed),
+          const SizedBox(height: 40),
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accentColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 0,
+                  offset: Offset(0, 6),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$countdownNumber',
+                style: TextStyle(
+                  fontSize: 80,
+                  fontWeight: FontWeight.bold,
+                  color: tileTextColor, // Dark brown
+                ),
+              ),
+            ),
           ),
-          _buildStatItem(
-            icon: Icons.grid_on,
-            label: 'Grid',
-            value: '${gridSize}x${gridSize}',
+          const SizedBox(height: 40),
+          Text(
+            'The game will start soon...',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+              shadows: [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(1, 1),
+                  blurRadius: 2,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+
+  
 
   Widget _buildStatItem({
     required IconData icon,
@@ -880,68 +1045,122 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   }
 
   Widget _buildStartScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 120,
-          height: 120,
+    final size = MediaQuery.of(context).size;
+    final bool isTablet = size.shortestSide >= 600;
+    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: min(size.width * 0.9, panelMaxWidth),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           decoration: BoxDecoration(
-            color: tileColor,
-            borderRadius: BorderRadius.circular(20),
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: Offset(0, 5),
+                color: primaryColor.withOpacity(0.25),
+                offset: const Offset(0, 12),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.5),
+                offset: const Offset(0, -4),
+                blurRadius: 12,
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              '${gridSize - 1}',
-              style: TextStyle(
-                fontSize: 60,
-                fontWeight: FontWeight.bold,
-                color: tileTextColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Puzzle Game',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 42 : 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 12),
+              Container(
+                width: isTablet ? 100 : 84,
+                height: isTablet ? 100 : 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primaryColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 0,
+                      offset: Offset(0, 4),
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.extension,
+                  size: isTablet ? 56 : 48,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Solve the puzzle!',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 22 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Slide the tiles to arrange them in order from 1 to ${gridSize * gridSize - 1}. Tap a tile next to the empty space to move it.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: primaryColor.withOpacity(0.85),
+                  fontSize: isTablet ? 18 : 15,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 18 : 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
+                    shadowColor: primaryColor.withOpacity(0.5),
+                  ),
+                  child: Text(
+                    'START GAME',
+                    style: TextStyle(
+                      fontSize: isTablet ? 22 : 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        SizedBox(height: 30),
-        Text(
-          'Sliding Puzzle',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
-          ),
-        ),
-        SizedBox(height: 10),
-        Text(
-          '${DifficultyUtils.getDifficultyDisplayName(widget.difficulty)} Mode',
-          style: TextStyle(fontSize: 20, color: primaryColor.withOpacity(0.8)),
-        ),
-        SizedBox(height: 10),
-        Text(
-          '${gridSize}x${gridSize} Grid (${gridSize * gridSize - 1} tiles)',
-          style: TextStyle(fontSize: 16, color: primaryColor.withOpacity(0.6)),
-        ),
-        SizedBox(height: 40),
-        ElevatedButton.icon(
-          onPressed: _startGame,
-          icon: Icon(Icons.play_arrow),
-          label: Text('Start Game', style: TextStyle(fontSize: 18)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accentColor,
-            foregroundColor: primaryColor,
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -949,16 +1168,50 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
     return Stack(
       children: [
         Center(
-          child: AspectRatio(
-            aspectRatio: 1.0,
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: 500,
+            ),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
+                ),
+                child: _buildPuzzleGrid(),
               ),
-              child: _buildPuzzleGrid(),
+            ),
+          ),
+        ),
+        // Left side - Time info circle
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 104),
+            child: _infoCircle(
+              label: 'Time',
+              value: _formatTime(timeElapsed),
+              circleSize: 104,
+              valueFontSize: 30,
+              labelFontSize: 26,
+            ),
+          ),
+        ),
+        // Right side - Moves info circle
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 104),
+            child: _infoCircle(
+              label: 'Moves',
+              value: '$moves',
+              circleSize: 104,
+              valueFontSize: 30,
+              labelFontSize: 26,
             ),
           ),
         ),
@@ -994,6 +1247,61 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _infoCircle({
+    required String label,
+    required String value,
+    double circleSize = 88,
+    double valueFontSize = 18,
+    double labelFontSize = 12,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.brown,
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.w800,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.45),
+                offset: const Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 6),
+                blurRadius: 0,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.brown,
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
       ],
     );
   }
