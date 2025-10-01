@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "202411215517",
+    "project_id": "growbrain-19b5d",
+    "storage_bucket": "growbrain-19b5d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202411215517:android:5d9cd522883fb636fee274",
+        "android_client_info": {
+          "package_name": "com.example.growbrain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpJimMhjCARt-RC-MtgF1CuV7R6Jr9_7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

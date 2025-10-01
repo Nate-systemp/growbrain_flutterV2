@@ -1,0 +1,248 @@
+/* Enhanced styles for Manage Students page */
+
+.student-table-container {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  margin-top: 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.student-table-container h3 {
+  font-size: 1.5rem;
+  color: #1a202c;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.student-table-container h3:before {
+  content: '👥';
+  font-size: 1.75rem;
+}
+
+.student-search-container {
+  background: transparent;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  max-width: 400px;
+  background: transparent;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+  background: transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.search-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 3rem;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #1a202c;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 1.1rem;
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+.search-input-wrapper:focus-within .search-icon {
+  color: #3b82f6;
+}
+
+#students-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+#students-table th,
+#students-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#students-table thead {
+  background: linear-gradient(to right, #f8fafc, #f1f5f9);
+  border-bottom: 2px solid #e2e8f0;
+}
+
+#students-table th {
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+#students-table tbody tr {
+  transition: all 0.2s ease-in-out;
+}
+
+#students-table tbody tr:hover {
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+#students-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#students-table .action-buttons {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#students-table tr:hover .action-buttons {
+  opacity: 1;
+}
+
+#students-table .edit-student-btn,
+#students-table .delete-student-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  font-size: 0.9rem;
+}
+
+#students-table .edit-student-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+#students-table .delete-student-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+#students-table .edit-student-btn:hover,
+#students-table .delete-student-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(110%);
+}
+
+.floating-add-button {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-add-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 12px 20px rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.floating-add-button:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Column widths */
+#students-table th:nth-child(1),
+#students-table td:nth-child(1) { 
+  width: 160px;
+  padding-left: 16px;
+} /* Name */
+
+#students-table th:nth-child(2),
+#students-table td:nth-child(2) { 
+  width: 80px;
+} /* Age */
+
+#students-table th:nth-child(3),
+#students-table td:nth-child(3) { 
+  width: 80px;
+} /* Sex */
+
+#students-table th:nth-child(4),
+#students-table td:nth-child(4) { 
+  width: 180px;
+} /* Cognitive Needs */
+
+#students-table th:nth-child(5),
+#students-table td:nth-child(5) { 
+  width: 120px;
+} /* Contact */
+
+#students-table th:nth-child(6),
+#students-table td:nth-child(6) { 
+  width: 140px;
+} /* Guardian */
+
+#students-table th:last-child,
+#students-table td:last-child {
+  width: 100px;
+  padding-right: 16px;
+  position: relative;
+} /* Actions */
+
+/* Header spacing below the title/search */
+.student-table-header {
+  margin-bottom: 16px;
+}

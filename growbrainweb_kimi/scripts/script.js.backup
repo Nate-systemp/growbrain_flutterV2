@@ -1,0 +1,2036 @@
+// ------------------------------
+// Firebase and Firestore Initialization
+// ------------------------------
+const db = firebase.firestore();
+
+// ------------------------------
+// DOMContentLoaded Initialization
+// ------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+  loadDashboardData();
+  initChart();
+  loadStudents();
+  initStudentForm();
+  initDarkMode();
+  initProfileModal();
+  initTeacherForm();      // Only one initTeacherForm is used now.
+  loadTeacherEmails();
+  loadTeacherCount();
+  // NEW: Load student progress for chart and update dashboard counts
+  loadStudentProgress();
+    initAdminModal(); // Ensure admin modal is initialized    // Initialize activities if the section is visible  const activitiesSection = document.getElementById('activities-section');  if (activitiesSection && activitiesSection.style.display !== 'none') {    loadActivities();  }
+
+  // Event listener: Open student modal with smooth scroll & animation
+  const openBtn = document.getElementById('open-student-form-btn');
+  if (openBtn) {
+    openBtn.addEventListener('click', function () {
+      openStudentModal();
+    });
+  }
+  
+  // Event listener: Close the student modal when clicking the close (×) button
+  const modalClose = document.getElementById('student-modal-close');
+  if (modalClose) {
+    modalClose.addEventListener('click', function () {
+      document.getElementById('student-modal').style.display = 'none';
+      clearStudentForm();
+    });
+  }
+  
+  // Close the student modal when clicking outside the modal content
+  window.addEventListener('click', function(e) {
+    const modal = document.getElementById('student-modal');
+    if (e.target === modal) {
+      modal.style.display = 'none';
+      clearStudentForm();
+    }
+  });
+  
+  // Student search functionality
+  const studentSearchInput = document.getElementById('student-search');
+  const studentSearchBtn = document.getElementById('student-search-btn');
+  if (studentSearchBtn) {
+    studentSearchBtn.addEventListener('click', function () {
+      filterStudents(studentSearchInput.value.toLowerCase());
+    });
+  }
+  // Optionally, filter as you type
+  if (studentSearchInput) {
+    studentSearchInput.addEventListener('input', function () {
+      filterStudents(this.value.toLowerCase());
+    });
+  }
+
+  // Activities search functionality
+  const activitiesSearchInput = document.getElementById('activities-search');
+  if (activitiesSearchInput) {
+    activitiesSearchInput.addEventListener('input', function() {
+      filterActivities(this.value.toLowerCase());
+    });
+  }
+
+  // Create Account Modal logic (for teachers)
+  const createAccountBtn = document.getElementById('create-account-btn');
+  const createAccountModal = document.getElementById('create-account-modal');
+  const createAccountModalClose = document.getElementById('create-account-modal-close');
+  const createAccountCancel = document.getElementById('create-account-cancel');
+  const createAccountForm = document.getElementById('create-account-form');
+
+  // Open the Create Account Modal
+  if (createAccountBtn) {
+    createAccountBtn.addEventListener('click', function () {
+      createAccountModal.style.display = 'block';
+    });
+  }
+
+  // Close the Create Account Modal
+  if (createAccountModalClose) {
+    createAccountModalClose.addEventListener('click', function () {
+      createAccountModal.style.display = 'none';
+    });
+  }
+
+  if (createAccountCancel) {
+    createAccountCancel.addEventListener('click', function () {
+      createAccountModal.style.display = 'none';
+    });
+  }
+
+  // Handle Create Account Form Submission
+  if (createAccountForm) {
+    createAccountForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById('create-name').value.trim();
+      const email = document.getElementById('create-email').value.trim();
+      const password = document.getElementById('create-password').value;
+      const pin = document.getElementById('create-pin').value.trim();
+
+      if (!name || !email || !password || !pin) {
+        showResultMessage('Please fill in all fields', true);
+        return;
+      }
+
+      if (pin.length !== 6 || isNaN(pin)) {
+        showResultMessage('PIN must be a 6-digit number.', true);
+        return;
+      }
+
+      const result = await createTeacherAccount(name, email, password, pin);
+      showResultMessage(result.message, !result.success);
+      
+      if (result.success) {
+        createAccountModal.style.display = 'none';
+        createAccountForm.reset();
+        loadTeacherEmails(); // Refresh the list
+      }
+    });
+  }
+  
+  // Teacher Modal open/close logic will be handled by initTeacherForm()
+  
+  // Event listeners for teacher and student search fields
+  const teacherSearchInput = document.getElementById('teacher-search');
+  if (teacherSearchInput) {
+    teacherSearchInput.addEventListener('input', function() {
+      filterTeachers(this.value);
+    });
+  }
+
+  // Records search functionality
+  const recordsSearch = document.getElementById('records-search');
+  if (recordsSearch) {
+    recordsSearch.addEventListener('input', function() {
+      filterRecords(this.value.toLowerCase());
+    });
+  }
+});
+
+// ------------------------------
+// Dashboard Functions (Stats & Chart)
+// ------------------------------
+function loadDashboardData() {
+  document.getElementById('total-students').textContent = '0';
+  document.getElementById('active-students').textContent = '0';
+  document.getElementById('avg-progress').textContent = '0%';
+  document.getElementById('improving-count').textContent = '0';
+  document.getElementById('needs-attention-count').textContent = '0';
+  document.getElementById('struggling-count').textContent = '0';
+}
+
+function initChart() {
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  const defaultData = {
+    labels: ['Progress'],
+    datasets: [
+      {
+        label: 'Improving',
+        data: [0],
+        backgroundColor: 'rgba(76, 175, 80, 0.7)', // Green
+        borderColor: 'rgba(76, 175, 80, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Needs Attention',
+        data: [0],
+        backgroundColor: 'rgba(255, 193, 7, 0.7)', // Amber
+        borderColor: 'rgba(255, 193, 7, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Struggling',
+        data: [0],
+        backgroundColor: 'rgba(244, 67, 54, 0.7)', // Red
+        borderColor: 'rgba(244, 67, 54, 1)',
+        borderWidth: 1
+      }
+    ]
+  };
+
+  window.progressChart = new Chart(ctx, {
+    type: 'bar',
+    data: defaultData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Number of Students'
+          },
+          ticks: {
+            precision: 0
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: ''
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateChart(improving, needsAttention, struggling) {
+  if (window.progressChart) {
+    window.progressChart.data.datasets[0].data = [improving];
+    window.progressChart.data.datasets[1].data = [needsAttention];
+    window.progressChart.data.datasets[2].data = [struggling];
+    window.progressChart.update();
+  }
+}
+
+// ------------------------------
+// Load Student Progress Data from Firestore and Classify
+// ------------------------------
+function loadStudentProgress() {
+  let improvingCount = 0, needsAttentionCount = 0, strugglingCount = 0;
+  db.collection('students').get().then((snapshot) => {
+    const promises = [];
+    snapshot.forEach((doc) => {
+      const studentId = doc.id;
+      const sessionsPromise = db.collection('students')
+        .doc(studentId)
+        .collection('sessions')
+        .get()
+        .then((sessionsSnapshot) => {
+          let totalAccuracy = 0;
+          let recordCount = 0;
+          sessionsSnapshot.forEach((sessionDoc) => {
+            const session = sessionDoc.data();
+            if (session.accuracy !== undefined && !isNaN(session.accuracy)) {
+              totalAccuracy += parseFloat(session.accuracy);
+              recordCount++;
+            }
+          });
+          const avgAccuracy = (recordCount > 0) ? parseFloat((totalAccuracy / recordCount).toFixed(1)) : 0;
+          if (avgAccuracy >= 85) {
+            improvingCount++;
+          } else if (avgAccuracy >= 60) {
+            needsAttentionCount++;
+          } else {
+            strugglingCount++;
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching sessions for student " + studentId, error);
+        });
+      promises.push(sessionsPromise);
+    });
+    Promise.all(promises).then(() => {
+      updateChart(improvingCount, needsAttentionCount, strugglingCount);
+      document.getElementById('improving-count').textContent = improvingCount;
+      document.getElementById('needs-attention-count').textContent = needsAttentionCount;
+      document.getElementById('struggling-count').textContent = strugglingCount;
+      db.collection('students').get().then((snapshot) => {
+        document.getElementById('total-students').textContent = snapshot.size;
+      });
+    });
+  })
+  .catch((error) => {
+    console.error("Error fetching students: ", error);
+  });
+}
+
+// ------------------------------
+// Student Management (CRUD)
+// ------------------------------
+function initStudentForm() {
+  const studentForm = document.getElementById('student-form');
+  const cancelBtn = document.getElementById('cancel-btn');
+
+  studentForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('student-id').value;
+    
+    const selectedChallenges = [];
+    document.querySelectorAll('.cognitive-challenge:checked').forEach(checkbox => {
+      selectedChallenges.push(checkbox.value);
+    });
+    
+    const studentData = {
+      name: document.getElementById('student-name').value.trim(),
+      age: Number(document.getElementById('student-age').value),
+      gender: document.getElementById('student-gender').value,
+      challenges: selectedChallenges,
+      contactNumber: document.getElementById('student-contact').value.trim(),
+      guardianName: document.getElementById('student-guardian').value.trim()
+    };
+
+    if (id) {
+      if (id === studentData.name) {
+        db.collection('students').doc(id).update(studentData)
+          .then(function () {
+            clearStudentForm();
+            showResultMessage('Student updated successfully!', false);
+          })
+          .catch(function (error) {
+            showResultMessage('Error updating student: ' + error, true);
+          });
+      } else {
+        db.collection('students').doc(studentData.name).set(studentData)
+          .then(function () {
+            db.collection('students').doc(id).delete();
+            clearStudentForm();
+            showResultMessage('Student updated successfully!', false);
+          })
+          .catch(function (error) {
+            showResultMessage('Error updating student: ' + error, true);
+          });
+      }
+    } else {
+      db.collection('students').doc(studentData.name).set(studentData)
+        .then(function () {
+          clearStudentForm();
+          showResultMessage('Student added successfully!', false);
+        })
+        .catch(function (error) {
+          showResultMessage('Error adding student: ' + error, true);
+        });
+    }
+  });
+
+  cancelBtn.addEventListener('click', function () {
+    clearStudentForm();
+  });
+}
+
+function clearStudentForm() {
+  document.getElementById('student-id').value = '';
+  document.getElementById('student-name').value = '';
+  document.getElementById('student-age').value = '';
+  document.getElementById('student-gender').value = '';
+  document.querySelectorAll('.cognitive-challenge').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  document.getElementById('student-contact').value = '';
+  document.getElementById('student-guardian').value = '';
+  document.getElementById('submit-btn').textContent = 'Add Student';
+  document.getElementById('form-title').textContent = 'Add New Student';
+  document.getElementById('cancel-btn').style.display = 'none';
+  const modal = document.getElementById('student-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function loadStudents() {
+  db.collection('students').orderBy('name').onSnapshot(function (snapshot) {
+    const tbody = document.querySelector('#students-table tbody');
+    tbody.innerHTML = '';
+    
+    if (snapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center">No students found</td></tr>';
+      return;
+    }
+
+    snapshot.forEach(function (doc) {
+      const student = doc.data();
+      const challengesDisplay = Array.isArray(student.challenges) 
+        ? student.challenges.join(', ') 
+        : student.challenges || 'None';
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="padding-left: 16px;">${student.name || ''}</td>
+        <td>${student.age || ''}</td>
+        <td>${student.gender || ''}</td>
+        <td>${challengesDisplay}</td>
+        <td>${student.contactNumber || ''}</td>
+        <td>${student.guardianName || ''}</td>
+        <td style="position: relative; padding-right: 16px;">
+          <div class="action-buttons">
+            <button class="edit-teacher-btn" onclick="editStudent('${doc.id}')" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="delete-pin-btn" onclick="deleteStudent('${doc.id}')" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>`;
+      tbody.appendChild(row);
+    });
+  });
+}
+
+window.editStudent = function (id) {
+  db.collection('students').doc(id).get().then(function(doc) {
+    if (doc.exists) {
+      const student = doc.data();
+      openStudentModal();
+      document.getElementById('student-id').value = id;
+      document.getElementById('student-name').value = student.name;
+      document.getElementById('student-age').value = student.age;
+      document.getElementById('student-gender').value = student.gender;
+      document.querySelectorAll('.cognitive-challenge').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      if (Array.isArray(student.challenges)) {
+        student.challenges.forEach(challenge => {
+          const checkbox = document.querySelector(`.cognitive-challenge[value="${challenge}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+      } else if (student.challenge) {
+        const checkbox = document.querySelector(`.cognitive-challenge[value="${student.challenge}"]`);
+        if (checkbox) checkbox.checked = true;
+      }
+      document.getElementById('student-contact').value = student.contactNumber;
+      document.getElementById('student-guardian').value = student.guardianName;
+      document.getElementById('submit-btn').textContent = 'Update Student';
+      document.getElementById('form-title').textContent = 'Edit Student';
+      document.getElementById('cancel-btn').style.display = 'inline-block';
+    } else {
+      showResultMessage('Student not found!', true);
+    }
+  }).catch(function(error) {
+    showResultMessage('Error getting student: ' + error, true);
+  });
+};
+
+window.deleteStudent = function (id) {
+  const confirmDialog = document.getElementById('delete-teacher-modal');
+  const confirmBtn = document.getElementById('confirm-delete-teacher');
+  const cancelBtn = document.getElementById('cancel-delete-teacher');
+
+  confirmDialog.style.display = 'block';
+
+  confirmBtn.onclick = function () {
+    db.collection('students').doc(id).delete()
+      .then(function () {
+        showResultMessage('Student deleted successfully!', false);
+        confirmDialog.style.display = 'none';
+      })
+      .catch(function (error) {
+        showResultMessage('Error deleting student: ' + error, true);
+      });
+  };
+
+  cancelBtn.onclick = function () {
+    confirmDialog.style.display = 'none';
+  };
+
+  window.onclick = function(event) {
+    if (event.target == confirmDialog) {
+      confirmDialog.style.display = 'none';
+    }
+  }
+};
+
+function filterStudents(searchTerm) {
+  const rows = document.querySelectorAll('#students-table tbody tr');
+  searchTerm = searchTerm.toLowerCase();
+  
+  rows.forEach(row => {
+    const name = row.querySelector('td:first-child').textContent.toLowerCase();
+    row.style.display = name.includes(searchTerm) ? '' : 'none';
+  });
+}
+
+function openStudentModal() {
+  const modal = document.getElementById('student-modal');
+  modal.style.display = 'block';
+  modal.classList.add('slide-in-animation');
+  modal.scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => {
+    modal.classList.remove('slide-in-animation');
+  }, 500);
+}
+
+// ------------------------------
+// Custom Result Window Functionality
+// ------------------------------
+function showResultMessage(message, isError = false) {
+  const resultWindow = document.getElementById('result-window');
+  const resultMessage = document.getElementById('result-message');
+  const closeBtn = document.getElementById('close-result-btn');
+
+  resultMessage.textContent = message;
+  if (isError) {
+    resultWindow.classList.remove('success');
+    resultWindow.classList.add('error');
+  } else {
+    resultWindow.classList.remove('error');
+    resultWindow.classList.add('success');
+  }
+  resultWindow.style.display = 'flex';
+
+  closeBtn.onclick = function () {
+    resultWindow.style.display = 'none';
+  };
+
+  setTimeout(function () {
+    resultWindow.style.display = 'none';
+  }, 3000);
+}
+
+// ------------------------------
+// Teacher Emails Management (CRUD)
+// ------------------------------
+async function createTeacherAccount(teacherName, teacherEmail, teacherPassword, teacherPin) {
+  try {
+    // First check if email exists in Firebase Authentication
+    const existingUser = await firebase.auth().fetchSignInMethodsForEmail(teacherEmail);
+    if (existingUser.length > 0) {
+      throw new Error('This email is already registered in Firebase Authentication');
+    }
+
+    // Check if email exists in Firestore
+    const emailCheck = await db.collection('teachers').where('email', '==', teacherEmail).get();
+    if (!emailCheck.empty) {
+      throw new Error('This email already exists in the database');
+    }
+
+    // Create user in Firebase Authentication
+    const userCredential = await firebase.auth().createUserWithEmailAndPassword(teacherEmail, teacherPassword);
+    const user = userCredential.user;
+
+    // Add teacher to Firestore using the auth UID as document ID
+    await db.collection('teachers').doc(user.uid).set({
+      name: teacherName,
+      email: teacherEmail,
+      password: teacherPassword,
+      pin: teacherPin,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      uid: user.uid
+    });
+
+    return { success: true, message: 'Teacher account created successfully!' };
+  } catch (error) {
+    console.error('Error creating teacher:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+// This is the single consolidated initTeacherForm function.
+// All duplicate logic has been removed.
+function initTeacherForm() {
+  const form = document.getElementById('teacher-form');
+  const openTeacherFormBtn = document.getElementById('open-teacher-form-btn');
+  const teacherModal = document.getElementById('teacher-modal');
+  const teacherModalClose = document.getElementById('teacher-modal-close');
+  const teacherCancelBtn = document.getElementById('teacher-cancel-btn');
+
+  if (openTeacherFormBtn && teacherModal) {
+    openTeacherFormBtn.addEventListener('click', function() {
+      clearTeacherForm();
+      teacherModal.style.display = 'block';
+      teacherModal.classList.add('slide-in-animation');
+      setTimeout(() => {
+        teacherModal.classList.remove('slide-in-animation');
+      }, 500);
+    });
+  }
+
+  if (teacherModalClose && teacherModal) {
+    teacherModalClose.addEventListener('click', function() {
+      teacherModal.style.display = 'none';
+      clearTeacherForm();
+    });
+  }
+
+  if (teacherCancelBtn) {
+    teacherCancelBtn.addEventListener('click', function() {
+      teacherModal.style.display = 'none';
+      clearTeacherForm();
+    });
+  }
+
+  // Close modal when clicking outside
+  window.addEventListener('click', function(e) {
+    if (e.target === teacherModal) {
+      teacherModal.style.display = 'none';
+      clearTeacherForm();
+    }
+  });
+
+  // Form submission handler
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const teacherName = document.getElementById('teacher-name').value.trim();
+      const teacherEmail = document.getElementById('teacher-email').value.trim();
+      const teacherPassword = document.getElementById('teacher-password').value.trim();
+      const teacherPin = document.getElementById('teacher-pin').value.trim();
+
+      if (!teacherName || !teacherEmail || !teacherPassword || !teacherPin) {
+        showResultMessage('Please fill in all fields', true);
+        return;
+      }
+
+      if (teacherPin.length !== 6 || isNaN(teacherPin)) {
+        showResultMessage('PIN must be a 6-digit number', true);
+        return;
+      }
+
+      try {
+        // Check if the email already exists in Firebase Authentication
+        const existingUser = await firebase.auth().fetchSignInMethodsForEmail(teacherEmail);
+        if (existingUser.length > 0) {
+          showResultMessage('A teacher with this email already exists in Firebase Authentication', true);
+          return;
+        }
+
+        // Check if the email already exists in Firestore
+        const emailCheck = await db.collection('teachers').where('email', '==', teacherEmail).get();
+        if (!emailCheck.empty) {
+          showResultMessage('A teacher with this email already exists in Firestore', true);
+          return;
+        }
+
+        // Create user in Firebase Authentication
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(teacherEmail, teacherPassword);
+        const user = userCredential.user;
+
+        // Add teacher to Firestore using the auth UID as document ID
+        await db.collection('teachers').doc(user.uid).set({
+          name: teacherName,
+          email: teacherEmail,
+          password: teacherPassword,
+          pin: teacherPin,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          uid: user.uid
+        });
+
+        // Display the password to the user (optional)
+        showResultMessage(`Teacher added successfully! Password: ${teacherPassword}`, false);
+
+        teacherModal.style.display = 'none';
+        clearTeacherForm();
+        loadTeacherEmails(); // Refresh the table
+
+      } catch (error) {
+        console.error('Error creating teacher:', error);
+        showResultMessage('Error creating teacher: ' + error.message, true);
+      }
+    });
+  }
+}
+
+function clearTeacherForm() {
+  const teacherForm = document.getElementById('teacher-form');
+  if (teacherForm) {
+    document.getElementById('teacher-name').value = '';
+    document.getElementById('teacher-email').value = '';
+    document.getElementById('teacher-password').value = '';
+    document.getElementById('teacher-pin').value = '';
+  }
+}
+
+function filterTeachers(searchTerm) {
+  const rows = document.querySelectorAll('#teacher-table tbody tr');
+  searchTerm = searchTerm.toLowerCase();
+  
+  rows.forEach(row => {
+    const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+    const email = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+    row.style.display = (name.includes(searchTerm) || email.includes(searchTerm)) ? '' : 'none';
+  });
+}
+
+function loadTeacherEmails() {
+  db.collection('teachers').orderBy('createdAt', 'desc').get()
+    .then(function (snapshot) {
+      const tbody = document.querySelector('#teacher-table tbody');
+      tbody.innerHTML = '';
+      
+      if (snapshot.empty) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="6" class="text-center">No teachers found</td>';
+        tbody.appendChild(emptyRow);
+        return;
+      }
+
+      snapshot.forEach(function (doc) {
+        const teacher = doc.data();
+        const createdAtStr = teacher.createdAt ? 
+          (teacher.createdAt.toDate ? teacher.createdAt.toDate().toLocaleString() : teacher.createdAt) 
+          : '';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${createdAtStr}</td>
+          <td>${teacher.name || ''}</td>
+          <td>${teacher.email || ''}</td>
+          <td>${teacher.password || ''}</td>
+          <td>${teacher.pin || ''}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="edit-teacher-btn" title="Edit">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="delete-pin-btn" title="Delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>`;
+
+        const editBtn = row.querySelector('.edit-teacher-btn');
+        const deleteBtn = row.querySelector('.delete-pin-btn');
+        
+        editBtn.addEventListener('click', () => {
+          showEditTeacherModal(doc.id, teacher);
+        });
+
+        deleteBtn.addEventListener('click', () => {
+          showDeleteTeacherModal(doc.id, teacher.email);
+        });
+
+        tbody.appendChild(row);
+      });
+    })
+    .catch(function (error) {
+      console.error("Error loading teachers:", error);
+      showResultMessage("Error loading teachers: " + error.message, true);
+    });
+}
+
+function showEditTeacherModal(teacherId, teacher) {
+  const modal = document.getElementById('edit-teacher-modal');
+  const nameInput = document.getElementById('edit-teacher-name');
+  const pinInput = document.getElementById('edit-teacher-pin');
+  const saveBtn = document.getElementById('edit-teacher-save');
+  const closeBtn = document.getElementById('edit-teacher-modal-close');
+  const cancelBtn = document.getElementById('edit-teacher-cancel');
+
+  modal.style.display = 'block';
+  nameInput.value = teacher.name || '';
+  pinInput.value = teacher.pin || '';
+
+  closeBtn.onclick = function() {
+    modal.style.display = 'none';
+  };
+
+  cancelBtn.onclick = function() {
+    modal.style.display = 'none';
+  };
+
+  saveBtn.onclick = function() {
+    const newName = nameInput.value.trim();
+    const newPin = pinInput.value.trim();
+
+    if (!newName) {
+      showResultMessage('Name cannot be empty', true);
+      return;
+    }
+
+    if (newPin.length !== 6 || isNaN(newPin)) {
+      showResultMessage('PIN must be a 6-digit number.', true);
+      return;
+    }
+
+    const updates = {
+      name: newName,
+      pin: newPin
+    };
+
+    db.collection('teachers').doc(teacherId).update(updates)
+      .then(() => {
+        modal.style.display = 'none';
+        showResultMessage('Teacher information updated successfully!', false);
+        loadTeacherEmails();
+      })
+      .catch((error) => {
+        showResultMessage('Error updating teacher: ' + error.message, true);
+      });
+  };
+
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  }
+}
+
+function showDeleteTeacherModal(teacherId, teacherEmail) {
+  const modal = document.getElementById('delete-teacher-modal');
+  const confirmBtn = document.getElementById('confirm-delete-teacher');
+  const cancelBtn = document.getElementById('cancel-delete-teacher');
+
+  if (!modal || !confirmBtn || !cancelBtn) {
+    console.error('Delete modal elements not found');
+    return;
+  }
+
+  modal.style.display = 'block';
+
+  confirmBtn.onclick = async function() {
+    try {
+      // Delete from Firestore first
+      await db.collection('teachers').doc(teacherId).delete();
+      
+      showResultMessage('Teacher deleted successfully!', false);
+      modal.style.display = 'none';
+      loadTeacherEmails(); // Refresh the table
+    } catch (error) {
+      console.error('Error deleting teacher:', error);
+      showResultMessage('Error deleting teacher: ' + error.message, true);
+    }
+  };
+
+  cancelBtn.onclick = function() {
+    modal.style.display = 'none';
+  };
+
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  };
+}
+
+// ------------------------------
+// Sidebar Navigation and Dark Mode
+// ------------------------------
+function initSidebar() {
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+      this.classList.add('active');
+      
+      document.querySelectorAll('section').forEach(section => {
+        section.style.display = 'none';
+      });
+      
+      const targetId = this.getAttribute('data-target');
+      if (targetId) {
+        document.getElementById(targetId).style.display = 'block';
+        
+        // Special initialization for sections needing data
+        if (targetId === 'students-section') {
+          // Refresh students data
+          loadStudents();
+        } else if (targetId === 'records-section') {
+          // Init records section if needed
+          if (typeof initRecordsSection === 'function') {
+            initRecordsSection();
+          }
+          loadStudentRecords();
+        } else if (targetId === 'teacher-emails-section') {
+          // Refresh teacher emails
+          loadTeacherEmails();
+        } else if (targetId === 'activities-section') {
+          // Load activities data
+          loadActivities();
+        }
+      }
+    });
+  });
+}
+
+function initDarkMode() {
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  if (!darkModeToggle) return;
+  
+  if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark-mode');
+    darkModeToggle.checked = true;
+  }
+  
+  darkModeToggle.addEventListener('change', function () {
+    if (darkModeToggle.checked) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('darkMode', 'enabled');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('darkMode', 'disabled');
+    }
+  });
+  
+  const settingsForm = document.getElementById('settings-form');
+  if (settingsForm) {
+    settingsForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const notificationsEnabled = document.getElementById('notification-toggle').checked;
+      const fontSize = document.getElementById('font-size').value;
+      localStorage.setItem('notificationsEnabled', notificationsEnabled ? 'true' : 'false');
+      localStorage.setItem('fontSize', fontSize);
+      showResultMessage('Settings saved successfully', false);
+    });
+  }
+}
+
+// ------------------------------
+// Profile Modal Functionality & Edit Profile
+// ------------------------------
+function initProfileModal() {
+  const profileTrigger = document.getElementById('profile-trigger');
+  const modal = document.getElementById('profile-modal');
+  const closeModal = document.querySelector('.modal .close');
+  const profileForm = document.getElementById('profile-form');
+
+  if (profileTrigger) {
+    profileTrigger.addEventListener('click', function () {
+      if (modal) {
+        modal.style.display = 'block';
+      } else {
+        console.error("Modal element not found.");
+      }
+    });
+  } else {
+    console.error("Profile trigger element not found.");
+  }
+
+  if (closeModal) {
+    closeModal.addEventListener('click', function () {
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    });
+  } else {
+    console.error("Close button element not found.");
+  }
+
+  window.addEventListener('click', function (event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+
+  if (profileForm) {
+    profileForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(profileForm);
+      fetch('updateProfile.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        if (data.message === "Profile updated successfully") {
+          showResultMessage("Profile updated successfully", false);
+          document.querySelector('.user-info span').textContent = formData.get('username');
+          modal.style.display = 'none';
+        } else {
+          showResultMessage("Error: " + data.message, true);
+        }
+      })
+      .catch(function (err) {
+        console.error("Error updating profile: ", err);
+        showResultMessage("Error updating profile", true);
+      });
+    });
+  }
+}
+
+// ------------------------------
+// Admin Form Submission for Adding Admins
+// ------------------------------
+function initAdminModal() {
+  const addAdminBtn = document.getElementById('add-admin-button');
+  const adminModal = document.getElementById('add-admin-modal');
+  const closeBtn = document.getElementById('add-admin-modal-close');
+  const cancelBtn = document.getElementById('add-admin-cancel');
+  const adminForm = document.getElementById('admin-form');
+
+  if (!addAdminBtn || !adminModal || !adminForm) {
+    console.error('Admin modal elements not found');
+    return;
+  }
+
+  // Show modal
+  addAdminBtn.addEventListener('click', () => {
+    adminModal.style.display = 'block';
+  });
+
+  // Hide modal handlers
+  closeBtn.addEventListener('click', () => {
+    adminModal.style.display = 'none';
+    adminForm.reset();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    adminModal.style.display = 'none';
+    adminForm.reset();
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target === adminModal) {
+      adminModal.style.display = 'none';
+      adminForm.reset();
+    }
+  });
+
+  // Form submission
+  adminForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    if (!formData.get('username') || !formData.get('password')) {
+      showResultMessage('Please fill in all fields', true);
+      return;
+    }
+
+    fetch('processAddAdmin.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showResultMessage(data.message, false);
+        
+        // Update admin list display
+        const adminListContainer = document.getElementById('admin-list-container');
+        let adminListHtml = `<p>Total Admins: ${data.adminList.length}</p>`;
+        adminListHtml += '<ul class="admin-list">';
+        
+        data.adminList.forEach(admin => {
+          adminListHtml += `
+            <li>
+              <div class="admin-profile-wrap">
+                <img src="${admin.profilePicture}" alt="Profile Picture of ${admin.username}" class="admin-profile-pic" />
+              </div>
+              <span class="admin-username">${admin.username}</span>
+            </li>`;
+        });
+        
+        adminListHtml += '</ul>';
+        adminListContainer.innerHTML = adminListHtml;
+        
+        // Reset form and close modal
+        adminForm.reset();
+        adminModal.style.display = 'none';
+      } else {
+        showResultMessage(data.message, true);
+      }
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      showResultMessage("An error occurred while adding the admin.", true);
+    });
+  });
+}
+
+// ------------------------------
+// Modal Profile Picture Upload
+// ------------------------------
+document.addEventListener('DOMContentLoaded', function() {
+  const profilePictureInput = document.getElementById('profile-picture');
+  const profilePicturePreviewImg = document.getElementById('profile-picture-preview-img');
+
+  if (profilePictureInput && profilePicturePreviewImg) {
+    profilePictureInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          profilePicturePreviewImg.setAttribute('src', e.target.result);
+        };
+        reader.readAsDataURL(file);
+
+        const formData = new FormData();
+        formData.append('profile_picture', file);
+
+        fetch('upload_profile_picture.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          if (data.status === 'success') {
+            console.log('Profile picture updated successfully.');
+            profilePicturePreviewImg.setAttribute('src', data.file);
+          } else {
+            showResultMessage('Error: ' + data.message, true);
+          }
+        })
+        .catch(function(error) {
+          console.error('Error uploading file:', error);
+          showResultMessage('Error uploading file', true);
+        });
+      }
+    });
+  }
+});
+
+// ------------------------------
+// Glitch/Dust Easter Egg Effect
+// ------------------------------
+document.addEventListener('keydown', function(e) {
+  if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'e') {
+    triggerOverloadGlitch();
+  }
+});
+
+function triggerOverloadGlitch() {
+  document.body.classList.add('glitch-effect-overload');
+  setTimeout(() => {
+    document.body.classList.remove('glitch-effect-overload');
+  }, 4000);
+}
+
+// ------------------------------
+// Records Management (CRUD)
+// ------------------------------
+document.addEventListener('DOMContentLoaded', function() {
+  initRecordsSection();
+});
+
+function initRecordsSection() {
+  loadStudentRecords();
+  initRecordsSearch();
+  initRecordsModal();
+}
+
+function initRecordsSearch() {
+  const recordsSearchInput = document.getElementById('records-search');
+  if (recordsSearchInput) {
+    recordsSearchInput.addEventListener('input', function() {
+      filterRecords(this.value.toLowerCase());
+    });
+  }
+}
+
+function initRecordsModal() {
+  const recordsModalClose = document.getElementById('records-modal-close');
+  if (recordsModalClose) {
+    recordsModalClose.addEventListener('click', function() {
+      document.getElementById('records-modal').style.display = 'none';
+    });
+  }
+  
+  window.addEventListener('click', function(e) {
+    const modal = document.getElementById('records-modal');
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+function loadStudentRecords() {
+  db.collection('students').orderBy('name').onSnapshot(function(snapshot) {
+    const tbody = document.querySelector('#records-table tbody');
+    tbody.innerHTML = '';
+    
+    if (snapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center">No students found</td></tr>';
+      return;
+    }
+
+    snapshot.forEach(function(doc) {
+      const student = doc.data();
+      const challengesDisplay = Array.isArray(student.challenges) 
+        ? student.challenges.join(', ') 
+        : student.challenges || 'None';
+      
+      const row = document.createElement('tr');
+      row.classList.add('clickable-row');
+      row.setAttribute('data-student-id', doc.id);
+      row.innerHTML = `
+        <td>${student.name || ''}</td>
+        <td>${student.age ? student.age + ' years old' : ''}</td>
+        <td>${student.gender || ''}</td>
+        <td>${challengesDisplay}</td>
+        <td>${student.contactNumber || ''}</td>
+        <td>${student.guardianName || ''}</td>
+        <td>
+          <button class="btn-download" onclick="event.stopPropagation(); downloadStudentReport('${doc.id}', '${student.name}')">
+            <i class="fas fa-download"></i> Report
+          </button>
+        </td>`;
+      
+      row.addEventListener('click', function() {
+        viewStudentRecords(doc.id, student.name);
+      });
+      tbody.appendChild(row);
+    });
+  });
+}
+
+// Function to generate and download student report
+async function downloadStudentReport(studentId, studentName) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Get student details
+    const studentDoc = await db.collection('students').doc(studentId).get();
+    if (!studentDoc.exists) {
+      showResultMessage('Student not found', true);
+      return;
+    }
+    const studentData = studentDoc.data();
+    
+    // Get student sessions
+    const sessionsSnapshot = await db.collection('students').doc(studentId).collection('sessions')
+      .orderBy('date', 'desc')
+      .get();
+
+    if (sessionsSnapshot.empty) {
+      showResultMessage('No sessions found for this student', true);
+      return;
+    }
+
+    // Process records data
+    const { records, stats, trends } = processRecordsForReport(sessionsSnapshot);
+    
+    // Generate performance graph
+    const graphCanvas = await createPerformanceGraph(trends);
+    
+    // Create PDF content
+    generatePDFContent(doc, studentName, studentData, stats, graphCanvas, records);
+    
+    // Save the PDF
+    doc.save(`${studentName}_progress_report.pdf`);
+    showResultMessage('Report downloaded successfully!', false);
+
+  } catch (error) {
+    console.error('Error generating report:', error);
+    showResultMessage('Error generating report', true);
+  }
+}
+
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// A separate date formatting function specifically for PDF reports
+function formatDateForReport(date) {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function processRecordsForReport(recordsSnapshot) {
+  let sessions = [];
+  let totalAccuracy = 0;
+  let totalCompletionTime = 0;
+  let totalErrors = 0;
+  let accuracyTrend = [];
+  let completionTimeTrend = [];
+  let errorsTrend = [];
+  let dates = [];
+  let count = 0;
+
+  // First, collect all sessions
+  recordsSnapshot.forEach(doc => {
+    const session = doc.data();
+    sessions.push(session);
+  });
+
+  // Sort by date (newest first for the sessions table, but oldest first for the trends)
+  sessions.sort((a, b) => {
+    const dateA = a.date?.toDate ? a.date.toDate() : new Date();
+    const dateB = b.date?.toDate ? b.date.toDate() : new Date();
+    return dateB - dateA; // descending order for table display
+  });
+
+  // Process the sessions for stats and trends (using first 20 for trends)
+  const trendSessions = [...sessions].reverse().slice(0, 20); // oldest first for trends
+  
+  trendSessions.forEach(session => {
+    if (session.accuracy !== undefined && !isNaN(session.accuracy)) {
+      totalAccuracy += parseFloat(session.accuracy);
+      accuracyTrend.push(parseFloat(session.accuracy));
+    } else {
+      accuracyTrend.push(null); // Use null for missing data points
+    }
+    
+    if (session.completionTime !== undefined && !isNaN(session.completionTime)) {
+      totalCompletionTime += parseFloat(session.completionTime);
+      completionTimeTrend.push(parseFloat(session.completionTime));
+    } else {
+      completionTimeTrend.push(null);
+    }
+    
+    if (session.errors !== undefined && !isNaN(session.errors)) {
+      totalErrors += parseInt(session.errors);
+      errorsTrend.push(parseInt(session.errors));
+    } else {
+      errorsTrend.push(null);
+    }
+    
+    const date = session.date?.toDate ? session.date.toDate() : new Date();
+    dates.push(formatDateForReport(date));
+    count++;
+  });
+
+  // Calculate averages
+  const stats = {
+    avgAccuracy: count > 0 ? (totalAccuracy / count).toFixed(1) : "0.0",
+    avgCompletionTime: count > 0 ? (totalCompletionTime / count).toFixed(1) : "0.0",
+    avgErrors: count > 0 ? (totalErrors / count).toFixed(1) : "0.0",
+    totalSessions: sessions.length
+  };
+
+  const trends = {
+    dates,
+    accuracyTrend,
+    completionTimeTrend,
+    errorsTrend
+  };
+
+  return { records: sessions, stats, trends };
+}
+
+async function createPerformanceGraph(trends) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 400;
+  const ctx = canvas.getContext('2d');
+  
+  // Set background color to white
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Add padding
+  const padding = 20;
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trends.dates,
+      datasets: [
+        {
+          label: 'Accuracy %',
+          data: trends.accuracyTrend,
+          borderColor: '#4CAF50',
+          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#4CAF50',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Completion Time (sec)',
+          data: trends.completionTimeTrend,
+          borderColor: '#2196F3',
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#2196F3',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Errors',
+          data: trends.errorsTrend,
+          borderColor: '#f44336',
+          backgroundColor: 'rgba(244, 67, 54, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#f44336',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.4,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      layout: {
+        padding: padding
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: 'Performance Trends Over Time',
+          font: {
+            size: 18,
+            weight: 'bold',
+            family: 'Arial'
+          },
+          padding: {
+            top: 10,
+            bottom: 20
+          },
+          color: '#333'
+        },
+        legend: {
+          position: 'bottom',
+          labels: {
+            boxWidth: 15,
+            padding: 15,
+            font: {
+              size: 12,
+              family: 'Arial'
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: {
+            size: 14,
+            family: 'Arial',
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 13,
+            family: 'Arial'
+          },
+          padding: 12,
+          cornerRadius: 6,
+          displayColors: true
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(200, 200, 200, 0.3)',
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              size: 11,
+              family: 'Arial'
+            },
+            color: '#666',
+            maxRotation: 45,
+            minRotation: 45
+          },
+          title: {
+            display: true,
+            text: 'Session Date and Time',
+            color: '#666',
+            font: {
+              size: 13,
+              family: 'Arial',
+              weight: 'bold'
+            },
+            padding: {
+              top: 10
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(200, 200, 200, 0.3)',
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              size: 11,
+              family: 'Arial'
+            },
+            color: '#666',
+            padding: 10
+          },
+          title: {
+            display: true,
+            text: 'Value',
+            color: '#666',
+            font: {
+              size: 13,
+              family: 'Arial',
+              weight: 'bold'
+            },
+            padding: {
+              bottom: 10
+            }
+          }
+        }
+      },
+      elements: {
+        line: {
+          tension: 0.4
+        }
+      },
+      animation: {
+        duration: 500
+      }
+    }
+  });
+
+  // Wait for chart animation to complete
+  await new Promise(resolve => setTimeout(resolve, 700));
+  return canvas;
+}
+
+function generatePDFContent(doc, studentName, studentData, stats, graphCanvas, records) {
+  // Set document properties
+  doc.setProperties({
+    title: `${studentName} - GrowBrain Progress Report`,
+    subject: 'Student Progress Report',
+    author: 'GrowBrain Learning Platform',
+    creator: 'GrowBrain Dashboard',
+    keywords: 'student report, progress, cognitive challenges, education',
+    creationDate: new Date()
+  });
+  
+  // Define colors
+  const primaryColor = [76/255, 175/255, 80/255]; // #4CAF50
+  const secondaryColor = [33/255, 150/255, 243/255]; // #2196F3
+  const textColor = [40/255, 40/255, 40/255]; // Darker text for better readability
+  const lightGray = [248/255, 248/255, 248/255]; // Very light gray for backgrounds
+  
+  // Add professional header with logo and title
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, 210, 30, 'F');
+  
+  // Add title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GrowBrain', 20, 15);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Student Progress Report', 105, 15, { align: 'center' });
+  doc.setFontSize(11);
+  doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 190, 15, { align: 'right' });
+  
+  // Add separator line
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.5);
+  doc.line(20, 20, 190, 20);
+  
+  // Add white space after header
+  const contentStartY = 40;
+  
+  // Student information section title
+  doc.setTextColor(...textColor);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Student Profile', 20, contentStartY);
+  
+  // Add horizontal rule under section title
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, contentStartY + 5, 190, contentStartY + 5);
+  
+  // Create a box for student info - using white background with subtle border
+  const studentInfoStartY = contentStartY + 10;
+  doc.setFillColor(255, 255, 255); // Pure white background
+  doc.roundedRect(20, studentInfoStartY, 170, 36, 3, 3, 'F');
+  doc.setDrawColor(220/255, 220/255, 220/255); // Light gray border
+  doc.setLineWidth(0.3);
+  doc.roundedRect(20, studentInfoStartY, 170, 36, 3, 3, 'S');
+  
+  // Add student information in two columns
+  doc.setFontSize(12);
+  doc.setTextColor(...textColor);
+  
+  // Column 1 (left side)
+  const col1 = 25;
+  const col2 = 105;
+  
+  // Row 1
+  doc.setFont('helvetica', 'bold');
+  doc.text('Name:', col1, studentInfoStartY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(studentName, col1 + 30, studentInfoStartY + 10);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Age:', col2, studentInfoStartY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(studentData.age ? `${studentData.age} years old` : 'N/A', col2 + 25, studentInfoStartY + 10);
+  
+  // Row 2
+  doc.setFont('helvetica', 'bold');
+  doc.text('Gender:', col1, studentInfoStartY + 20);
+  doc.setFont('helvetica', 'normal');
+  doc.text(studentData.gender || 'N/A', col1 + 30, studentInfoStartY + 20);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Guardian:', col2, studentInfoStartY + 20);
+  doc.setFont('helvetica', 'normal');
+  doc.text(studentData.guardianName || 'N/A', col2 + 25, studentInfoStartY + 20);
+  
+  // Row 3
+  doc.setFont('helvetica', 'bold');
+  doc.text('Contact:', col1, studentInfoStartY + 30);
+  doc.setFont('helvetica', 'normal');
+  doc.text(studentData.contactNumber || 'N/A', col1 + 30, studentInfoStartY + 30);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Challenges:', col2, studentInfoStartY + 30);
+  doc.setFont('helvetica', 'normal');
+  const challenges = Array.isArray(studentData.challenges) ? studentData.challenges.join(', ') : (studentData.challenges || 'None');
+  doc.text(challenges, col2 + 25, studentInfoStartY + 30);
+  
+  // Performance Summary section
+  const summaryStartY = studentInfoStartY + 50;
+  
+  // Summary title
+  doc.setTextColor(...textColor);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Performance Summary', 20, summaryStartY);
+  
+  // Add horizontal rule under section title
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, summaryStartY + 5, 190, summaryStartY + 5);
+  
+  // Summary box - white background with subtle border
+  doc.setFillColor(255, 255, 255); // Pure white background
+  doc.roundedRect(20, summaryStartY + 10, 170, 40, 3, 3, 'F');
+  doc.setDrawColor(220/255, 220/255, 220/255); // Light gray border
+  doc.setLineWidth(0.3);
+  doc.roundedRect(20, summaryStartY + 10, 170, 40, 3, 3, 'S');
+  
+  // Create three-column layout for stats
+  const colWidth = 56;
+  const col1X = 25;
+  const col2X = col1X + colWidth;
+  const col3X = col2X + colWidth;
+  const statsY = summaryStartY + 32;
+  const statsLabelY = statsY + 10;
+  
+  // Accuracy
+  doc.setFillColor(...primaryColor);
+  doc.circle(col1X + 3, statsY - 3, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...primaryColor);
+  doc.text(`${stats.avgAccuracy}%`, col1X + 15, statsY);
+  doc.setFontSize(9);
+  doc.setTextColor(...textColor);
+  doc.text('Average Accuracy', col1X + 3, statsLabelY);
+  
+  // Completion Time
+  doc.setFillColor(...secondaryColor);
+  doc.circle(col2X + 3, statsY - 3, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...secondaryColor);
+  doc.text(`${stats.avgCompletionTime}s`, col2X + 15, statsY);
+  doc.setFontSize(9);
+  doc.setTextColor(...textColor);
+  doc.text('Average Completion Time', col2X + 3, statsLabelY);
+  
+  // Errors
+  doc.setFillColor(244/255, 67/255, 54/255); // Red
+  doc.circle(col3X + 3, statsY - 3, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(244/255, 67/255, 54/255);
+  doc.text(`${stats.avgErrors}`, col3X + 15, statsY);
+  doc.setFontSize(9);
+  doc.setTextColor(...textColor);
+  doc.text('Average Errors per Session', col3X + 3, statsLabelY);
+  
+  // Sessions count info
+  doc.setFontSize(10);
+  doc.setTextColor(...textColor);
+  doc.setFont('helvetica', 'italic');
+  doc.text(`Total Sessions: ${stats.totalSessions}`, 25, summaryStartY + 22);
+  
+  // Performance Trends section
+  const trendsStartY = summaryStartY + 60;
+  doc.setFontSize(16);
+  doc.setTextColor(...textColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Performance Trends Over Time', 20, trendsStartY);
+  
+  // Add horizontal rule under section title
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, trendsStartY + 5, 190, trendsStartY + 5);
+  
+  // Add graph with border and background (white background, no black border)
+  doc.setFillColor(255, 255, 255); // Pure white background
+  doc.roundedRect(20, trendsStartY + 10, 170, 90, 3, 3, 'F');
+  doc.setDrawColor(220/255, 220/255, 220/255); // Light gray border
+  doc.setLineWidth(0.3);
+  doc.roundedRect(20, trendsStartY + 10, 170, 90, 3, 3, 'S');
+  
+  // Insert the graph
+  const graphImage = graphCanvas.toDataURL('image/png');
+  doc.addImage(graphImage, 'PNG', 22, trendsStartY + 12, 166, 86);
+  
+  // Add detailed session data section
+  doc.addPage();
+  
+  // Header on second page
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, 210, 20, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GrowBrain - Student Progress Report', 105, 13, { align: 'center' });
+  
+  // Session details title
+  const detailsStartY = 30;
+  doc.setTextColor(...textColor);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Detailed Session Data', 20, detailsStartY);
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, detailsStartY + 5, 190, detailsStartY + 5);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...textColor);
+  doc.text(`${studentName} - Last ${Math.min(records.length, 20)} Sessions`, 20, detailsStartY + 15);
+  
+  // Create styled table for records
+  const tableStartY = detailsStartY + 25;
+  const headers = ['Date', 'Challenge Focus', 'Difficulty', 'Accuracy', 'Time (sec)', 'Errors'];
+  const colWidths = [30, 50, 25, 25, 25, 20];
+  
+  // Draw table header
+  doc.setFillColor(0, 0, 0);
+  doc.rect(20, tableStartY - 5, 175, 10, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  
+  let currentX = 20;
+  headers.forEach((header, i) => {
+    doc.text(header, currentX + 3, tableStartY);
+    currentX += colWidths[i];
+  });
+  
+  // Table rows
+  let currentY = tableStartY + 10;
+  doc.setTextColor(...textColor);
+  doc.setFont('helvetica', 'normal');
+  
+  // Create zebra striping
+  let rowCount = 0;
+  
+  // Only show up to 20 most recent records
+  records.slice(0, 20).forEach(record => {
+    if (currentY > 270) {
+      doc.addPage();
+      // Header on continuation page
+      doc.setFillColor(0, 0, 0);
+      doc.rect(0, 0, 210, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GrowBrain - Student Progress Report (continued)', 105, 13, { align: 'center' });
+      
+      // Reset position for new page and redraw table header
+      currentY = 30;
+      
+      doc.setFillColor(0, 0, 0);
+      doc.rect(20, currentY - 5, 175, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      
+      currentX = 20;
+      headers.forEach((header, i) => {
+        doc.text(header, currentX + 3, currentY);
+        currentX += colWidths[i];
+      });
+      
+      currentY += 10;
+      doc.setTextColor(...textColor);
+      doc.setFont('helvetica', 'normal');
+    }
+    
+    // Zebra striping for rows
+    const rowHeight = 8;
+    if (rowCount % 2 === 0) {
+      doc.setFillColor(...lightGray);
+      doc.rect(20, currentY - 5, 175, rowHeight, 'F');
+    }
+    
+    currentX = 20;
+    const date = record.date?.toDate ? formatDateForReport(record.date.toDate()) : 'N/A';
+    
+    // Format challenge focus (limit length if needed)
+    let challengeFocus = record.challengeFocus || 'N/A';
+    if (challengeFocus.length > 25) {
+      challengeFocus = challengeFocus.substring(0, 22) + '...';
+    }
+    
+    // Format accuracy and add color coding
+    let accuracyValue = record.accuracy ? parseFloat(record.accuracy).toFixed(1) + '%' : 'N/A';
+    let accuracyColor = textColor;
+    if (record.accuracy) {
+      if (record.accuracy >= 80) {
+        accuracyColor = primaryColor; // Green for good
+      } else if (record.accuracy >= 60) {
+        accuracyColor = [255/255, 152/255, 0/255]; // Orange for medium
+      } else {
+        accuracyColor = [244/255, 67/255, 54/255]; // Red for needs improvement
+      }
+    }
+    
+    const rowData = [
+      date,
+      challengeFocus,
+      record.difficulty || 'N/A',
+      { text: accuracyValue, color: accuracyColor },
+      record.completionTime ? parseFloat(record.completionTime).toFixed(2) + ' sec' : 'N/A',
+      record.errors || '0'
+    ];
+    
+    rowData.forEach((item, i) => {
+      if (typeof item === 'object') {
+        // Handle colored text
+        doc.setTextColor(...item.color);
+        doc.text(String(item.text), currentX + 3, currentY);
+        doc.setTextColor(...textColor); // Reset text color
+      } else {
+        doc.text(String(item), currentX + 3, currentY);
+      }
+      currentX += colWidths[i];
+    });
+    
+    currentY += rowHeight;
+    rowCount++;
+  });
+  
+  // Add footer with page numbers
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFillColor(245, 245, 245);
+    doc.rect(0, 280, 210, 17, 'F');
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Page ${i} of ${pageCount}`, 105, 287, { align: 'center' });
+    doc.text('GrowBrain Learning Platform', 20, 287);
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 190, 287, { align: 'right' });
+  }
+}
+
+function filterRecords(searchTerm) {
+  const rows = document.querySelectorAll('#records-table tbody tr');
+  rows.forEach(row => {
+    const name = row.querySelector('td:first-child').textContent.toLowerCase();
+    row.style.display = name.includes(searchTerm) ? '' : 'none';
+  });
+}
+
+function viewStudentRecords(studentId, studentName) {
+  // Update modal header and reset stats
+  document.getElementById('records-student-name').textContent = `${studentName}'s Sessions`;
+  document.querySelector('#student-records-table tbody').innerHTML = '';
+  setLoadingStats();
+  document.getElementById('records-modal').style.display = 'block';
+  
+  // Fetch student sessions
+  db.collection('students').doc(studentId).collection('sessions')
+    .orderBy('date', 'desc')
+    .get()
+    .then(function(querySnapshot) {
+      const tbody = document.querySelector('#student-records-table tbody');
+      
+      if (querySnapshot.empty) {
+        handleEmptyRecords(tbody);
+        return;
+      }
+      
+      const stats = processStudentRecords(querySnapshot, tbody);
+      updateRecordStats(stats);
+    })
+    .catch(function(error) {
+      console.error("Error getting student sessions: ", error);
+      showError(error.message);
+    });
+}
+
+function setLoadingStats() {
+  document.getElementById('avg-completion-time').textContent = 'Loading...';
+  document.getElementById('avg-accuracy').textContent = 'Loading...';
+}
+
+function handleEmptyRecords(tbody) {
+  tbody.innerHTML = '<tr><td colspan="6" class="no-records">No sessions found for this student.</td></tr>';
+  document.getElementById('avg-completion-time').textContent = '0.00 sec';
+  document.getElementById('avg-accuracy').textContent = '0.0%';
+}
+
+function processStudentRecords(querySnapshot, tbody) {
+  let totalCompletionTime = 0;
+  let totalAccuracy = 0;
+  let count = 0;
+  
+  querySnapshot.forEach(function(doc) {
+    const record = doc.data();
+    const row = createRecordRow(record);
+    tbody.appendChild(row);
+    
+    // Update stats
+    if (record.completionTime) {
+      totalCompletionTime += parseFloat(record.completionTime);
+      count++;
+    }
+    if (record.accuracy) {
+      totalAccuracy += parseFloat(record.accuracy);
+    }
+  });
+  
+  return { totalCompletionTime, totalAccuracy, count };
+}
+
+function createRecordRow(record) {
+  const dateObj = record.date && record.date.toDate ? record.date.toDate() : new Date();
+  
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${formatDate(dateObj)}</td>
+    <td>${record.challengeFocus || 'N/A'}</td>
+    <td>${record.difficulty || 'N/A'}</td>
+    <td>${record.accuracy ? parseFloat(record.accuracy).toFixed(1) + '%' : 'N/A'}</td>
+    <td>${record.completionTime ? parseFloat(record.completionTime).toFixed(2) + ' sec' : 'N/A'}</td>
+    <td>${record.lastPlayed || 'N/A'}</td>`;
+  
+  return row;
+}
+
+function updateRecordStats({ totalCompletionTime, totalAccuracy, count }) {
+  if (count > 0) {
+    const avgCompletionTime = (totalCompletionTime / count).toFixed(2);
+    const avgAccuracy = (totalAccuracy / count).toFixed(1);
+    
+    document.getElementById('avg-completion-time').textContent = `${avgCompletionTime} sec`;
+    document.getElementById('avg-accuracy').textContent = `${avgAccuracy}%`;
+  } else {
+    document.getElementById('avg-completion-time').textContent = '0.00 sec';
+    document.getElementById('avg-accuracy').textContent = '0.0%';
+  }
+}
+
+function showError(message) {
+  document.querySelector('#student-records-table tbody').innerHTML = 
+    `<tr><td colspan="6" class="error-message">Error loading records: ${message}</td></tr>`;
+}
+
+// ------------------------------
+// Dashboard Teacher Count
+// ------------------------------
+function loadTeacherCount() {
+  db.collection('users').get()
+    .then(snapshot => {
+      document.getElementById('active-teachers').textContent = snapshot.size;
+    })
+    .catch(error => {
+      console.error("Error loading teacher count:", error);
+    });
+}
+
+// ------------------------------
+// Activities Section Functions
+// ------------------------------
+function loadActivities() {
+  const activitiesTable = document.getElementById('activities-table');
+  if (!activitiesTable) return;
+  
+  const tbody = activitiesTable.querySelector('tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="loading-message">Loading activities data...</td></tr>';
+  
+  // Get gameRecords collection from Firestore
+  db.collection('gameRecords')
+    .orderBy('date', 'desc')
+    .get()
+    .then((querySnapshot) => {
+      if (querySnapshot.empty) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">No activities found</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = '';
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const tr = createActivityRow(data);
+        tbody.appendChild(tr);
+      });
+    })
+    .catch((error) => {
+      console.error("Error loading activities: ", error);
+      tbody.innerHTML = `<tr><td colspan="7" class="error-message">Error loading activities: ${error.message}</td></tr>`;
+    });
+}
+
+function createActivityRow(activity) {
+  const tr = document.createElement('tr');
+  
+  // Format date and time for display
+  const date = activity.date ? formatDate(new Date(activity.date)) : 'N/A';
+  const lastPlayed = activity.lastPlayed ? formatDate(new Date(activity.lastPlayed)) : 'N/A';
+  
+  // Format accuracy as percentage
+  const accuracy = activity.accuracy !== undefined ? `${activity.accuracy}%` : 'N/A';
+  
+  // Format completion time in seconds
+  const completionTime = activity.completionTime !== undefined ? 
+    `${activity.completionTime} sec` : 'N/A';
+  
+  tr.innerHTML = `
+    <td>${activity.studentName || 'Unknown'}</td>
+    <td>${activity.challengeFocus || 'N/A'}</td>
+    <td>${accuracy}</td>
+    <td>${completionTime}</td>
+    <td>${activity.difficulty || 'N/A'}</td>
+    <td>${date}</td>
+    <td>${lastPlayed}</td>
+  `;
+  
+  return tr;
+}
+
+function filterActivities(searchTerm) {
+  const rows = document.querySelectorAll('#activities-table tbody tr');
+  rows.forEach(row => {
+    const studentName = row.cells[0].textContent.toLowerCase();
+    const challengeFocus = row.cells[1].textContent.toLowerCase();
+    if (studentName.includes(searchTerm) || challengeFocus.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
