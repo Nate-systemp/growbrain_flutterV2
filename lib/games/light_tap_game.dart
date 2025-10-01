@@ -509,9 +509,15 @@ class _LightTapGameState extends State<LightTapGame>
         gameName: 'Light Tap',
         difficulty: _normalizedDifficulty,
       );
+      // In session mode, the session screen handles showing the congrats dialog
+      // So we don't show our own game over dialog to avoid overlap
+      return;
     }
 
-    _showGameOverDialog(completed, accuracy, completionTime);
+    // Only show game over dialog in demo mode
+    if (widget.onGameComplete == null) {
+      _showGameOverDialog(completed, accuracy, completionTime);
+    }
   }
 
   void _resetGame() {

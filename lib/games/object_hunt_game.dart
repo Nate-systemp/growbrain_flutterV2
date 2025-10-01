@@ -309,6 +309,9 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
         grid[row][col].isShaking = true;
       });
 
+      // Play wrong sound effect
+      SoundEffectsManager().playWrong();
+
       _shakeController.forward().then((_) {
         _shakeController.reset();
         if (mounted) {
