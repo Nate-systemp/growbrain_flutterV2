@@ -1,0 +1,1 @@
+<?php\nheader(" Content-Type: text/javascript\);\n?>
