@@ -54,10 +54,105 @@ Color goOverlayTextColor = const Color(0xFF5B6F4A);
 late final AnimationController _goController;
 late final Animation<double> _goOpacity;
 late final Animation<double> _goScale;
+// HUD pop-in animation
+late final AnimationController _hudController;
+late final Animation<double> _hudOpacity;
+late final Animation<double> _hudScale;
+bool showHud = false;
   int round = 1;
   static const int maxRounds = 5;
   int tappedIndex = -1;
   String _normalizedDifficulty = 'Starter';
+
+  // Icon-specific pastel colors similar to Light Tap// Fixed card size for consistency
+static const double _fixedCardSize = 140.0;
+static const double _cardSpacing = 12.0;
+  // Fallback goes to primary green if icon is not in the map
+  final Map<IconData, Color> _iconPastelColors = {
+    // Light Tap core set
+    Icons.star: Color(0xFFFFD700), // Gold
+  Icons.favorite: Color(0xFFFF1744), // Bright red
+  Icons.flash_on: Color(0xFFFFEB3B), // Bright yellow
+  Icons.sunny: Color(0xFFFF9800), // Orange
+  Icons.brightness_high: Color(0xFFFFEB3B),
+  Icons.nightlight: Color(0xFF3F51B5), // Indigo
+  Icons.local_fire_department: Color(0xFFFF5722), // Deep orange
+  Icons.water_drop: Color(0xFF2196F3), // Blue
+  Icons.eco: Color(0xFF4CAF50), // Green
+  Icons.diamond: Color(0xFF9C27B0), // Purple
+
+    // Find Me common set
+   Icons.sports_soccer: Color(0xFF2196F3),
+  Icons.car_rental: Color(0xFF607D8B),
+  Icons.home: Color(0xFF009688),
+  Icons.pets: Color(0xFFE91E63),
+  Icons.local_florist: Color(0xFF4CAF50),
+  Icons.cake: Color(0xFFFFD700),
+  Icons.music_note: Color(0xFF9C27B0),
+  Icons.umbrella: Color(0xFF2196F3),
+  Icons.airplane_ticket: Color(0xFF2196F3),
+  Icons.school: Color(0xFFFF9800),
+  Icons.book: Color(0xFFFF9800),
+  Icons.emoji_food_beverage: Color(0xFFFF9800),
+  Icons.face: Color(0xFFFF5722),
+
+  Icons.apple: Color(0xFFFF1744), // Bright red
+Icons.beach_access: Color(0xFF00BCD4), // Cyan
+Icons.camera_alt: Color(0xFF424242), // Dark gray
+Icons.park: Color(0xFF4CAF50), // Green
+Icons.sports_esports: Color(0xFF9C27B0), // Purple
+Icons.headphones: Color(0xFF9C27B0), // Purple
+Icons.ice_skating: Color(0xFF2196F3), // Blue
+Icons.vpn_key: Color(0xFFFF9800), // Orange
+Icons.lightbulb: Color(0xFFFFEB3B), // Yellow
+Icons.map: Color(0xFF009688), // Teal
+Icons.palette: Color(0xFFE91E63), // Pink
+Icons.rocket_launch: Color(0xFF2196F3), // Blue
+Icons.sailing: Color(0xFF03A9F4), // Light blue
+Icons.train: Color(0xFF607D8B), // Blue gray
+Icons.watch: Color(0xFFFF9800), // Orange
+Icons.yard: Color(0xFF4CAF50), // Green
+Icons.zoom_in: Color(0xFF757575), // Gray
+
+Icons.anchor: Color(0xFF2196F3), // Blue
+Icons.balance: Color(0xFF795548), // Brown
+Icons.castle: Color(0xFF9C27B0), // Purple
+Icons.directions_bike: Color(0xFFFF9800), // Orange
+Icons.fingerprint: Color(0xFF607D8B), // Blue gray
+Icons.gavel: Color(0xFFFF9800), // Orange
+Icons.hiking: Color(0xFF4CAF50), // Green
+Icons.icecream: Color(0xFFE91E63), // Pink
+Icons.keyboard: Color(0xFF424242), // Dark gray
+Icons.landscape: Color(0xFF4CAF50), // Green
+Icons.medical_services: Color(0xFFFF1744), // Red
+Icons.nature_people: Color(0xFF4CAF50), // Green
+Icons.outdoor_grill: Color(0xFFFF5722), // Deep orange
+Icons.piano: Color(0xFF424242), // Dark gray
+Icons.quiz: Color(0xFFFF9800), // Orange
+Icons.restaurant: Color(0xFFFF5722), // Deep orange
+Icons.sports_tennis: Color(0xFF4CAF50), // Green
+Icons.theater_comedy: Color(0xFFFFD700), // Gold
+Icons.umbrella_outlined: Color(0xFF2196F3), // Blue
+
+Icons.apartment: Color(0xFF607D8B), // Blue gray
+Icons.brush: Color(0xFFE91E63), // Pink
+Icons.celebration: Color(0xFFFFD700), // Gold
+Icons.dashboard: Color(0xFF424242), // Dark gray
+Icons.extension: Color(0xFF9C27B0), // Purple
+Icons.flight_takeoff: Color(0xFF2196F3), // Blue
+Icons.gesture: Color(0xFFFF9800), // Orange
+Icons.handyman: Color(0xFF795548), // Brown
+Icons.inventory: Color(0xFF607D8B), // Blue gray
+Icons.join_inner: Color(0xFF9C27B0), // Purple
+Icons.kitchen: Color(0xFFFF9800), // Orange
+Icons.language: Color(0xFF2196F3), // Blue
+Icons.memory: Color(0xFF607D8B), // Blue gray
+Icons.navigation: Color(0xFF2196F3), // Blue
+  };
+
+  Color _getIconPastelColor(IconData icon) {
+    return _iconPastelColors[icon] ?? const Color(0xFF5B6F4A);
+  }
 
   @override
 void initState() {
@@ -70,6 +165,15 @@ void initState() {
   _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
   _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
     CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
+  );
+  // HUD animation init
+  _hudController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
+  _hudOpacity = CurvedAnimation(parent: _hudController, curve: Curves.easeInOut);
+  _hudScale = Tween<double>(begin: 0.85, end: 1.0).animate(
+    CurvedAnimation(parent: _hudController, curve: Curves.easeOutBack),
   );
   _initializeAnimations();
   _initializeGame();
@@ -272,7 +376,9 @@ void _showCountdown() async {
     setState(() {
       showingCountdown = false;
       isShowingTarget = true;
+      showHud = true;
     });
+    _hudController.forward();
     _cardAnimationController.forward();
 
     int displayTime = 3;
@@ -323,32 +429,39 @@ void _showCountdown() async {
     });
   }
 
-  void _correctAnswer() {
+void _correctAnswer() {
+  setState(() {
+    score += 10;
+    correctAnswers++;
+    // mark correct so UI can show green feedback
+    _isCorrectHighlight = true;
+    _isWrongHighlight = false;
+  });
+
+  // Play success sound effect with voice
+  SoundEffectsManager().playSuccessWithVoice();
+
+  _scoreAnimationController.forward().then((_) {
+    _scoreAnimationController.reverse();
+  });
+
+  // Show green check overlay
+  _showGoOverlay(
+    text: '✓',
+    color: Colors.green,
+    textColor: Colors.white,
+    
+  );
+
+  // Pause briefly to show green feedback, then advance to next round
+  Timer(const Duration(milliseconds: 1000), () {
+    // clear correct highlight and advance
     setState(() {
-      score += 10;
-      correctAnswers++;
-      // mark correct so UI can show green feedback
-      _isCorrectHighlight = true;
-      _isWrongHighlight = false;
+      _isCorrectHighlight = false;
     });
-
-    // Play success sound effect with voice
-    SoundEffectsManager().playSuccessWithVoice();
-
-    _scoreAnimationController.forward().then((_) {
-      _scoreAnimationController.reverse();
-    });
-
-    // Pause briefly to show green feedback, then advance to next round
-    Timer(const Duration(milliseconds: 700), () {
-      // clear correct highlight and advance
-      setState(() {
-        _isCorrectHighlight = false;
-      });
-      _nextRound();
-    });
-  }
-
+    _nextRound();
+  });
+}
   
 void _wrongAnswer(int index) {
   setState(() {
@@ -446,28 +559,29 @@ void _endGame() {
         return AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
           title: Column(
             children: [
               Container(
-                width: 80,
-                height: 80,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
                   color: const Color(0xFF5B6F4A),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF5B6F4A).withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: const Color(0xFF5B6F4A).withOpacity(0.30),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: const Icon(
                   Icons.search_rounded,
                   color: Colors.white,
-                  size: 40,
+                  size: 48,
                 ),
               ),
               const SizedBox(height: 16),
@@ -475,8 +589,8 @@ void _endGame() {
                 'Fantastic! 🔍✨',
                 style: TextStyle(
                   color: const Color(0xFF5B6F4A),
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -485,8 +599,15 @@ void _endGame() {
           content: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5DC).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -506,69 +627,55 @@ void _endGame() {
             if (widget.onGameComplete == null) ...[
               // Demo mode: Show Play Again and Exit buttons
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop();
                           _resetGame();
                         },
+                        icon: const Icon(Icons.refresh, size: 22),
+                        label: const Text(
+                          'Play Again',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5B6F4A),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          elevation: 3,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.refresh, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Play Again',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                          elevation: 4,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop(); // Close dialog
                           Navigator.of(context).pop(); // Exit game
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        icon: const Icon(Icons.exit_to_app, size: 22, color: Color(0xFF5B6F4A)),
+                        label: const Text(
+                          'Exit',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5B6F4A),
                           ),
-                          elevation: 3,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.exit_to_app, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Exit',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF5B6F4A), width: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -580,33 +687,27 @@ void _endGame() {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
                     Navigator.of(context).pop(); // Exit game and return to session screen
                   },
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                  label: const Text(
+                    'Next Game',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5B6F4A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    elevation: 3,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Next Game',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                    elevation: 4,
                   ),
                 ),
               ),
@@ -663,10 +764,12 @@ void _endGame() {
       gameEnded = false;
       isShowingTarget = false;
       tappedIndex = -1;
+      showHud = false;
     });
     _cardAnimationController.reset();
     _scoreAnimationController.reset();
     _tapAnimationController.reset();
+    _hudController.reset();
     _initializeGame();
   }
 
@@ -711,6 +814,7 @@ void _endGame() {
     _scoreAnimationController.dispose();
     _tapAnimationController.dispose();
     _goController.dispose();
+    _hudController.dispose();
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
@@ -747,53 +851,63 @@ Widget build(BuildContext context) {
             children: [
               Column(
                 children: [
-                  const SizedBox(height: 55),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _infoCircle(
-                        label: 'Score',
-                        value: '$score',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
+                  if (showHud) ...[
+                    const SizedBox(height: 55),
+                    FadeTransition(
+                      opacity: _hudOpacity,
+                      child: ScaleTransition(
+                        scale: _hudScale,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _infoCircle(
+                              label: 'Score',
+                              value: '$score',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                            ),
+                            _infoCircle(
+                              label: 'Round',
+                              value: '$round/$maxRounds',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                            ),
+                            _infoCircle(
+                              label: 'Time',
+                              value: '$timeLeft',
+                              circleSize: 110,
+                              valueFontSize: 30,
+                              labelFontSize: 26,
+                              valueColor: timeLeft <= 10 ? Colors.red : const Color(0xFF5B6F4A),
+                            ),
+                          ],
+                        ),
                       ),
-                      _infoCircle(
-                        label: 'Round',
-                        value: '$round/$maxRounds',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
-                      ),
-                      _infoCircle(
-                        label: 'Time',
-                        value: '$timeLeft',
-                        circleSize: 110,
-                        valueFontSize: 30,
-                        labelFontSize: 26,
-                        valueColor: timeLeft <= 10 ? Colors.red : const Color(0xFF5B6F4A),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   if (showingCountdown)
                     Expanded(child: _buildCountdownScreen())
                   else if (!gameStarted)
-                    Expanded(child: Center(child: _buildStartCubeButton()))
+                    Expanded(child: Center(child: _buildStartScreenWithInstruction()))
                   else if (gameStarted && !gameEnded && isShowingTarget)
                     Expanded(child: Center(child: _buildTargetDisplay()))
                   else if (gameStarted && !gameEnded && !isShowingTarget)
                     Expanded(child: Stack(children: [_buildGameGrid()])),
                 ],
               ),
-              // "GO!" overlay
-              if (showingGo)
+             // "GO!" overlay
+if (showingGo)
   Positioned.fill(
     child: IgnorePointer(
       child: FadeTransition(
         opacity: _goOpacity,
         child: Container(
-          color: Colors.black.withOpacity(0.12),
+         color: goOverlayText == 'X' || goOverlayText == '✓'
+    ? const Color.fromARGB(83, 0, 0, 0).withOpacity(0.3)  // Gray background for X
+    : const Color.fromARGB(19, 0, 0, 0).withOpacity(0), // Original background for GO!
           child: Center(
             child: ScaleTransition(
               scale: _goScale,
@@ -1064,7 +1178,7 @@ Widget _infoCircle({
                   Icon(
                     targetObject!.icon,
                     size: 62,
-                    color: const Color(0xFF5B6F4A),
+                    color: _getIconPastelColor(targetObject!.icon),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1334,7 +1448,7 @@ Widget _infoCircle({
                         ? Colors.green
                         : isWrong
                         ? Colors.red
-                        : const Color(0xFF5B6F4A),
+                        : _getIconPastelColor(object.icon),
                   ),
                   SizedBox(height: cardSize * 0.08),
                   Text(
@@ -1361,67 +1475,117 @@ Widget _infoCircle({
     );
   }
 
-  Widget _buildStartCubeButton() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Find Me',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 36,
-            fontWeight: FontWeight.w900,
+  // LightTap-style start / instruction screen for Find Me (panel UI)
+  Widget _buildStartScreenWithInstruction() {
+    final size = MediaQuery.of(context).size;
+    final bool isTablet = size.shortestSide >= 600;
+    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: min(size.width * 0.9, panelMaxWidth),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 12),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Find Me',
+                style: const TextStyle(
+                  color: Color(0xFF5B6F4A),
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: isTablet ? 100 : 84,
+                height: isTablet ? 100 : 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFD740),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFD740).withOpacity(0),
+                      blurRadius: 20,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.search_rounded,
+                  size: 56,
+                  color: Color(0xFF5B6F4A),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Watch carefully!',
+                style: TextStyle(
+                  color: Color(0xFF5B6F4A),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You will see several objects. One of them will be highlighted. Can you spot and tap the same object when the grid appears?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF5B6F4A).withOpacity(0.9),
+                  fontSize: isTablet ? 18 : 15,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD740),
+                    foregroundColor: const Color(0xFF5B6F4A),
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 18 : 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Text(
+                    'START GAME',
+                    style: TextStyle(
+                      fontSize: isTablet ? 22 : 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        const Icon(
-          Icons.remove_red_eye_outlined,
-          size: 72,
-          color: Colors.white70,
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Watch carefully!',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 36.0),
-          child: Text(
-            'You will see several objects. One of them will be highlighted. Can you spot and tap the same object when the grid appears?',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
-              fontSize: 14,
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        ElevatedButton(
-          onPressed: gameStarted ? null : _startGame,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF5B6F4A),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(40),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-            elevation: 2,
-          ),
-          child: const Text(
-            'Start !',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-        ),
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 }
 
 class _TeacherPinDialog extends StatefulWidget {

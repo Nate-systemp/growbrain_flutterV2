@@ -176,7 +176,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
   void _initializeGame() {
     // Normalize difficulty
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
+      widget.difficulty,
+    );
     // Set difficulty parameters
     switch (_normalizedDifficulty) {
       case 'Starter':
@@ -436,7 +438,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
     gameTimer?.cancel();
 
-    // Calculate game statistics  
+    // Calculate game statistics
     // wrongAttempts actually counts all attempts, not just wrong ones
     double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
@@ -521,80 +523,82 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             ),
           ),
           child: SafeArea(
-          child: Column(
-            children: [
-              // Header bar - Dark olive green style
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5B6F4A), // Dark olive green header
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+            child: Column(
+              children: [
+                // Header bar - Dark olive green style
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5B6F4A), // Dark olive green header
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Score: $score',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          'Picture Words - Starter',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Round: $correctMatches/$totalPairs',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4A5A3A), // Slightly darker green
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        timeLeft > 0 ? '${timeLeft}s' : 'Get Ready...',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Score: $score',
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                    ),
-                  ],
+                      Column(
+                        children: [
+                          const Text(
+                            'Picture Words - Starter',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Round: $correctMatches/$totalPairs',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFF4A5A3A,
+                          ), // Slightly darker green
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          timeLeft > 0 ? '${timeLeft}s' : 'Get Ready...',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // Game area
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                // Game area
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: gameStarted ? _buildGameArea() : _buildStartScreen(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -611,7 +615,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(15),
@@ -665,7 +672,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(15),
@@ -726,11 +736,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             color: Colors.white.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.menu_book,
-            size: 60,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.menu_book, size: 60, color: Colors.white),
         ),
         const SizedBox(height: 20),
         Container(
@@ -786,10 +792,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 40,
-              vertical: 16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
             ),
@@ -803,10 +806,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
           },
           child: const Text(
             'Start !',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -1197,14 +1197,14 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       selectedImageIndex = null;
       canSelect = true;
     });
-    
+
     gameTimer?.cancel();
-    
+
     // Reset all game items
     for (var item in gameItems) {
       item.isMatched = false;
     }
-    
+
     _setupGame();
   }
 
@@ -1214,7 +1214,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     final double accuracyDouble = wrongAttempts > 0
         ? (correctMatches / wrongAttempts) * 100
         : 0;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1267,11 +1267,23 @@ class _PictureWordsGameState extends State<PictureWordsGame>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildStatRow(Icons.star_rounded, 'Final Score', '$score points'),
+                _buildStatRow(
+                  Icons.star_rounded,
+                  'Final Score',
+                  '$score points',
+                ),
                 const SizedBox(height: 12),
-                _buildStatRow(Icons.favorite_rounded, 'Pairs Matched', '$correctMatches/$totalPairs'),
+                _buildStatRow(
+                  Icons.favorite_rounded,
+                  'Pairs Matched',
+                  '$correctMatches/$totalPairs',
+                ),
                 const SizedBox(height: 12),
-                _buildStatRow(Icons.track_changes, 'Accuracy', '${accuracyDouble.toStringAsFixed(1)}%'),
+                _buildStatRow(
+                  Icons.track_changes,
+                  'Accuracy',
+                  '${accuracyDouble.toStringAsFixed(1)}%',
+                ),
                 const SizedBox(height: 12),
                 _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
               ],
@@ -1359,7 +1371,9 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Exit game and return to session screen
+                    Navigator.of(
+                      context,
+                    ).pop(); // Exit game and return to session screen
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5B6F4A),

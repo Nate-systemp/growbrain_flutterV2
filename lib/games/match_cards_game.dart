@@ -12,8 +12,7 @@ class MatchCardsGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })?
-  onGameComplete;
+  })? onGameComplete;
   final String challengeFocus;
   final String gameName;
   const MatchCardsGame({
@@ -28,7 +27,8 @@ class MatchCardsGame extends StatefulWidget {
   State<MatchCardsGame> createState() => _MatchCardsGameState();
 }
 
-class _MatchCardsGameState extends State<MatchCardsGame> {
+class _MatchCardsGameState extends State<MatchCardsGame>
+    with TickerProviderStateMixin {
   late List<_CardModel> cards;
   int? firstFlipped;
   int? secondFlipped;
@@ -46,11 +46,27 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   int matches = 0;
   bool gameStarted = false;
 
-  // App color scheme
-  final Color primaryColor = const Color(0xFF5B6F4A);
-  final Color accentColor = const Color(0xFFFFD740);
-  final Color backgroundColor = const Color(0xFFF5F5DC);
-  final Color surfaceColor = const Color(0xFFF5F5DC);
+  // Countdown state
+  bool showingCountdown = false;
+  int countdownNumber = 3;
+
+  // Overlays (GO and Status X/✓)
+  bool showingGo = false;
+  late final AnimationController _goController;
+  late final Animation<double> _goOpacity;
+  late final Animation<double> _goScale;
+
+  bool showingStatus = false;
+  String overlayText = '';
+  Color overlayColor = Colors.green;
+  Color overlayTextColor = Colors.white;
+
+  // App color scheme - warm brown theme
+  final Color primaryColor = const Color(0xFF7A5833);
+  final Color accentColor = const Color(0xFFF5C16C);
+  final Color backgroundColor = const Color(0xFFFAF3E8);
+  final Color surfaceColor = const Color(0xFFEBD8C0);
+  final Color successColor = const Color(0xFF81C784); // green flash for correct match
 
   @override
   void initState() {
@@ -58,11 +74,21 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Match Cards');
     difficulty = widget.difficulty;
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    _normalizedDifficulty =
+        DifficultyUtils.normalizeDifficulty(widget.difficulty);
     stopwatch = Stopwatch();
     _setupDifficulty();
     _initGame();
-    // Don't auto-start the game anymore
+
+    // Init overlay animations
+    _goController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
+      CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
+    );
   }
 
   void _setupDifficulty() {
@@ -120,8 +146,10 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
       matches = 0;
       timerSeconds = 0;
       timerActive = false;
+      showingCountdown = false;
+      countdownNumber = 3;
     });
-    
+
     stopwatch.reset();
     _initGame();
   }
@@ -136,18 +164,68 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     }
   }
 
-  void _startGame() {
+  Future<void> _showGoOverlay() async {
+    if (!mounted) return;
+    setState(() => showingGo = true);
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingGo = false);
+  }
+
+  Future<void> _showStatusOverlay({
+    required String text,
+    required Color color,
+    Color textColor = Colors.white,
+  }) async {
+    if (!mounted) return;
     setState(() {
+      overlayText = text;
+      overlayColor = color;
+      overlayTextColor = textColor;
+      showingStatus = true;
+    });
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() {
+      showingStatus = false;
+    });
+  }
+
+  void _showCountdown() async {
+    for (int i = 3; i >= 1; i--) {
+      if (!mounted) return;
+      setState(() {
+        countdownNumber = i;
+      });
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    if (!mounted) return;
+    setState(() {
+      showingCountdown = false;
       gameStarted = true;
     });
     stopwatch.start();
     timerActive = true;
     _tickTimer();
+    await _showGoOverlay();
+  }
+
+  void _startGame() {
+    setState(() {
+      showingCountdown = true;
+      countdownNumber = 3;
+    });
+    _showCountdown();
   }
 
   void _onCardTap(int idx) async {
-    if (!gameStarted || waiting || cards[idx].isMatched || cards[idx].isFaceUp)
-      return;
+    if (!gameStarted || waiting || cards[idx].isMatched || cards[idx].isFaceUp) return;
     setState(() => cards[idx].isFaceUp = true);
     if (firstFlipped == null) {
       firstFlipped = idx;
@@ -160,20 +238,30 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
         setState(() {
           cards[firstFlipped!].isMatched = true;
           cards[secondFlipped!].isMatched = true;
+          // trigger green flash
+          cards[firstFlipped!].isFlashingSuccess = true;
+          cards[secondFlipped!].isFlashingSuccess = true;
         });
         matches++;
         // Play success sound with voice effect
         SoundEffectsManager().playSuccessWithVoice();
-        // Check if all matched
+
+        // Show green flash briefly
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+        setState(() {
+          cards[firstFlipped!].isFlashingSuccess = false;
+          cards[secondFlipped!].isFlashingSuccess = false;
+        });
+
+        // Check if all matched after flash completes
         if (cards.every((c) => c.isMatched)) {
           stopwatch.stop();
           timerActive = false;
-          Future.delayed(const Duration(milliseconds: 500), () {
-            final int accuracy = attempts > 0
-                ? ((matches / attempts) * 100).round()
-                : 0;
+          Future.delayed(const Duration(milliseconds: 300), () {
+            final int accuracy = attempts > 0 ? ((matches / attempts) * 100).round() : 0;
             final int completionTime = stopwatch.elapsed.inSeconds;
-            
+
             if (widget.onGameComplete != null) {
               widget.onGameComplete!(
                 accuracy: accuracy,
@@ -183,8 +271,8 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
                 difficulty: _normalizedDifficulty,
               );
             }
-            
-            _showCompletionDialog(accuracy, completionTime);
+
+            _showGameOverDialog(accuracy, completionTime);
           });
         }
       } else {
@@ -194,6 +282,7 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           cards[firstFlipped!].isFaceUp = false;
           cards[secondFlipped!].isFaceUp = false;
         });
+        await _showStatusOverlay(text: 'X', color: Colors.red, textColor: Colors.white);
       }
       setState(() {
         firstFlipped = null;
@@ -203,182 +292,163 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     }
   }
 
-  void _showCompletionDialog(int accuracy, int completionTime) {
+  void _showGameOverDialog(int accuracy, int completionTime) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Column(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.memory,
-                  color: Colors.white,
-                  size: 40,
-                ),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+        title: Column(
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: primaryColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.30),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Memory Master! 🧠✨',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+              child: const Icon(
+                Icons.memory,
+                color: Colors.white,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Amazing! 🌟',
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        content: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          content: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: backgroundColor.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildStatRow(Icons.star_rounded, 'Matches', '$matches'),
-                const SizedBox(height: 12),
-                _buildStatRow(Icons.flash_on, 'Attempts', '$attempts'),
-                const SizedBox(height: 12),
-                _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
-                const SizedBox(height: 12),
-                _buildStatRow(Icons.timer, 'Time Used', '${completionTime}s'),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildStatRow(Icons.star_rounded, 'Matches', '$matches'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.flash_on, 'Attempts', '$attempts'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+              const SizedBox(height: 12),
+              _buildStatRow(Icons.timer, 'Time', '${completionTime}s'),
+            ],
           ),
-          actions: [
-            // Different actions for demo mode vs session mode
-            if (widget.onGameComplete == null) ...[
-              // Demo mode: Show Play Again and Exit buttons
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _resetGame();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
+        ),
+        actions: [
+          if (widget.onGameComplete == null) ...[
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _resetGame();
+                      },
+                      icon: const Icon(Icons.refresh, size: 22),
+                      label: const Text(
+                        'Play Again',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.refresh, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Play Again',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                        elevation: 4,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog
-                          Navigator.of(context).pop(); // Exit game
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.exit_to_app, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Exit',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              // Session mode: Show Next Game button
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Exit game and return to session screen
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 3,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Next Game',
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                      label: Text(
+                        'Exit',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: primaryColor,
                         ),
                       ),
-                    ],
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: primaryColor, width: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                label: const Text(
+                  'Next Game',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                ),
               ),
-            ],
+            ),
           ],
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -417,10 +487,246 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
     );
   }
 
+  Color _getIconColor(IconData icon) {
+    if (icon == Icons.apple) return const Color(0xFFE57373); // light red
+    if (icon == Icons.emoji_food_beverage) return const Color(0xFFFFF176); // light yellow
+    if (icon == Icons.local_pizza) return const Color(0xFFFFB74D); // light orange
+    if (icon == Icons.emoji_nature) return const Color(0xFFCE93D8); // light purple
+    if (icon == Icons.eco) return const Color(0xFFA5D6A7); // light green
+    if (icon == Icons.egg) return const Color(0xFFFFE0B2); // eggshell
+    if (icon == Icons.emoji_emotions) return const Color(0xFFF48FB1); // pink
+    if (icon == Icons.brightness_1) return const Color(0xFF90CAF9); // light blue
+    if (icon == Icons.bubble_chart) return const Color(0xFF80CBC4); // teal
+    if (icon == Icons.spa) return const Color(0xFFC5E1A5); // light greenish
+    return Colors.white;
+  }
+
+  Widget _infoCircle({
+    required String label,
+    required String value,
+    double circleSize = 88,
+    double valueFontSize = 18,
+    double labelFontSize = 12,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.w800,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.45),
+                offset: const Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 6),
+                blurRadius: 0,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStartScreenWithInstruction() {
+    final size = MediaQuery.of(context).size;
+    final bool isTablet = size.shortestSide >= 600;
+    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: min(size.width * 0.9, panelMaxWidth),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 12),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Match Cards',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 42 : 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: isTablet ? 100 : 84,
+                height: isTablet ? 100 : 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accentColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0),
+                      blurRadius: 20,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.memory,
+                  size: isTablet ? 56 : 48,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Find the pairs!',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 22 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Flip two cards. If they match, they stay open. Remember positions and match all pairs as fast as you can!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: primaryColor.withOpacity(0.9),
+                  fontSize: isTablet ? 18 : 15,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _startGame();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: primaryColor,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 18 : 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Text(
+                    'START GAME',
+                    style: TextStyle(
+                      fontSize: isTablet ? 22 : 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountdownScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Get Ready!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 40),
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accentColor,
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$countdownNumber',
+                style: TextStyle(
+                  fontSize: 80,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            'The game will start soon...',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     timerActive = false;
     stopwatch.stop();
+    _goController.dispose();
     // Stop background music when leaving the game
     BackgroundMusicManager().stopMusic();
     super.dispose();
@@ -429,7 +735,8 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final gridWidth = (gridCols * 100).toDouble().clamp(320, screenWidth * 0.8);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final gridWidth = min(screenWidth * 0.9, screenHeight * 0.85);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -440,220 +747,268 @@ class _MatchCardsGameState extends State<MatchCardsGame> {
           ),
         ),
         child: Stack(
-        children: [
-          // Decorative icons
-          Positioned(
-            top: 32,
-            left: 32,
-            child: Icon(
-              Icons.lightbulb,
-              color: Colors.black.withOpacity(0.08),
-              size: 48,
-            ),
-          ),
-          Positioned(
-            top: 80,
-            right: 60,
-            child: Icon(
-              Icons.cloud,
-              color: Colors.black.withOpacity(0.08),
-              size: 44,
-            ),
-          ),
-          Positioned(
-            bottom: 60,
-            left: 60,
-            child: Icon(
-              Icons.calculate,
-              color: Colors.black.withOpacity(0.08),
-              size: 44,
-            ),
-          ),
-          Positioned(
-            bottom: 40,
-            right: 40,
-            child: Transform.rotate(
-              angle: -0.3,
-              child: Icon(
-                Icons.abc,
-                color: Colors.black.withOpacity(0.08),
-                size: 54,
+          children: [
+            // Warm overlay to blend with 7A5833 palette
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0x667A5833), Color(0x337A5833)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
               ),
             ),
-          ),
-          // App bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AppBar(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              title: Text(
-                'Match Cards - ${widget.difficulty}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+
+            // Main content area (handles countdown, start screen, and game grid)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: showingCountdown
+                    ? _buildCountdownScreen()
+                    : (!gameStarted
+                        ? _buildStartScreenWithInstruction()
+                        : Center(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final availableHeight = constraints.maxHeight;
+                                final cols = gridCols;
+                                final rows = gridRows;
+                                const double spacing = 16.0;
+                                final double sidePad = spacing; // equal margins to spacing
+                                final w = min(gridWidth.toDouble(), constraints.maxWidth);
+                                final effectiveW = w - 2 * sidePad;
+                                final tileW =
+                                    (effectiveW - spacing * (cols - 1)) / cols;
+                                final tileHFit = (availableHeight -
+                                        spacing * (rows - 1)) /
+                                    rows;
+                                double aspect = tileW / tileHFit;
+                                aspect = aspect.clamp(0.68, 1.30);
+                                return SizedBox(
+                                  width: w,
+                                  child: GridView.builder(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: sidePad),
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    shrinkWrap: true,
+                                    itemCount: cards.length,
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: cols,
+                                      mainAxisSpacing: spacing,
+                                      crossAxisSpacing: spacing,
+                                      childAspectRatio: aspect,
+                                    ),
+                                    itemBuilder: (context, idx) {
+                                      final card = cards[idx];
+                                      return GestureDetector(
+                                        onTap: () => _onCardTap(idx),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 250,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: card.isFlashingSuccess
+                                                ? successColor
+                                                : (card.isMatched
+                                                    ? Colors.white
+                                                    : (card.isFaceUp
+                                                        ? backgroundColor
+                                                        : primaryColor)),
+                                            borderRadius:
+                                                BorderRadius.circular(22),
+                                            border: Border.all(
+                                              color: (card.isFaceUp ||
+                                                      card.isMatched)
+                                                  ? Colors.transparent
+                                                  : Colors.white
+                                                      .withOpacity(0.18),
+                                              width: 3,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              final s = constraints.maxWidth <
+                                                      constraints.maxHeight
+                                                  ? constraints.maxWidth
+                                                  : constraints.maxHeight;
+                                              final iconSize = s * 0.52;
+                                              final qSize = s * 0.50;
+                                              return Center(
+                                                child: card.isFaceUp ||
+                                                        card.isMatched
+                                                    ? Icon(
+                                                        card.icon,
+                                                        color: _getIconColor(
+                                                            card.icon),
+                                                        size: iconSize,
+                                                      )
+                                                    : Text(
+                                                        '?',
+                                                        style: TextStyle(
+                                                          fontSize: qSize,
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                        ),
+                                                      ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          )),
               ),
-              elevation: 0,
-              centerTitle: true,
             ),
-          ),
-          // Main game content
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Header with timer
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Matches: $matches/${numPairs}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+
+            // Side HUD circles (Time and Paired), centered vertically
+            if (gameStarted) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 104),
+                  child: _infoCircle(
+                    label: 'Time',
+                    value: '${timerSeconds}s',
+                    circleSize: 104,
+                    valueFontSize: 30,
+                    labelFontSize: 26,
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 104),
+                  child: _infoCircle(
+                    label: 'Paired',
+                    value: '$matches/$numPairs',
+                    circleSize: 104,
+                    valueFontSize: 30,
+                    labelFontSize: 26,
+                  ),
+                ),
+              ),
+            ],
+
+            // GO overlay
+            if (showingGo)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: FadeTransition(
+                    opacity: _goOpacity,
+                    child: Container(
+                      color: Colors.black.withOpacity(0.12),
+                      child: Center(
+                        child: ScaleTransition(
+                          scale: _goScale,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Get Ready!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                width: 140,
+                                height: 140,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: accentColor,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.30),
+                                      offset: const Offset(0, 8),
+                                      blurRadius: 0,
+                                      spreadRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'GO!',
+                                    style: TextStyle(
+                                      color: primaryColor,
+                                      fontSize: 54,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        if (_normalizedDifficulty == 'Challenged')
-                          Text(
-                            'Time: ${timerSeconds}s',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: !gameStarted
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.psychology,
-                                  size: 80,
-                                  color: primaryColor,
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Memory Match!',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Flip cards to find matching pairs.\nRemember where each card is!',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 30),
-                                ElevatedButton(
-                                  onPressed: _startGame,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 40,
-                                      vertical: 15,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Start Game',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
+                ),
+              ),
+
+            // Status overlay (X/✓)
+            if (showingStatus)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: FadeTransition(
+                    opacity: _goOpacity,
+                    child: Container(
+                      color: Colors.black.withOpacity(0.12),
+                      child: Center(
+                        child: ScaleTransition(
+                          scale: _goScale,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: overlayColor,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.30),
+                                  offset: const Offset(0, 8),
+                                  blurRadius: 0,
+                                  spreadRadius: 8,
                                 ),
                               ],
                             ),
-                          )
-                        : Center(
-                            child: SizedBox(
-                              width: gridWidth.toDouble(),
-                              child: GridView.builder(
-                                shrinkWrap: true,
-                                itemCount: cards.length,
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: gridCols,
-                                      mainAxisSpacing: 16,
-                                      crossAxisSpacing: 16,
-                                    ),
-                                itemBuilder: (context, idx) {
-                                  final card = cards[idx];
-                                  return GestureDetector(
-                                    onTap: () => _onCardTap(idx),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 250,
-                                      ),
-                                      width: 90,
-                                      height: 90,
-                                      decoration: BoxDecoration(
-                                        color: card.isMatched
-                                            ? accentColor
-                                            : (card.isFaceUp
-                                                  ? Colors.white
-                                                  : primaryColor),
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.1,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Center(
-                                        child: card.isFaceUp || card.isMatched
-                                            ? Icon(
-                                                card.icon,
-                                                color: card.isMatched
-                                                    ? primaryColor
-                                                    : primaryColor,
-                                                size: 40,
-                                              )
-                                            : const Text(
-                                                '?',
-                                                style: TextStyle(
-                                                  fontSize: 32,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                            child: Center(
+                              child: Text(
+                                overlayText,
+                                style: TextStyle(
+                                  color: overlayTextColor,
+                                  fontSize: 72,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -664,5 +1019,6 @@ class _CardModel {
   final IconData icon;
   bool isFaceUp = false;
   bool isMatched = false;
+  bool isFlashingSuccess = false; // transient flash state when matched
   _CardModel({required this.icon});
 }
