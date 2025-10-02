@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
@@ -470,6 +472,33 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
     );
   }
 
+  // PIN PROTECTION METHODS
+  void _handleBackButton(BuildContext context) {
+    if (widget.onGameComplete == null) {
+      Navigator.of(context).pop();
+    } else {
+      _showTeacherPinDialog(context);
+    }
+  }
+
+  void _showTeacherPinDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return _TeacherPinDialog(
+          onPinVerified: () {
+            Navigator.of(dialogContext).pop();
+            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          },
+          onCancel: () {
+            Navigator.of(dialogContext).pop();
+          },
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _goController.dispose();
@@ -481,112 +510,116 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/verbalbg.png'), fit: BoxFit.cover)),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0x667A5833), Color(0x337A5833)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
-              ),
-            ),
-            Positioned.fill(
-              child: showingCountdown ? _buildCountdownScreen() : (!gameStarted ? _buildStartScreenWithInstruction() : _buildGameContent()),
-            ),
-            if (gameStarted) ...[
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 104),
-                  child: _infoCircle(label: 'Time', value: '${timerSeconds}s', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
-                ),
-              ),
-              
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 104),
-                  child: _infoCircle(label: 'Correct', value: '$correctMatches/$totalPairs', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
-                ),
-              ),
-            ],
-            if (showingGo)
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/verbalbg.png'), fit: BoxFit.cover)),
+          child: Stack(
+            children: [
               Positioned.fill(
-                child: IgnorePointer(
-                  child: FadeTransition(
-                    opacity: _goOpacity,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.12),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _goScale,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('Get Ready!', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
-                              const SizedBox(height: 16),
-                              Container(
-                                width: 140,
-                                height: 140,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: accentColor,
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.3), offset: const Offset(0, 6), blurRadius: 0, spreadRadius: 0),
-                                  ],
+                child: Container(
+                  decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0x667A5833), Color(0x337A5833)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
+                ),
+              ),
+              Positioned.fill(
+                child: showingCountdown ? _buildCountdownScreen() : (!gameStarted ? _buildStartScreenWithInstruction() : _buildGameContent()),
+              ),
+              if (gameStarted) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 104),
+                    child: _infoCircle(label: 'Time', value: '${timerSeconds}s', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+                  ),
+                ),
+                
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 104),
+                    child: _infoCircle(label: 'Correct', value: '$correctMatches/$totalPairs', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+                  ),
+                ),
+              ],
+              if (showingGo)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Get Ready!', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: 140,
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: accentColor,
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black.withOpacity(0.3), offset: const Offset(0, 6), blurRadius: 0, spreadRadius: 0),
+                                    ],
+                                  ),
+                                  child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold))),
                                 ),
-                                child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold))),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            if (showingStatus)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: FadeTransition(
-                    opacity: _goOpacity,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.12),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _goScale,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: overlayColor, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), offset: const Offset(0, 8), blurRadius: 0, spreadRadius: 8)]),
-                            child: Center(child: Text(overlayText, style: TextStyle(color: overlayTextColor, fontSize: 72, fontWeight: FontWeight.bold))),
+              if (showingStatus)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(shape: BoxShape.circle, color: overlayColor, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), offset: const Offset(0, 8), blurRadius: 0, spreadRadius: 8)]),
+                              child: Center(child: Text(overlayText, style: TextStyle(color: overlayTextColor, fontSize: 72, fontWeight: FontWeight.bold))),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildGameContent() {
-    // Determine grid layout based on difficulty
-    int crossAxisCount = 2; // Default 2 columns
-    double childAspectRatio = 2.5; // Width to height ratio - adjusted for tablets
+    int crossAxisCount = 2;
+    double childAspectRatio = 2.5;
     
-    // Adjust for different difficulties
     if (_normalizedDifficulty == 'Growing') {
-      // 8 words: 2 columns × 4 rows
       crossAxisCount = 2;
       childAspectRatio = 2.5;
     } else if (_normalizedDifficulty == 'Challenged') {
-      // 10 words: 2 columns × 5 rows
       crossAxisCount = 2;
       childAspectRatio = 2.8;
     }
@@ -799,6 +832,230 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
               ),
               const SizedBox(height: 2),
               Icon(Icons.volume_up_rounded, size: 14, color: textColor.withOpacity(0.8)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// PIN DIALOG CLASS
+class _TeacherPinDialog extends StatefulWidget {
+  final VoidCallback onPinVerified;
+  final VoidCallback? onCancel;
+
+  const _TeacherPinDialog({required this.onPinVerified, this.onCancel});
+
+  @override
+  State<_TeacherPinDialog> createState() => _TeacherPinDialogState();
+}
+
+class _TeacherPinDialogState extends State<_TeacherPinDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  String? _error;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verifyPin() async {
+    final pin = _pinController.text.trim();
+    if (pin.length != 6 || !RegExp(r'^[0-9]{6}').hasMatch(pin)) {
+      setState(() => _error = 'PIN must be 6 digits');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _error = 'Not logged in.';
+          _isLoading = false;
+        });
+        return;
+      }
+      final doc = await FirebaseFirestore.instance.collection('teachers').doc(user.uid).get();
+      final savedPin = doc.data()?['pin'];
+      if (savedPin == null) {
+        setState(() {
+          _error = 'No PIN set. Please contact your administrator.';
+          _isLoading = false;
+        });
+        return;
+      }
+      if (pin != savedPin) {
+        setState(() {
+          _error = 'Incorrect PIN.';
+          _isLoading = false;
+        });
+        return;
+      }
+      widget.onPinVerified();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to verify PIN. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Color.fromARGB(255, 181, 187, 17),
+              blurRadius: 0,
+              spreadRadius: 0,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD740),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.lock, color: const Color(0xFF5B6F4A), size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Teacher PIN Required',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF5B6F4A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Enter your 6-digit PIN to exit the session and access teacher features.',
+                  style: TextStyle(fontSize: 16, color: const Color(0xFF5B6F4A), fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                      blurRadius: 0,
+                      spreadRadius: 0,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _pinController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  obscureText: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold, color: Color(0xFF5B6F4A)),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '••••••',
+                    hintStyle: TextStyle(color: const Color(0xFF5B6F4A).withOpacity(0.4), letterSpacing: 8),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: const Color(0xFF5B6F4A), width: 2)),
+                    errorText: _error,
+                    errorStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+                    fillColor: Colors.white,
+                    filled: true,
+                  ),
+                  onSubmitted: (_) => _verifyPin(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.6), blurRadius: 0, spreadRadius: 0, offset: Offset(0, 4))],
+                      ),
+                      child: TextButton(
+                        onPressed: () {
+                          if (widget.onCancel != null) {
+                            widget.onCancel!();
+                          } else {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF5B6F4A),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 0,
+                        ),
+                        child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [BoxShadow(color: const Color(0xFF5B6F4A).withOpacity(0.6), blurRadius: 0, spreadRadius: 0, offset: Offset(0, 4))],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _verifyPin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF5B6F4A),
+                          foregroundColor: const Color(0xFFFFD740),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD740))))
+                            : const Text('Verify', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

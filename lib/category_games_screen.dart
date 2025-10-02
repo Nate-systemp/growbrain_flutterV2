@@ -499,14 +499,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         difficulty: 'Starter',
         challengeFocus: 'Logic',
         gameName: 'Tic Tac Toe',
-        onGameComplete:
-            ({
-              required int accuracy,
-              required int completionTime,
-              required String challengeFocus,
-              required String gameName,
-              required String difficulty,
-            }) {},
+        onGameComplete: null,
       );
     } else if (gameWidget is ObjectHuntGame) {
       return ObjectHuntGame(difficulty: 'Starter', onGameComplete: null);
