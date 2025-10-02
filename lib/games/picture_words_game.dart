@@ -66,6 +66,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   bool canSelect = true;
   late DateTime gameStartTime;
   String _normalizedDifficulty = 'easy';
+  bool _completionDialogShown = false;
 
   // Countdown state
   bool showingCountdown = false;
@@ -503,31 +504,12 @@ void _showCountdown() async {
   void _endGame() {
     setState(() {
       gameActive = false;
+      gameComplete = true;
     });
 
     gameTimer?.cancel();
-
-    // Calculate game statistics
-    // wrongAttempts actually counts all attempts, not just wrong ones
-    double accuracyDouble = wrongAttempts > 0
-        ? (correctMatches / wrongAttempts) * 100
-        : 0;
-    int accuracy = accuracyDouble.round();
-    int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-
-    // Call completion callback if provided
-    if (widget.onGameComplete != null) {
-      widget.onGameComplete!(
-        accuracy: accuracy,
-        completionTime: completionTime,
-        challengeFocus: 'Verbal',
-        gameName: 'Picture Words',
-        difficulty: _normalizedDifficulty,
-      );
-    }
-
-    // Auto-advance without showing end screen
-    Navigator.pop(context);
+    
+    // The completion screen will show the dialog via _buildCompletionScreen
   }
 @override
 void dispose() {
@@ -1055,10 +1037,15 @@ Widget build(BuildContext context) {
   }
 
   Widget _buildCompletionScreen() {
-    // Schedule dialog to show after build is complete
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showGameOverDialog(true);
-    });
+    // Schedule dialog to show after build is complete (only once)
+    if (!_completionDialogShown) {
+      _completionDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showGameOverDialog(true);
+        }
+      });
+    }
     return Container(); // Return empty container since dialog handles the UI
   }
 
@@ -1073,6 +1060,7 @@ Widget build(BuildContext context) {
       selectedWordIndex = null;
       selectedImageIndex = null;
       canSelect = true;
+      _completionDialogShown = false;
     });
 
     gameTimer?.cancel();
@@ -1175,9 +1163,20 @@ Widget build(BuildContext context) {
               width: double.infinity,
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Exit game
+                  
+                  // Trigger session progression
+                  if (widget.onGameComplete != null) {
+                    await widget.onGameComplete!(
+                      accuracy: accuracy,
+                      completionTime: completionTime,
+                      challengeFocus: 'Verbal',
+                      gameName: 'Picture Words',
+                      difficulty: _normalizedDifficulty,
+                    );
+                  }
                 },
                 icon: const Icon(Icons.arrow_forward_rounded, size: 22),
                 label: const Text('Next Game', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
