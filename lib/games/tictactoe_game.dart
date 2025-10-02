@@ -903,96 +903,19 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 20),
-                Text(
-                  'Game $matchGame of 3',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Turn Indicator
+                const SizedBox(height: 100),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  width: 420,
+                  height: 420,
                   decoration: BoxDecoration(
-                    color: xTurn
-                        ? const Color(0xFFE8F5E8)
-                        : const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: xTurn
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFFFF9800),
-                      width: 2,
-                    ),
+                    color: const Color(0xFFD2B48C), // Light brown (tan)
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: const Color.fromARGB(255, 99, 73, 43).withOpacity(0.4),
+                        blurRadius: 0,
+                        offset: const Offset(8, 8),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (xTurn) ...[
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: accentColor,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Your Turn',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E7D32),
-                          ),
-                        ),
-                      ] else ...[
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CustomPaint(
-                            painter: TrianglePainter(color: primaryColor),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'AI Thinking...',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  width: 320,
-                  height: 320,
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 8)
                     ],
                   ),
                   child: GridView.builder(
@@ -1005,36 +928,26 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
                     itemBuilder: (context, idx) => GestureDetector(
                       onTap: xTurn ? () => _makeMove(idx) : null,
                       child: Container(
-                        margin: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.all(11),
                         decoration: BoxDecoration(
-                          color: xTurn ? Colors.white : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: xTurn ? primaryColor : Colors.grey[300]!,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(xTurn ? 0.1 : 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          color: const Color.fromARGB(255, 255, 255, 255), // Slightly darker brown for cells
+                          borderRadius: BorderRadius.circular(8),
+                          
                         ),
                         child: Center(
                           child: board[idx] == 'square'
                               ? Container(
-                                  width: 40,
-                                  height: 40,
+                                  width: 55,
+                                  height: 55,
                                   decoration: BoxDecoration(
-                                    color: accentColor,
-                                    borderRadius: BorderRadius.circular(4),
+                                    color: const Color(0xFF3E2723), // Dark brown
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                 )
                               : board[idx] == 'triangle'
                                   ? CustomPaint(
-                                      size: const Size(40, 40),
-                                      painter: TrianglePainter(color: primaryColor),
+                                      size: const Size(55, 55),
+                                      painter: TrianglePainter(color: const Color(0xFF4A7C59)), // Green contrast
                                     )
                                   : const SizedBox(),
                         ),
@@ -1062,24 +975,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: matchOver ? null : _resetBoard,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 12,
-                          ),
-                        ),
-                        child: const Text(
-                          'Next Game',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      
                     ],
                   ),
               ],
@@ -1094,8 +990,8 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
             child: _infoCircle(
               label: 'Player',
               value: '$matchPlayerWins',
-              circleSize: 80,
-              valueFontSize: 28,
+              circleSize: 120,
+              valueFontSize: 38,
               labelFontSize: 16,
             ),
           ),
@@ -1108,9 +1004,72 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
             child: _infoCircle(
               label: 'AI',
               value: '$matchAIWins',
-              circleSize: 80,
-              valueFontSize: 28,
+              circleSize: 120,
+              valueFontSize: 38,
               labelFontSize: 16,
+            ),
+          ),
+        ),
+        // HUD - Top center (Game counter)
+        Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: _infoCircle(
+              label: 'Game',
+              value: '$matchGame/3',
+              circleSize: 100,
+              valueFontSize: 32,
+              labelFontSize: 14,
+            ),
+          ),
+        ),
+        // Turn Indicator - Top Right
+        Positioned(
+          top: 190,
+          right: 430,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD2B48C),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(1), // Walang radius sa bottom right
+              ),
+              
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (xTurn)
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3E2723),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CustomPaint(
+                      painter: TrianglePainter(color: const Color(0xFF4A7C59)),
+                    ),
+                  ),
+                const SizedBox(width: 10),
+                Text(
+                  'Your Turn',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown[900],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1163,7 +1122,7 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
           child: Text(
             value,
             style: TextStyle(
-              color: primaryColor,
+              color: Colors.brown,
               fontSize: valueFontSize,
               fontWeight: FontWeight.w900,
             ),
