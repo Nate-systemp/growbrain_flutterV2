@@ -632,11 +632,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(
-                                        0xFF2E7D32,
-                                      ).withOpacity(0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
+                                      color: const Color(0xFF2E7D32).withOpacity(0.15),
+                                      blurRadius: 0,
+                                      offset: const Offset(0, 6),
+                                      spreadRadius: 0,
                                     ),
                                   ],
                                 ),
