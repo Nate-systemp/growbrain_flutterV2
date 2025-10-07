@@ -67,6 +67,7 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   late DateTime gameStartTime;
   String _normalizedDifficulty = 'easy';
   bool _completionDialogShown = false;
+  bool showSimpleInstruction = false;
 
   // Countdown state
   bool showingCountdown = false;
@@ -258,72 +259,74 @@ class _PictureWordsGameState extends State<PictureWordsGame>
 
     setState(() {});
   }
-Future<void> _showGoOverlay() async {
-  if (!mounted) return;
-  setState(() => showingGo = true);
-  await _goController.forward();
-  await Future.delayed(const Duration(milliseconds: 550));
-  if (!mounted) return;
-  await _goController.reverse();
-  if (!mounted) return;
-  setState(() => showingGo = false);
-}
 
-Future<void> _showStatusOverlay({required String text, required Color color, Color textColor = Colors.white}) async {
-  if (!mounted) return;
-  setState(() {
-    overlayText = text;
-    overlayColor = color;
-    overlayTextColor = textColor;
-    showingStatus = true;
-  });
-  await _goController.forward();
-  await Future.delayed(const Duration(milliseconds: 550));
-  if (!mounted) return;
-  await _goController.reverse();
-  if (!mounted) return;
-  setState(() => showingStatus = false);
-}
-
-void _showCountdown() async {
-  for (int i = 3; i >= 1; i--) {
+  Future<void> _showGoOverlay() async {
     if (!mounted) return;
-    setState(() => countdownNumber = i);
-    await Future.delayed(const Duration(seconds: 1));
+    setState(() => showingGo = true);
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingGo = false);
   }
-  if (!mounted) return;
-  setState(() {
-    showingCountdown = false;
-    gameStarted = true;
-    gameActive = true;
-    gameStartTime = DateTime.now();
-    score = 0;
-    correctMatches = 0;
-    wrongAttempts = 0;
-    canSelect = true;
-    selectedWordIndex = null;
-    selectedImageIndex = null;
 
-    // Reset all items
-    for (var item in gameItems) {
-      item.isMatched = false;
-      item.isSelected = false;
-    }
-  });
-  
-  if (timeLeft > 0) {
-    _startTimer();
+  Future<void> _showStatusOverlay({required String text, required Color color, Color textColor = Colors.white}) async {
+    if (!mounted) return;
+    setState(() {
+      overlayText = text;
+      overlayColor = color;
+      overlayTextColor = textColor;
+      showingStatus = true;
+    });
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingStatus = false);
   }
-  
-  await _showGoOverlay();
-}
- void _startGame() {
-  setState(() {
-    showingCountdown = true;
-    countdownNumber = 3;
-  });
-  _showCountdown();
-}
+
+  void _showCountdown() async {
+    for (int i = 3; i >= 1; i--) {
+      if (!mounted) return;
+      setState(() => countdownNumber = i);
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    if (!mounted) return;
+    setState(() {
+      showingCountdown = false;
+      gameStarted = true;
+      gameActive = true;
+      gameStartTime = DateTime.now();
+      score = 0;
+      correctMatches = 0;
+      wrongAttempts = 0;
+      canSelect = true;
+      selectedWordIndex = null;
+      selectedImageIndex = null;
+
+      // Reset all items
+      for (var item in gameItems) {
+        item.isMatched = false;
+        item.isSelected = false;
+      }
+    });
+    
+    if (timeLeft > 0) {
+      _startTimer();
+    }
+    
+    await _showGoOverlay();
+  }
+
+  void _startGame() {
+    setState(() {
+      showingCountdown = true;
+      countdownNumber = 3;
+    });
+    _showCountdown();
+  }
 
   void _showInstructions() {
     showDialog(
@@ -511,15 +514,16 @@ void _showCountdown() async {
     
     // The completion screen will show the dialog via _buildCompletionScreen
   }
-@override
-void dispose() {
-  gameTimer?.cancel();
-  _cardAnimationController.dispose();
-  _scoreAnimationController.dispose();
-  _goController.dispose();  // ADD THIS LINE
-  BackgroundMusicManager().stopMusic();
-  super.dispose();
-}
+
+  @override
+  void dispose() {
+    gameTimer?.cancel();
+    _cardAnimationController.dispose();
+    _scoreAnimationController.dispose();
+    _goController.dispose();
+    BackgroundMusicManager().stopMusic();
+    super.dispose();
+  }
 
   void _handleBackButton(BuildContext context) {
     // If this is a demo game (onGameComplete is null), allow direct navigation back
@@ -554,7 +558,7 @@ void dispose() {
     );
   }
 
- Widget _infoCircle({required String label, required String value, double circleSize = 88, double valueFontSize = 18, double labelFontSize = 12}) {
+  Widget _infoCircle({required String label, required String value, double circleSize = 88, double valueFontSize = 18, double labelFontSize = 12}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -571,215 +575,413 @@ void dispose() {
     );
   }
 
- @override
-Widget build(BuildContext context) {
-  int elapsedSeconds = gameStarted ? DateTime.now().difference(gameStartTime).inSeconds : 0;
-  
-  return PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) {
-        _handleBackButton(context);
-      }
-    },
-    child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/verbalbg.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Main content
-            Positioned.fill(
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: showingCountdown 
-                    ? _buildCountdownScreen() 
-                    : (gameStarted ? _buildGameArea() : _buildStartScreen()),
+  Widget _buildHelpButton() {
+    return FloatingActionButton.extended(
+      heroTag: 'helpBtn',
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      icon: const Icon(Icons.help_outline),
+      label: const Text('Need Help?'),
+      onPressed: () {
+        bool showSimple = false;
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) => Dialog(
+              backgroundColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD740),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Need Help?',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF5B6F4A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            showSimple
+                                ? 'Tap a word from the yellow box on the left. Then tap the matching picture from the purple box on the right. Keep matching until all pairs are found!'
+                                : 'Tap a word from the left section, then tap its matching picture on the right section. Match all pairs to win!',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF5B6F4A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (showSimple)
+                          const SizedBox(height: 16),
+                        if (showSimple)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'That\'s the simpler explanation!',
+                              style: TextStyle(
+                                color: Color(0xFF5B6F4A),
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF5B6F4A).withOpacity(0.6),
+                                      blurRadius: 0,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    if (!showSimple) {
+                                      setState(() => showSimple = true);
+                                    } else {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF5B6F4A),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    showSimple ? 'Close' : 'More Help?',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-            
-            // HUD overlays - Time and Pairs
-            if (gameStarted) ...[
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 104),
-                  child: _infoCircle(label: 'Time', value: '${elapsedSeconds}s', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int elapsedSeconds = gameStarted ? DateTime.now().difference(gameStartTime).inSeconds : 0;
+    
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/verbalbg.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Stack(
+            children: [
+              // Main content
+              Positioned.fill(
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: showingCountdown 
+                      ? _buildCountdownScreen() 
+                      : (gameStarted ? _buildGameArea() : _buildStartScreen()),
+                  ),
                 ),
               ),
               
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 104),
-                  child: _infoCircle(label: 'Pairs', value: '$correctMatches/$totalPairs', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+              // HUD overlays - Time and Pairs
+              if (gameStarted && !showingCountdown) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 104),
+                    child: _infoCircle(label: 'Time', value: '${elapsedSeconds}s', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+                  ),
                 ),
-              ),
-            ],
-            
-            // GO overlay
-            if (showingGo)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: FadeTransition(
-                    opacity: _goOpacity,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.12),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _goScale,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('Get Ready!', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
-                              const SizedBox(height: 16),
-                              Container(
-                                width: 140,
-                                height: 140,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [accentColor, Colors.white],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
+                
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 104),
+                    child: _infoCircle(label: 'Pairs', value: '$correctMatches/$totalPairs', circleSize: 104, valueFontSize: 30, labelFontSize: 26),
+                  ),
+                ),
+              ],
+              
+              // GO overlay
+              if (showingGo)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Get Ready!', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: 140,
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [accentColor, Colors.white],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(color: primaryColor.withOpacity(0.40), offset: const Offset(0, 8), blurRadius: 20, spreadRadius: 4),
+                                      BoxShadow(color: Colors.white.withOpacity(0.3), offset: const Offset(0, -4), blurRadius: 10),
+                                    ],
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(color: primaryColor.withOpacity(0.40), offset: const Offset(0, 8), blurRadius: 20, spreadRadius: 4),
-                                    BoxShadow(color: Colors.white.withOpacity(0.3), offset: const Offset(0, -4), blurRadius: 10),
-                                  ],
+                                  child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
                                 ),
-                                child: Center(child: Text('GO!', style: TextStyle(color: primaryColor, fontSize: 54, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
- Widget _buildStartScreen() {
-  final size = MediaQuery.of(context).size;
-  final bool isTablet = size.shortestSide >= 600;
-  final double panelMaxWidth = isTablet ? 560.0 : 420.0;
 
-  return Center(
-    child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: min(size.width * 0.9, panelMaxWidth)),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.92),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              offset: const Offset(0, 12),
-              blurRadius: 24,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              'Picture Words',
-              style: TextStyle(
-                color: primaryColor,
-                fontSize: isTablet ? 42 : 34,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: isTablet ? 100 : 84,
-              height: isTablet ? 100 : 84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accentColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor.withOpacity(0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.menu_book,
-                size: isTablet ? 56 : 48,
-                color: primaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Match words with pictures!',
-              style: TextStyle(
-                color: primaryColor,
-                fontSize: isTablet ? 22 : 18,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap a word from the left, then tap its matching picture on the right. Match all pairs to win!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: primaryColor.withOpacity(0.9),
-                fontSize: isTablet ? 18 : 15,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _startGame,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: primaryColor,
-                  padding: EdgeInsets.symmetric(
-                    vertical: isTablet ? 18 : 14,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 3,
+              // Need Help button - show only when in-game
+              if (gameStarted && !showingCountdown)
+                Positioned(
+                  left: 24,
+                  bottom: 24,
+                  child: _buildHelpButton(),
                 ),
-                child: Text(
-                  'START GAME',
-                  style: TextStyle(
-                    fontSize: isTablet ? 22 : 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Widget _buildStartScreen() {
+    final size = MediaQuery.of(context).size;
+    final bool isTablet = size.shortestSide >= 600;
+    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: min(size.width * 0.9, panelMaxWidth)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 12),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Picture Words',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 42 : 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: isTablet ? 100 : 84,
+                height: isTablet ? 100 : 84,
+decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accentColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.menu_book,
+                  size: isTablet ? 56 : 48,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Match words with pictures!',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: isTablet ? 22 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 200),
+                crossFadeState: showSimpleInstruction
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: Text(
+                  'Tap a word from the left section, then tap its matching picture on the right section. Match all pairs to win!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: primaryColor.withOpacity(0.9),
+                    fontSize: isTablet ? 18 : 15,
+                    height: 1.35,
+                  ),
+                ),
+                secondChild: Text(
+                  'Tap a word from the yellow box on the left. Then tap the matching picture from the purple box on the right. Keep matching until all pairs are found!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: primaryColor.withOpacity(0.9),
+                    fontSize: isTablet ? 18 : 15,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    showSimpleInstruction = !showSimpleInstruction;
+                  });
+                },
+                icon: Icon(Icons.help_outline, color: primaryColor),
+                label: Text(
+                  showSimpleInstruction
+                      ? 'Show Original Instruction'
+                      : 'Need a simpler explanation?',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isTablet ? 16 : 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: primaryColor,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 18 : 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Text(
+                    'START GAME',
+                    style: TextStyle(
+                      fontSize: isTablet ? 22 : 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildGameArea() {
     if (!gameActive && correctMatches == totalPairs) {
@@ -792,7 +994,6 @@ Widget build(BuildContext context) {
 
     return Column(
       children: [
-                
         SizedBox(height: 30),
 
         // Game Layout - Two Sections
@@ -824,7 +1025,6 @@ Widget build(BuildContext context) {
                     children: [
                       // WORDS header
                       Container(
-                        
                         padding: EdgeInsets.symmetric(vertical: 15),
                         child: Center(
                           child: Text(
@@ -1196,36 +1396,38 @@ Widget build(BuildContext context) {
     });
     return Container(); // Return empty container since dialog handles the UI
   }
-Widget _buildCountdownScreen() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text('Get Ready!', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
-        const SizedBox(height: 40),
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [accentColor, Colors.white],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+
+  Widget _buildCountdownScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Get Ready!', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4)])),
+          const SizedBox(height: 40),
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [accentColor, Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(color: primaryColor.withOpacity(0.5), blurRadius: 30, spreadRadius: 5),
+                BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 15, spreadRadius: 2),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(color: primaryColor.withOpacity(0.5), blurRadius: 30, spreadRadius: 5),
-              BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 15, spreadRadius: 2),
-            ],
+            child: Center(child: Text('$countdownNumber', style: TextStyle(fontSize: 80, fontWeight: FontWeight.bold, color: primaryColor, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
           ),
-          child: Center(child: Text('$countdownNumber', style: TextStyle(fontSize: 80, fontWeight: FontWeight.bold, color: primaryColor, shadows: [Shadow(color: Colors.white.withOpacity(0.5), offset: Offset(0, 0), blurRadius: 10)]))),
-        ),
-        const SizedBox(height: 40),
-        Text('The game will start soon...', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500, shadows: [Shadow(color: Colors.black26, offset: Offset(1, 1), blurRadius: 2)])),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 40),
+          Text('The game will start soon...', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500, shadows: [Shadow(color: Colors.black26, offset: Offset(1, 1), blurRadius: 2)])),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatRow(IconData icon, String label, String value) {
     return Row(
       children: [

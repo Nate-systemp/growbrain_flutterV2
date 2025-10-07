@@ -55,7 +55,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   List<GameShape> shapes = [];
   int movedShapeIndex = -1;
   int? selectedShapeIndex;
-  List<bool> tapStates = []; // For tap animation feedback
+  List<bool> tapStates = [];
   int score = 0;
   int timer = 0;
   int roundsPlayed = 0;
@@ -76,23 +76,19 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   late final AnimationController _goController;
   late final Animation<double> _goOpacity;
   late final Animation<double> _goScale;
-  // HUD pop-in animation
   late final AnimationController _hudController;
   late final Animation<double> _hudOpacity;
   late final Animation<double> _hudScale;
   bool showHud = false;
-  // Status overlay (check/X) state
   bool showingStatus = false;
   String overlayText = '';
   Color overlayColor = Colors.green;
   Color overlayTextColor = Colors.white;
-
   bool showingResult = false;
   String resultText = '';
   bool isCorrectResult = false;
   String _normalizedDifficulty = 'Starter';
 
-  // App color scheme
   final Color primaryColor = const Color(0xFF5B6F4A);
   final Color accentColor = const Color(0xFFFFD740);
   final Color backgroundColor = const Color(0xFFF5F5DC);
@@ -159,13 +155,10 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     super.initState();
     gameStartTime = DateTime.now();
     BackgroundMusicManager().startGameMusic('Who Moved?');
-    // Normalize difficulty (accept display names like "Growing"/"Starter")
     _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
       widget.difficulty,
     );
 
-    // DEBUG: log normalized difficulty
-    // ignore: avoid_print
     print(
       '[WhoMoved] init difficulty="${widget.difficulty}" normalized="$_normalizedDifficulty"',
     );
@@ -178,7 +171,6 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
 
-    // Initialize result animation controller
     _resultAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -197,7 +189,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         curve: const Interval(0.6, 1.0, curve: Curves.bounceOut),
       ),
     );
-    // GO overlay controller (gentle)
+
     _goController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
@@ -209,7 +201,7 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     _goScale = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
     );
-    // HUD animation init
+
     _hudController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
@@ -262,7 +254,6 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       );
     }
 
-    // Initialize tap states
     tapStates = List.generate(numberOfShapes, (index) => false);
 
     final rand = math.Random();
@@ -332,7 +323,6 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _startGame() {
-    // Update controller duration and reset instead of disposing/creating — reduces flicker
     _shakeController.duration = shakeDuration;
     _shakeController.reset();
     _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
@@ -348,18 +338,14 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       countdownNumber = 3;
     });
 
-    // DEBUG: starting round
-    // ignore: avoid_print
     print(
       '[WhoMoved] start round ${roundsPlayed + 1} with speed=${shakeDuration.inMilliseconds}ms',
     );
 
-    // Start countdown sequence
     _startCountdown();
   }
 
   void _startCountdown() {
-    // Show countdown 3, 2, 1
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && countdownNumber > 1) {
         setState(() {
@@ -367,7 +353,6 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         });
         _startCountdown();
       } else if (mounted) {
-        // Countdown finished, start the shaking animation
         setState(() {
           showingCountdown = false;
           showingAnimation = true;
@@ -378,11 +363,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
         Future.delayed(const Duration(milliseconds: 500), () async {
           if (mounted) {
             await _shakeController.forward();
-            // Add a small pause after shake
             await Future.delayed(const Duration(milliseconds: 400));
 
             if (mounted) {
-              // show a short, gentle "GO!" overlay before enabling selection
               await _showGoOverlay();
               if (!mounted) return;
               setState(() {
@@ -397,55 +380,51 @@ class _WhoMovedGameState extends State<WhoMovedGame>
     });
   }
 
-Future<void> _showGoOverlay() async {
-  if (!mounted) return;
+  Future<void> _showGoOverlay() async {
+    if (!mounted) return;
 
-  // Ensure shapes remain visible but static during the "GO!" overlay
-  setState(() {
-    showingAnimation = false;
-    showingGo = true;
-  });
+    setState(() {
+      showingAnimation = false;
+      showingGo = true;
+    });
 
-  // Smoothly animate the "GO!" overlay
-  await _goController.forward();
-  await Future.delayed(const Duration(milliseconds: 450));
-  if (!mounted) return;
-  await _goController.reverse();
-  if (!mounted) return;
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 450));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
 
-  // Hide the "GO!" overlay and enable selection
-  setState(() {
-    showingGo = false;
-    canSelect = true;
-  });
-}
+    setState(() {
+      showingGo = false;
+      canSelect = true;
+    });
+  }
 
-// Generic status overlay for correct/wrong feedback
-Future<void> _showStatusOverlay({
-  required String text,
-  required Color color,
-  Color textColor = Colors.white,
-}) async {
-  if (!mounted) return;
-  setState(() {
-    overlayText = text;
-    overlayColor = color;
-    overlayTextColor = textColor;
-    showingStatus = true;
-  });
-  await _goController.forward();
-  await Future.delayed(const Duration(milliseconds: 550));
-  if (!mounted) return;
-  await _goController.reverse();
-  if (!mounted) return;
-  setState(() {
-    showingStatus = false;
-  });
-}
+  Future<void> _showStatusOverlay({
+    required String text,
+    required Color color,
+    Color textColor = Colors.white,
+  }) async {
+    if (!mounted) return;
+    setState(() {
+      overlayText = text;
+      overlayColor = color;
+      overlayTextColor = textColor;
+      showingStatus = true;
+    });
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() {
+      showingStatus = false;
+    });
+  }
+
   void _selectShape(int index) async {
     if (!canSelect) return;
 
-    // Trigger tap animation
     _animateTap(index);
 
     setState(() {
@@ -457,11 +436,9 @@ Future<void> _showStatusOverlay({
       score += 10;
       correctAnswers++;
       SoundEffectsManager().playSuccessWithVoice();
-      // Show green check overlay and wait for it to complete
       await _showStatusOverlay(text: '✓', color: Colors.green, textColor: Colors.white);
     } else {
       SoundEffectsManager().playWrong();
-      // Show red "X" overlay and wait for it to complete
       await _showStatusOverlay(text: 'X', color: Colors.red, textColor: Colors.white);
     }
 
@@ -476,11 +453,9 @@ Future<void> _showStatusOverlay({
       resultText = correct ? 'Correct!' : 'Wrong!';
     });
 
-    // Start the animation
     _resultAnimationController.reset();
     _resultAnimationController.forward();
 
-    // Hide result text after 3 seconds and proceed to next round
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
@@ -493,33 +468,30 @@ Future<void> _showStatusOverlay({
   }
 
   void _nextRound() {
-  setState(() {
-    roundsPlayed++;
-  });
+    setState(() {
+      roundsPlayed++;
+    });
 
-  if (roundsPlayed >= totalRounds) {
-    _endGame();
-    return;
-  }
-
-  // Reset only necessary states
-  _shakeController.reset();
-  _resultAnimationController.reset();
-
-  // Prepare next round and start it immediately
-  setState(() {
-    timer = 0;
-  });
-
-  _initializeGame();
-
-  // Small delay to allow UI to settle, then start the next round automatically
-  Future.delayed(const Duration(milliseconds: 400), () {
-    if (mounted) {
-      _startGame();
+    if (roundsPlayed >= totalRounds) {
+      _endGame();
+      return;
     }
-  });
-}
+
+    _shakeController.reset();
+    _resultAnimationController.reset();
+
+    setState(() {
+      timer = 0;
+    });
+
+    _initializeGame();
+
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        _startGame();
+      }
+    });
+  }
 
   void _endGame() {
     setState(() {
@@ -618,9 +590,7 @@ Future<void> _showStatusOverlay({
           ),
         ),
         actions: [
-          // Different actions for demo mode vs session mode
           if (widget.onGameComplete == null) ...[
-            // Demo mode: Big, full-width buttons
             Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
@@ -653,8 +623,8 @@ Future<void> _showStatusOverlay({
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        Navigator.of(context).pop(); // Exit game
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
                       },
                       icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
                       label: Text(
@@ -678,14 +648,13 @@ Future<void> _showStatusOverlay({
               ),
             ),
           ] else ...[
-            // Session mode: Show Next Game button
             Container(
               width: double.infinity,
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Exit game and return to session screen
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
                 },
                 icon: const Icon(Icons.arrow_forward_rounded, size: 22),
                 label: const Text(
@@ -762,7 +731,14 @@ Future<void> _showStatusOverlay({
           style: TextStyle(
             color: const Color.fromARGB(255, 255, 255, 255),
             fontSize: labelFontSize,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.45),
+                offset: const Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -776,7 +752,7 @@ Future<void> _showStatusOverlay({
               BoxShadow(
                 color: Colors.black.withOpacity(0.18),
                 offset: const Offset(0, 6),
-                blurRadius: 0, // solid edge shadow per request
+                blurRadius: 0,
                 spreadRadius: 4,
               ),
             ],
@@ -795,7 +771,160 @@ Future<void> _showStatusOverlay({
     );
   }
 
-  // LightTap-style start / instruction screen for WhoMoved (panel UI)
+  Widget _buildHelpButton() {
+    return FloatingActionButton.extended(
+      heroTag: 'helpBtn',
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      icon: const Icon(Icons.help_outline),
+      label: const Text('Need Help?'),
+      onPressed: () {
+        bool showSimple = false;
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) => Dialog(
+              backgroundColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD740),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Need Help?',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF5B6F4A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            showSimple
+                                ? 'Look at the shapes. One of them will shake or move a little. After they stop moving, tap the shape that moved!'
+                                : 'Watch carefully as one shape moves briefly. When the movement stops, tap the shape that moved.',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF5B6F4A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (showSimple)
+                          const SizedBox(height: 16),
+                        if (showSimple)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'That\'s the simpler explanation!',
+                              style: TextStyle(
+                                color: Color(0xFF5B6F4A),
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF5B6F4A).withOpacity(0.6),
+                                      blurRadius: 0,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    if (!showSimple) {
+                                      setState(() => showSimple = true);
+                                    } else {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF5B6F4A),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    showSimple ? 'Close' : 'More Help?',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildStartScreenWithInstruction() {
     final size = MediaQuery.of(context).size;
     final bool isTablet = size.shortestSide >= 600;
@@ -907,7 +1036,6 @@ Future<void> _showStatusOverlay({
     );
   }
 
-  // ...existing code...
   void _resetGame() {
     setState(() {
       score = 0;
@@ -935,7 +1063,6 @@ Future<void> _showStatusOverlay({
       tapStates[index] = true;
     });
 
-    // Reset tap state after animation
     Future.delayed(Duration(milliseconds: 150), () {
       if (mounted) {
         setState(() {
@@ -988,8 +1115,7 @@ Future<void> _showStatusOverlay({
                 double shakeOffset = 0;
                 if (isMoved) {
                   shakeOffset =
-                      math.sin(_shakeAnimation.value * math.pi * 8) *
-                      2; // Shake 18px
+                      math.sin(_shakeAnimation.value * math.pi * 8) * 2;
                 }
                 return Transform.translate(
                   offset: Offset(shakeOffset, 0),
@@ -1022,11 +1148,9 @@ Future<void> _showStatusOverlay({
   }
 
   void _handleBackButton(BuildContext context) {
-    // If this is a demo game (onGameComplete is null), allow direct navigation back
     if (widget.onGameComplete == null) {
       Navigator.of(context).pop();
     } else {
-      // Only show PIN dialog for actual student sessions
       _showTeacherPinDialog(context);
     }
   }
@@ -1051,264 +1175,277 @@ Future<void> _showStatusOverlay({
     );
   }
 
- @override
-Widget build(BuildContext context) {
-  return PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) {
-        _handleBackButton(context);
-      }
-    },
-    child: Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/background.png'),
-            fit: BoxFit.cover,
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/background.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Scaffold(
-          backgroundColor: const Color.fromARGB(0, 0, 0, 0),
-          appBar: null, // Removed the AppBar
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0), // Adjusted padding
-              child: Column(
+          child: Scaffold(
+            backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+            appBar: null,
+            body: SafeArea(
+              child: Stack(
                 children: [
-                  const SizedBox(height: 70),
-                  // Three equal circular badges: Score / Round / Time
-                  if (showHud) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                    child: Column(
                       children: [
-                        FadeTransition(
-                          opacity: _hudOpacity,
-                          child: ScaleTransition(
-                            scale: _hudScale,
-                            child: _infoCircle(
-                              label: 'Score',
-                              value: '$score',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
-                            ),
+                        const SizedBox(height: 70),
+                        if (showHud) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              FadeTransition(
+                                opacity: _hudOpacity,
+                                child: ScaleTransition(
+                                  scale: _hudScale,
+                                  child: _infoCircle(
+                                    label: 'Score',
+                                    value: '$score',
+                                    circleSize: 110,
+                                    valueFontSize: 30,
+                                    labelFontSize: 26,
+                                  ),
+                                ),
+                              ),
+                              FadeTransition(
+                                opacity: _hudOpacity,
+                                child: ScaleTransition(
+                                  scale: _hudScale,
+                                  child: _infoCircle(
+                                    label: 'Round',
+                                    value: '${roundsPlayed + 1}/$totalRounds',
+                                    circleSize: 110,
+                                    valueFontSize: 30,
+                                    labelFontSize: 26,
+                                  ),
+                                ),
+                              ),
+                              FadeTransition(
+                                opacity: _hudOpacity,
+                                child: ScaleTransition(
+                                  scale: _hudScale,
+                                  child: _infoCircle(
+                                    label: 'Time',
+                                    value: canSelect && timer > 0
+                                        ? '${timer}s'
+                                        : showingAnimation
+                                        ? '...'
+                                        : '${timer}s',
+                                    circleSize: 110,
+                                    valueFontSize: 30,
+                                    labelFontSize: 26,
+                                    valueColor: timer <= 5 && canSelect
+                                        ? Colors.red
+                                        : primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        FadeTransition(
-                          opacity: _hudOpacity,
-                          child: ScaleTransition(
-                            scale: _hudScale,
-                            child: _infoCircle(
-                              label: 'Round',
-                              value: '${roundsPlayed + 1}/$totalRounds',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
-                            ),
-                          ),
-                        ),
-                        FadeTransition(
-                          opacity: _hudOpacity,
-                          child: ScaleTransition(
-                            scale: _hudScale,
-                            child: _infoCircle(
-                              label: 'Time',
-                              value: canSelect && timer > 0
-                                  ? '${timer}s'
-                                  : showingAnimation
-                                  ? '...'
-                                  : '${timer}s',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
-                              valueColor: timer <= 5 && canSelect
-                                  ? Colors.red
-                                  : primaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          if (!gameStarted) ...[
-                            Expanded(
-                              child: _buildStartScreenWithInstruction(),
-                            ),
-                          ] else ...[
-                                // show status box only when NOT in countdown (removes white "Get ready..." box)
-                            
-                              const SizedBox(height: 10),
-                              Expanded(
-                                child: Stack(
-                                  children: [
-                                    // Show shapes during countdown animation (shaking), or when selectable, or when showing result
-                                    // Show shapes during shaking, while GO overlay is visible (freeze), when selectable, or when showing result
-                                   if (showingAnimation || showingGo || canSelect || showingResult || showingStatus)
-                                    Center(
-                                      child: RepaintBoundary(
-                                        child: _buildShapeGrid(),
-                                      ),
-                                    )
-                                  else
-                                    const SizedBox.shrink(),
-                                   if (showingCountdown)
-                                      Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Text(
-                                              'Get Ready!',
-                                              style: TextStyle(
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
+                          const SizedBox(height: 20),
+                        ],
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              children: [
+                                if (!gameStarted) ...[
+                                  Expanded(
+                                    child: _buildStartScreenWithInstruction(),
+                                  ),
+                                ] else ...[
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: Stack(
+                                      children: [
+                                        if (showingAnimation || showingGo || canSelect || showingResult || showingStatus)
+                                          Center(
+                                            child: RepaintBoundary(
+                                              child: _buildShapeGrid(),
                                             ),
-                                            const SizedBox(height: 24),
-                                            Container(
-                                              width: 150,
-                                              height: 150,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: accentColor,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: accentColor.withOpacity(0.3),
-                                                    blurRadius: 20,
-                                                    spreadRadius: 5,
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  countdownNumber.toString(),
+                                          )
+                                        else
+                                          const SizedBox.shrink(),
+                                        if (showingCountdown)
+                                          Center(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text(
+                                                  'Get Ready!',
                                                   style: TextStyle(
-                                                    fontSize: 80,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: primaryColor,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 32),
-                                            Text(
-                                              'The game will start soon...',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                color: Colors.white.withOpacity(0.9),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                    if (showingResult)
-                                      Center(
-                                        child: AnimatedBuilder(
-                                          animation: _resultAnimationController,
-                                          builder: (context, child) {
-                                            return Transform.scale(
-                                              scale:
-                                                  _resultScaleAnimation.value *
-                                                  _resultBounceAnimation.value,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 40,
-                                                      vertical: 20,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: isCorrectResult
-                                                      ? Colors.green
-                                                            .withOpacity(0.9)
-                                                      : Colors.red.withOpacity(
-                                                          0.9,
-                                                        ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withOpacity(0.3),
-                                                      spreadRadius: 2,
-                                                      blurRadius: 8,
-                                                      offset: const Offset(
-                                                        0,
-                                                        4,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Text(
-                                                  resultText,
-                                                  style: const TextStyle(
-                                                    fontSize: 48,
+                                                    fontSize: 32,
                                                     fontWeight: FontWeight.bold,
                                                     color: Colors.white,
                                                   ),
-                                                  textAlign: TextAlign.center,
+                                                ),
+                                                const SizedBox(height: 24),
+                                                Container(
+                                                  width: 150,
+                                                  height: 150,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: accentColor,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: accentColor.withOpacity(0.3),
+                                                        blurRadius: 20,
+                                                        spreadRadius: 5,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      countdownNumber.toString(),
+                                                      style: TextStyle(
+                                                        fontSize: 80,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 32),
+                                                Text(
+                                                  'The game will start soon...',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    color: Colors.white.withOpacity(0.9),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        if (showingResult)
+                                          Center(
+                                            child: AnimatedBuilder(
+                                              animation: _resultAnimationController,
+                                              builder: (context, child) {
+                                                return Transform.scale(
+                                                  scale: _resultScaleAnimation.value * _resultBounceAnimation.value,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 40,
+                                                      vertical: 20,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: isCorrectResult
+                                                          ? Colors.green.withOpacity(0.9)
+                                                          : Colors.red.withOpacity(0.9),
+                                                      borderRadius: BorderRadius.circular(20),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.3),
+                                                          spreadRadius: 2,
+                                                          blurRadius: 8,
+                                                          offset: const Offset(0, 4),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Text(
+                                                      resultText,
+                                                      style: const TextStyle(
+                                                        fontSize: 48,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        if (showingGo)
+                                          Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: FadeTransition(
+                                                opacity: _goOpacity,
+                                                child: Container(
+                                                  color: Colors.black.withOpacity(0.12),
+                                                  child: Center(
+                                                    child: ScaleTransition(
+                                                      scale: _goScale,
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const Text(
+                                                            'Get Ready!',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 26,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 16),
+                                                          Container(
+                                                            width: 140,
+                                                            height: 140,
+                                                            decoration: BoxDecoration(
+                                                              shape: BoxShape.circle,
+                                                              color: accentColor,
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: Colors.black.withOpacity(0.30),
+                                                                  offset: Offset(0, 8),
+                                                                  blurRadius: 0,
+                                                                  spreadRadius: 8,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            child: Center(
+                                                              child: Text(
+                                                                'GO!',
+                                                                style: TextStyle(
+                                                                  color: primaryColor,
+                                                                  fontSize: 54,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-
-                                    // "GO!" overlay (smooth fade + scale)
-                                    if (showingGo)
-                                      Positioned.fill(
-                                        child: IgnorePointer(
-                                          child: FadeTransition(
-                                            opacity: _goOpacity,
-                                            child: Container(
-                                              color: Colors.black.withOpacity(
-                                                0.12,
-                                              ),
-                                              child: Center(
-                                                child: ScaleTransition(
-                                                  scale: _goScale,
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      const Text(
-                                                        'Get Ready!',
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 26,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        height: 16,
-                                                      ),
-                                                      Container(
+                                            ),
+                                          ),
+                                        if (showingStatus)
+                                          Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: FadeTransition(
+                                                opacity: _goOpacity,
+                                                child: Container(
+                                                  color: Colors.black.withOpacity(0.12),
+                                                  child: Center(
+                                                    child: ScaleTransition(
+                                                      scale: _goScale,
+                                                      child: Container(
                                                         width: 140,
                                                         height: 140,
                                                         decoration: BoxDecoration(
-                                                          shape:
-                                                              BoxShape.circle,
-                                                          color: accentColor,
+                                                          shape: BoxShape.circle,
+                                                          color: overlayColor,
                                                           boxShadow: [
                                                             BoxShadow(
-                                                              color: Colors
-                                                                  .black
-                                                                  .withOpacity(
-                                                                    0.30,
-                                                                  ),
-                                                              offset: Offset(
-                                                                0,
-                                                                8,
-                                                              ),
+                                                              color: Colors.black.withOpacity(0.30),
+                                                              offset: Offset(0, 8),
                                                               blurRadius: 0,
                                                               spreadRadius: 8,
                                                             ),
@@ -1316,81 +1453,39 @@ Widget build(BuildContext context) {
                                                         ),
                                                         child: Center(
                                                           child: Text(
-                                                            'GO!',
+                                                            overlayText,
                                                             style: TextStyle(
-                                                              color:
-                                                                  primaryColor,
-                                                              fontSize: 54,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
+                                                              color: overlayTextColor,
+                                                              fontSize: 72,
+                                                              fontWeight: FontWeight.bold,
                                                             ),
                                                           ),
                                                         ),
                                                       ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                    // Status overlay for correct/wrong feedback
-                                    if (showingStatus)
-                                      Positioned.fill(
-                                        child: IgnorePointer(
-                                          child: FadeTransition(
-                                            opacity: _goOpacity,
-                                            child: Container(
-                                              color: Colors.black.withOpacity(0.12),
-                                              child: Center(
-                                                child: ScaleTransition(
-                                                  scale: _goScale,
-                                                  child: Container(
-                                                    width: 140,
-                                                    height: 140,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: overlayColor,
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withOpacity(0.30),
-                                                          offset: Offset(0, 8),
-                                                          blurRadius: 0,
-                                                          spreadRadius: 8,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        overlayText,
-                                                        style: TextStyle(
-                                                          color: overlayTextColor,
-                                                          fontSize: 72,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
                                                     ),
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    // ...existing code...
-                  ],
-                ),
+                  ),
+                  if (gameStarted && !showingCountdown)
+                    Positioned(
+                      left: 24,
+                      bottom: 24,
+                      child: _buildHelpButton(),
+                    ),
+                ],
               ),
             ),
           ),
@@ -1399,7 +1494,6 @@ Widget build(BuildContext context) {
     );
   }
 }
-// ...existing code...
 
 class _TeacherPinDialog extends StatefulWidget {
   final VoidCallback onPinVerified;
@@ -1492,7 +1586,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           width: 400,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFD740), // Yellow background like "For Teachers" button
+            color: const Color(0xFFFFD740),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -1531,7 +1625,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                 child: Text(
                   'Enter your 6-digit PIN to exit the session and access teacher features.',
                   style: TextStyle(
-                    fontSize: 16, 
+                    fontSize: 16,
                     color: const Color(0xFF5B6F4A),
                     fontWeight: FontWeight.w600,
                   ),
@@ -1568,7 +1662,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                     counterText: '',
                     hintText: '••••••',
                     hintStyle: TextStyle(
-                      color: const Color(0xFF5B6F4A).withOpacity(0.4), 
+                      color: const Color(0xFF5B6F4A).withOpacity(0.4),
                       letterSpacing: 8
                     ),
                     border: OutlineInputBorder(
@@ -1630,7 +1724,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                         child: const Text(
                           'Cancel',
                           style: TextStyle(
-                            fontSize: 16, 
+                            fontSize: 16,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1726,11 +1820,9 @@ class ShapePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 12;
 
-    // Create gradient colors based on the base color
     final lightColor = Color.lerp(color, Colors.white, 0.3)!;
     final darkColor = Color.lerp(color, Colors.black, 0.2)!;
 
-    // Gradient fill
     final gradientPaint = Paint()
       ..shader = RadialGradient(
         colors: [lightColor, color, darkColor],
@@ -1739,7 +1831,6 @@ class ShapePainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.fill;
 
-    // Enhanced border with gradient
     final borderGradient = LinearGradient(
       colors: [
         Colors.white.withOpacity(0.8),
@@ -1758,12 +1849,9 @@ class ShapePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
 
-    // Multiple shadow layers for depth
     final shapePath = _getShapePath(shapeType, center, radius);
 
-    // Selection highlight - draw glowing outline if selected
     if (isSelected) {
-      // Outer glow using the shape's color
       final glowColor = Color.lerp(color, Colors.white, 0.4)!;
       canvas.drawShadow(
         _getShapePath(shapeType, center, radius + 8),
@@ -1779,7 +1867,6 @@ class ShapePainter extends CustomPainter {
       );
     }
 
-    // Deep shadow
     canvas.drawShadow(
       shapePath.shift(const Offset(3, 3)),
       Colors.black.withOpacity(0.25),
@@ -1787,7 +1874,6 @@ class ShapePainter extends CustomPainter {
       false,
     );
 
-    // Medium shadow
     canvas.drawShadow(
       shapePath.shift(const Offset(1, 1)),
       Colors.black.withOpacity(0.15),
@@ -1795,13 +1881,10 @@ class ShapePainter extends CustomPainter {
       false,
     );
 
-    // Soft shadow
     canvas.drawShadow(shapePath, Colors.black.withOpacity(0.08), 2, false);
 
-    // Draw main shape with gradient
     canvas.drawPath(shapePath, gradientPaint);
 
-    // Inner highlight for 3D effect
     final highlightPaint = Paint()
       ..color = Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.stroke
@@ -1810,10 +1893,8 @@ class ShapePainter extends CustomPainter {
     final innerPath = _getShapePath(shapeType, center, radius * 0.85);
     canvas.drawPath(innerPath, highlightPaint);
 
-    // Draw border
     canvas.drawPath(shapePath, borderPaint);
 
-    // Selection outline - draw bright outline if selected
     if (isSelected) {
       final selectionPaint = Paint()
         ..color = Color.lerp(color, Colors.white, 0.6)!

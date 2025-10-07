@@ -93,6 +93,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
   int timerSeconds = 0;
   bool timerActive = false;
 
+  bool showSimpleInstruction = false;
+
   final Color primaryColor = const Color(0xFF7A5833);
   final Color accentColor = const Color(0xFFF5C16C);
 
@@ -567,10 +569,171 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
                   ),
                 ),
               ),
+            // Need Help button - ONLY when in-game (not on start/instructions/countdown)
+            if (gameStarted && !showingCountdown)
+              Positioned(
+                left: 24,
+                bottom: 24,
+                child: _buildHelpButton(),
+              ),
           ],
         ),
       ),
       ),
+    );
+  }
+
+  Widget _buildHelpButton() {
+    return FloatingActionButton.extended(
+      heroTag: 'helpBtn',
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      icon: const Icon(Icons.help_outline),
+      label: const Text('Need Help?'),
+      onPressed: () {
+        bool showSimple = false;
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) => Dialog(
+              backgroundColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD740),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.help_outline, color: primaryColor, size: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Need Help?',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            showSimple
+                                ? 'Watch fruits shuffle inside the baskets. After shuffling, drag the correct fruit to each basket as fast as you can!'
+                                : 'Watch carefully as fruits shuffle in the baskets. Then, drag each fruit to its correct basket based on what you saw.',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (showSimple)
+                          const SizedBox(height: 16),
+                        if (showSimple)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'That\'s the simpler explanation!',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryColor.withOpacity(0.6),
+                                      blurRadius: 0,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    if (!showSimple) {
+                                      setState(() => showSimple = true);
+                                    } else {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: primaryColor,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    showSimple ? 'Close' : 'More Help?',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -632,12 +795,42 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
               const SizedBox(height: 16),
               Text('Watch carefully!', style: TextStyle(color: primaryColor, fontSize: isTablet ? 22 : 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               const SizedBox(height: 8),
-              Text(
-                'Watch fruits shuffle inside the baskets. After shuffling, drag the correct fruit to each basket as fast as you can!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: primaryColor.withOpacity(0.9), fontSize: isTablet ? 18 : 15, height: 1.35),
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 200),
+                crossFadeState: showSimpleInstruction
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: Text(
+                  'Watch fruits shuffle inside the baskets. After shuffling, drag the correct fruit to each basket as fast as you can!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: primaryColor.withOpacity(0.9), fontSize: isTablet ? 18 : 15, height: 1.35),
+                ),
+                secondChild: Text(
+                  'Look at the fruits as they move in the baskets. Remember which fruit goes in which basket. Then tap the fruits to put them back!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: primaryColor.withOpacity(0.9), fontSize: isTablet ? 18 : 15, height: 1.35, fontWeight: FontWeight.w600),
+                ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    showSimpleInstruction = !showSimpleInstruction;
+                  });
+                },
+                icon: Icon(Icons.help_outline, color: primaryColor),
+                label: Text(
+                  showSimpleInstruction
+                      ? 'Show Original Instruction'
+                      : 'Need a simpler explanation?',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isTablet ? 16 : 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

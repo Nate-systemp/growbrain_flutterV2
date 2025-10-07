@@ -48,106 +48,95 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
   bool showingCountdown = false;
   int countdownNumber = 3;
   bool showingGo = false;
-String goOverlayText = 'GO!';
-Color goOverlayColor = const Color(0xFFFFD740); // yellow by default
-Color goOverlayTextColor = const Color(0xFF5B6F4A); 
-late final AnimationController _goController;
-late final Animation<double> _goOpacity;
-late final Animation<double> _goScale;
-// HUD pop-in animation
-late final AnimationController _hudController;
-late final Animation<double> _hudOpacity;
-late final Animation<double> _hudScale;
-bool showHud = false;
+  String goOverlayText = 'GO!';
+  Color goOverlayColor = const Color(0xFFFFD740);
+  Color goOverlayTextColor = const Color(0xFF5B6F4A); 
+  late final AnimationController _goController;
+  late final Animation<double> _goOpacity;
+  late final Animation<double> _goScale;
+  late final AnimationController _hudController;
+  late final Animation<double> _hudOpacity;
+  late final Animation<double> _hudScale;
+  bool showHud = false;
   int round = 1;
   static const int maxRounds = 5;
   int tappedIndex = -1;
   String _normalizedDifficulty = 'Starter';
 
-  // Icon-specific pastel colors similar to Light Tap// Fixed card size for consistency
-static const double _fixedCardSize = 140.0;
-static const double _cardSpacing = 12.0;
-  // Fallback goes to primary green if icon is not in the map
   final Map<IconData, Color> _iconPastelColors = {
-    // Light Tap core set
-    Icons.star: Color(0xFFFFD700), // Gold
-  Icons.favorite: Color(0xFFFF1744), // Bright red
-  Icons.flash_on: Color(0xFFFFEB3B), // Bright yellow
-  Icons.sunny: Color(0xFFFF9800), // Orange
-  Icons.brightness_high: Color(0xFFFFEB3B),
-  Icons.nightlight: Color(0xFF3F51B5), // Indigo
-  Icons.local_fire_department: Color(0xFFFF5722), // Deep orange
-  Icons.water_drop: Color(0xFF2196F3), // Blue
-  Icons.eco: Color(0xFF4CAF50), // Green
-  Icons.diamond: Color(0xFF9C27B0), // Purple
-
-    // Find Me common set
-   Icons.sports_soccer: Color(0xFF2196F3),
-  Icons.car_rental: Color(0xFF607D8B),
-  Icons.home: Color(0xFF009688),
-  Icons.pets: Color(0xFFE91E63),
-  Icons.local_florist: Color(0xFF4CAF50),
-  Icons.cake: Color(0xFFFFD700),
-  Icons.music_note: Color(0xFF9C27B0),
-  Icons.umbrella: Color(0xFF2196F3),
-  Icons.airplane_ticket: Color(0xFF2196F3),
-  Icons.school: Color(0xFFFF9800),
-  Icons.book: Color(0xFFFF9800),
-  Icons.emoji_food_beverage: Color(0xFFFF9800),
-  Icons.face: Color(0xFFFF5722),
-
-  Icons.apple: Color(0xFFFF1744), // Bright red
-Icons.beach_access: Color(0xFF00BCD4), // Cyan
-Icons.camera_alt: Color(0xFF424242), // Dark gray
-Icons.park: Color(0xFF4CAF50), // Green
-Icons.sports_esports: Color(0xFF9C27B0), // Purple
-Icons.headphones: Color(0xFF9C27B0), // Purple
-Icons.ice_skating: Color(0xFF2196F3), // Blue
-Icons.vpn_key: Color(0xFFFF9800), // Orange
-Icons.lightbulb: Color(0xFFFFEB3B), // Yellow
-Icons.map: Color(0xFF009688), // Teal
-Icons.palette: Color(0xFFE91E63), // Pink
-Icons.rocket_launch: Color(0xFF2196F3), // Blue
-Icons.sailing: Color(0xFF03A9F4), // Light blue
-Icons.train: Color(0xFF607D8B), // Blue gray
-Icons.watch: Color(0xFFFF9800), // Orange
-Icons.yard: Color(0xFF4CAF50), // Green
-Icons.zoom_in: Color(0xFF757575), // Gray
-
-Icons.anchor: Color(0xFF2196F3), // Blue
-Icons.balance: Color(0xFF795548), // Brown
-Icons.castle: Color(0xFF9C27B0), // Purple
-Icons.directions_bike: Color(0xFFFF9800), // Orange
-Icons.fingerprint: Color(0xFF607D8B), // Blue gray
-Icons.gavel: Color(0xFFFF9800), // Orange
-Icons.hiking: Color(0xFF4CAF50), // Green
-Icons.icecream: Color(0xFFE91E63), // Pink
-Icons.keyboard: Color(0xFF424242), // Dark gray
-Icons.landscape: Color(0xFF4CAF50), // Green
-Icons.medical_services: Color(0xFFFF1744), // Red
-Icons.nature_people: Color(0xFF4CAF50), // Green
-Icons.outdoor_grill: Color(0xFFFF5722), // Deep orange
-Icons.piano: Color(0xFF424242), // Dark gray
-Icons.quiz: Color(0xFFFF9800), // Orange
-Icons.restaurant: Color(0xFFFF5722), // Deep orange
-Icons.sports_tennis: Color(0xFF4CAF50), // Green
-Icons.theater_comedy: Color(0xFFFFD700), // Gold
-Icons.umbrella_outlined: Color(0xFF2196F3), // Blue
-
-Icons.apartment: Color(0xFF607D8B), // Blue gray
-Icons.brush: Color(0xFFE91E63), // Pink
-Icons.celebration: Color(0xFFFFD700), // Gold
-Icons.dashboard: Color(0xFF424242), // Dark gray
-Icons.extension: Color(0xFF9C27B0), // Purple
-Icons.flight_takeoff: Color(0xFF2196F3), // Blue
-Icons.gesture: Color(0xFFFF9800), // Orange
-Icons.handyman: Color(0xFF795548), // Brown
-Icons.inventory: Color(0xFF607D8B), // Blue gray
-Icons.join_inner: Color(0xFF9C27B0), // Purple
-Icons.kitchen: Color(0xFFFF9800), // Orange
-Icons.language: Color(0xFF2196F3), // Blue
-Icons.memory: Color(0xFF607D8B), // Blue gray
-Icons.navigation: Color(0xFF2196F3), // Blue
+    Icons.star: Color(0xFFFFD700),
+    Icons.favorite: Color(0xFFFF1744),
+    Icons.flash_on: Color(0xFFFFEB3B),
+    Icons.sunny: Color(0xFFFF9800),
+    Icons.brightness_high: Color(0xFFFFEB3B),
+    Icons.nightlight: Color(0xFF3F51B5),
+    Icons.local_fire_department: Color(0xFFFF5722),
+    Icons.water_drop: Color(0xFF2196F3),
+    Icons.eco: Color(0xFF4CAF50),
+    Icons.diamond: Color(0xFF9C27B0),
+    Icons.sports_soccer: Color(0xFF2196F3),
+    Icons.car_rental: Color(0xFF607D8B),
+    Icons.home: Color(0xFF009688),
+    Icons.pets: Color(0xFFE91E63),
+    Icons.local_florist: Color(0xFF4CAF50),
+    Icons.cake: Color(0xFFFFD700),
+    Icons.music_note: Color(0xFF9C27B0),
+    Icons.umbrella: Color(0xFF2196F3),
+    Icons.airplane_ticket: Color(0xFF2196F3),
+    Icons.school: Color(0xFFFF9800),
+    Icons.book: Color(0xFFFF9800),
+    Icons.emoji_food_beverage: Color(0xFFFF9800),
+    Icons.face: Color(0xFFFF5722),
+    Icons.apple: Color(0xFFFF1744),
+    Icons.beach_access: Color(0xFF00BCD4),
+    Icons.camera_alt: Color(0xFF424242),
+    Icons.park: Color(0xFF4CAF50),
+    Icons.sports_esports: Color(0xFF9C27B0),
+    Icons.headphones: Color(0xFF9C27B0),
+    Icons.ice_skating: Color(0xFF2196F3),
+    Icons.vpn_key: Color(0xFFFF9800),
+    Icons.lightbulb: Color(0xFFFFEB3B),
+    Icons.map: Color(0xFF009688),
+    Icons.palette: Color(0xFFE91E63),
+    Icons.rocket_launch: Color(0xFF2196F3),
+    Icons.sailing: Color(0xFF03A9F4),
+    Icons.train: Color(0xFF607D8B),
+    Icons.watch: Color(0xFFFF9800),
+    Icons.yard: Color(0xFF4CAF50),
+    Icons.zoom_in: Color(0xFF757575),
+    Icons.anchor: Color(0xFF2196F3),
+    Icons.balance: Color(0xFF795548),
+    Icons.castle: Color(0xFF9C27B0),
+    Icons.directions_bike: Color(0xFFFF9800),
+    Icons.fingerprint: Color(0xFF607D8B),
+    Icons.gavel: Color(0xFFFF9800),
+    Icons.hiking: Color(0xFF4CAF50),
+    Icons.icecream: Color(0xFFE91E63),
+    Icons.keyboard: Color(0xFF424242),
+    Icons.landscape: Color(0xFF4CAF50),
+    Icons.medical_services: Color(0xFFFF1744),
+    Icons.nature_people: Color(0xFF4CAF50),
+    Icons.outdoor_grill: Color(0xFFFF5722),
+    Icons.piano: Color(0xFF424242),
+    Icons.quiz: Color(0xFFFF9800),
+    Icons.restaurant: Color(0xFFFF5722),
+    Icons.sports_tennis: Color(0xFF4CAF50),
+    Icons.theater_comedy: Color(0xFFFFD700),
+    Icons.umbrella_outlined: Color(0xFF2196F3),
+    Icons.apartment: Color(0xFF607D8B),
+    Icons.brush: Color(0xFFE91E63),
+    Icons.celebration: Color(0xFFFFD700),
+    Icons.dashboard: Color(0xFF424242),
+    Icons.extension: Color(0xFF9C27B0),
+    Icons.flight_takeoff: Color(0xFF2196F3),
+    Icons.gesture: Color(0xFFFF9800),
+    Icons.handyman: Color(0xFF795548),
+    Icons.inventory: Color(0xFF607D8B),
+    Icons.join_inner: Color(0xFF9C27B0),
+    Icons.kitchen: Color(0xFFFF9800),
+    Icons.language: Color(0xFF2196F3),
+    Icons.memory: Color(0xFF607D8B),
+    Icons.navigation: Color(0xFF2196F3),
   };
 
   Color _getIconPastelColor(IconData icon) {
@@ -155,29 +144,28 @@ Icons.navigation: Color(0xFF2196F3), // Blue
   }
 
   @override
-void initState() {
-  super.initState();
-  BackgroundMusicManager().startGameMusic('Find Me');
-  _goController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 350),
-  );
-  _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
-  _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
-    CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
-  );
-  // HUD animation init
-  _hudController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 350),
-  );
-  _hudOpacity = CurvedAnimation(parent: _hudController, curve: Curves.easeInOut);
-  _hudScale = Tween<double>(begin: 0.85, end: 1.0).animate(
-    CurvedAnimation(parent: _hudController, curve: Curves.easeOutBack),
-  );
-  _initializeAnimations();
-  _initializeGame();
-}
+  void initState() {
+    super.initState();
+    BackgroundMusicManager().startGameMusic('Find Me');
+    _goController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
+      CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
+    );
+    _hudController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _hudOpacity = CurvedAnimation(parent: _hudController, curve: Curves.easeInOut);
+    _hudScale = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _hudController, curve: Curves.easeOutBack),
+    );
+    _initializeAnimations();
+    _initializeGame();
+  }
 
   void _initializeAnimations() {
     _cardAnimationController = AnimationController(
@@ -220,7 +208,6 @@ void initState() {
 
   void _generateGameObjects() {
     final List<Map<String, dynamic>> allObjectData = [
-      // Basic Objects (16)
       {'icon': Icons.sports_soccer, 'name': 'Ball'},
       {'icon': Icons.car_rental, 'name': 'Car'},
       {'icon': Icons.home, 'name': 'House'},
@@ -237,8 +224,6 @@ void initState() {
       {'icon': Icons.book, 'name': 'Book'},
       {'icon': Icons.emoji_food_beverage, 'name': 'Cup'},
       {'icon': Icons.face, 'name': 'Face'},
-
-      // Additional Diverse Icons (20)
       {'icon': Icons.apple, 'name': 'Apple'},
       {'icon': Icons.beach_access, 'name': 'Beach'},
       {'icon': Icons.camera_alt, 'name': 'Camera'},
@@ -259,8 +244,6 @@ void initState() {
       {'icon': Icons.watch, 'name': 'Watch'},
       {'icon': Icons.yard, 'name': 'Garden'},
       {'icon': Icons.zoom_in, 'name': 'Magnify'},
-
-      // Complex Icons (20)
       {'icon': Icons.anchor, 'name': 'Anchor'},
       {'icon': Icons.balance, 'name': 'Scale'},
       {'icon': Icons.castle, 'name': 'Castle'},
@@ -281,8 +264,6 @@ void initState() {
       {'icon': Icons.sports_tennis, 'name': 'Tennis'},
       {'icon': Icons.theater_comedy, 'name': 'Comedy'},
       {'icon': Icons.umbrella_outlined, 'name': 'Parasol'},
-
-      // Advanced Icons (14)
       {'icon': Icons.apartment, 'name': 'Building'},
       {'icon': Icons.brush, 'name': 'Brush'},
       {'icon': Icons.celebration, 'name': 'Party'},
@@ -300,9 +281,8 @@ void initState() {
     ];
 
     gameObjects.clear();
-    tappedIndex = -1; // Reset tapped index
+    tappedIndex = -1;
 
-    // Progressive difficulty: increase objects as rounds progress
     int baseObjectCount;
     switch (_normalizedDifficulty) {
       case 'Starter':
@@ -319,7 +299,6 @@ void initState() {
         break;
     }
 
-    // Add extra objects in later rounds
     int extraObjects = 0;
     if (round >= 3) extraObjects = 1;
     if (round >= 4) extraObjects = 2;
@@ -327,7 +306,6 @@ void initState() {
 
     int totalObjects = baseObjectCount + extraObjects;
 
-    // Shuffle and select objects
     final selectedObjects = List.from(allObjectData);
     selectedObjects.shuffle();
 
@@ -353,47 +331,46 @@ void initState() {
   }
 
   void _startGame() {
-  setState(() {
-    gameStarted = true;
-    showingCountdown = true;
-    countdownNumber = 3;
-    isShowingTarget = false;
-  });
-
-  _showCountdown();
-}
-
-void _showCountdown() async {
-  for (int i = 3; i >= 1; i--) {
-    if (!mounted) return;
     setState(() {
-      countdownNumber = i;
+      gameStarted = true;
+      showingCountdown = true;
+      countdownNumber = 3;
+      isShowingTarget = false;
     });
-    await Future.delayed(const Duration(milliseconds: 1000));
+
+    _showCountdown();
   }
-  // After countdown, show target object as before
-  if (mounted) {
-    setState(() {
-      showingCountdown = false;
-      isShowingTarget = true;
-      showHud = true;
-    });
-    _hudController.forward();
-    _cardAnimationController.forward();
 
-    int displayTime = 3;
-    if (round >= 3) displayTime = 2;
-    if (round >= 5) displayTime = 1;
-
-    showTimer = Timer(Duration(seconds: displayTime), () async {
+  void _showCountdown() async {
+    for (int i = 3; i >= 1; i--) {
+      if (!mounted) return;
       setState(() {
-        isShowingTarget = false;
+        countdownNumber = i;
       });
-      _showGoOverlay(); // <-- Show "GO!" overlay after target
-      _startTimer();
-    });
+      await Future.delayed(const Duration(milliseconds: 1000));
+    }
+    if (mounted) {
+      setState(() {
+        showingCountdown = false;
+        isShowingTarget = true;
+        showHud = true;
+      });
+      _hudController.forward();
+      _cardAnimationController.forward();
+
+      int displayTime = 3;
+      if (round >= 3) displayTime = 2;
+      if (round >= 5) displayTime = 1;
+
+      showTimer = Timer(Duration(seconds: displayTime), () async {
+        setState(() {
+          isShowingTarget = false;
+        });
+        _showGoOverlay();
+        _startTimer();
+      });
+    }
   }
-}
 
   void _startTimer() {
     gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -410,8 +387,7 @@ void _showCountdown() async {
   void _onObjectTapped(GameObject object, int index) {
     if (!gameStarted || gameEnded || isShowingTarget || tappedIndex != -1) return;
 
-    // Trigger tap animation
-   setState(() {
+    setState(() {
       tappedIndex = index;
     });
 
@@ -419,7 +395,6 @@ void _showCountdown() async {
       _tapAnimationController.reverse();
     });
 
-    // Small delay for visual feedback
     Timer(const Duration(milliseconds: 100), () {
       if (object.isTarget) {
         _correctAnswer();
@@ -429,69 +404,58 @@ void _showCountdown() async {
     });
   }
 
-void _correctAnswer() {
-  setState(() {
-    score += 10;
-    correctAnswers++;
-    // mark correct so UI can show green feedback
-    _isCorrectHighlight = true;
-    _isWrongHighlight = false;
-  });
-
-  // Play success sound effect with voice
-  SoundEffectsManager().playSuccessWithVoice();
-
-  _scoreAnimationController.forward().then((_) {
-    _scoreAnimationController.reverse();
-  });
-
-  // Show green check overlay
-  _showGoOverlay(
-    text: '✓',
-    color: Colors.green,
-    textColor: Colors.white,
-    
-  );
-
-  // Pause briefly to show green feedback, then advance to next round
-  Timer(const Duration(milliseconds: 1000), () {
-    // clear correct highlight and advance
+  void _correctAnswer() {
     setState(() {
-      _isCorrectHighlight = false;
-    });
-    _nextRound();
-  });
-}
-  
-void _wrongAnswer(int index) {
-  setState(() {
-    // Penalize time
-    timeLeft = (timeLeft - 5).clamp(0, 60);
-    // Mark which card was wrong so we can show red feedback
-    tappedIndex = index;
-    _isWrongHighlight = true;
-  });
-
-  // Play wrong sound effect
-  SoundEffectsManager().playWrong();
-
-  // Show red "X" overlay
-  _showGoOverlay(
-    text: 'X',
-    color: Colors.red,
-    textColor: Colors.white,
-  );
-
-  // Pause for 1 second before next round and before showing next icon
-  Future.delayed(const Duration(milliseconds: 1000), () {
-    if (!mounted) return;
-    setState(() {
+      score += 10;
+      correctAnswers++;
+      _isCorrectHighlight = true;
       _isWrongHighlight = false;
-      tappedIndex = -1;
     });
-    _nextRound();
-  });
-}
+
+    SoundEffectsManager().playSuccessWithVoice();
+
+    _scoreAnimationController.forward().then((_) {
+      _scoreAnimationController.reverse();
+    });
+
+    _showGoOverlay(
+      text: '✓',
+      color: Colors.green,
+      textColor: Colors.white,
+    );
+
+    Timer(const Duration(milliseconds: 1000), () {
+      setState(() {
+        _isCorrectHighlight = false;
+      });
+      _nextRound();
+    });
+  }
+  
+  void _wrongAnswer(int index) {
+    setState(() {
+      timeLeft = (timeLeft - 5).clamp(0, 60);
+      tappedIndex = index;
+      _isWrongHighlight = true;
+    });
+
+    SoundEffectsManager().playWrong();
+
+    _showGoOverlay(
+      text: 'X',
+      color: Colors.red,
+      textColor: Colors.white,
+    );
+
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (!mounted) return;
+      setState(() {
+        _isWrongHighlight = false;
+        tappedIndex = -1;
+      });
+      _nextRound();
+    });
+  }
 
   void _nextRound() {
     if (round >= maxRounds) {
@@ -502,13 +466,12 @@ void _wrongAnswer(int index) {
     setState(() {
       round++;
       isShowingTarget = true;
-      tappedIndex = -1; // Reset tapped index for new round
+      tappedIndex = -1;
     });
 
     _generateGameObjects();
     _selectTarget();
 
-    // Progressive difficulty: decrease target display time
     int displayTime = 3;
     if (round >= 3) displayTime = 2;
     if (round >= 5) displayTime = 1;
@@ -520,16 +483,14 @@ void _wrongAnswer(int index) {
     });
   }
 
-void _endGame() {
+  void _endGame() {
     gameTimer?.cancel();
     showTimer?.cancel();
     setState(() {
       gameEnded = true;
     });
 
-    // Call completion callback if provided
     if (widget.onGameComplete != null) {
-      // Calculate accuracy as percentage
       final roundsPlayed = round > maxRounds ? maxRounds : (round - 1);
       final int accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
       final timeTaken = 60 - timeLeft;
@@ -547,9 +508,8 @@ void _endGame() {
   }
 
   void _showGameOverDialog() {
-    // Calculate accuracy percentage
-  final roundsPlayed = round > maxRounds ? maxRounds : (round - 1);
-   final accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
+    final roundsPlayed = round > maxRounds ? maxRounds : (round - 1);
+    final accuracy = roundsPlayed > 0 ? ((correctAnswers / roundsPlayed) * 100).round() : 0;
     final timeTaken = 60 - timeLeft;
     
     showDialog(
@@ -623,9 +583,7 @@ void _endGame() {
             ),
           ),
           actions: [
-            // Different actions for demo mode vs session mode
             if (widget.onGameComplete == null) ...[
-              // Demo mode: Show Play Again and Exit buttons
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Column(
@@ -658,8 +616,8 @@ void _endGame() {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog
-                          Navigator.of(context).pop(); // Exit game
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop();
                         },
                         icon: const Icon(Icons.exit_to_app, size: 22, color: Color(0xFF5B6F4A)),
                         label: const Text(
@@ -683,14 +641,13 @@ void _endGame() {
                 ),
               ),
             ] else ...[
-              // Session mode: Show Next Game button
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Exit game and return to session screen
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop();
                   },
                   icon: const Icon(Icons.arrow_forward_rounded, size: 22),
                   label: const Text(
@@ -774,11 +731,9 @@ void _endGame() {
   }
 
   void _handleBackButton(BuildContext context) {
-    // If this is a demo game (onGameComplete is null), allow direct navigation back
     if (widget.onGameComplete == null) {
       Navigator.of(context).pop();
     } else {
-      // Only show PIN dialog for actual student sessions
       _showTeacherPinDialog(context);
     }
   }
@@ -790,16 +745,11 @@ void _endGame() {
       builder: (BuildContext dialogContext) {
         return _TeacherPinDialog(
           onPinVerified: () {
-            Navigator.of(dialogContext).pop(); // Close dialog
-            // Exit session and go to home screen after PIN verification
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/home', (route) => false);
+            Navigator.of(dialogContext).pop();
+            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
           },
           onCancel: () {
-            Navigator.of(
-              dialogContext,
-            ).pop(); // Just close dialog, stay in game
+            Navigator.of(dialogContext).pop();
           },
         );
       },
@@ -818,335 +768,415 @@ void _endGame() {
     BackgroundMusicManager().stopMusic();
     super.dispose();
   }
-void _showGoOverlay({String text = 'GO!', Color? color, Color? textColor}) async {
-  if (!mounted) return;
-  setState(() {
-    showingGo = true;
-    goOverlayText = text;
-    goOverlayColor = color ?? const Color(0xFFFFD740);
-    goOverlayTextColor = textColor ?? const Color(0xFF5B6F4A);
-  });
-  await _goController.forward();
-  await Future.delayed(const Duration(milliseconds: 550));
-  if (!mounted) return;
-  await _goController.reverse();
-  if (!mounted) return;
-  setState(() => showingGo = false);
-}
- @override
-Widget build(BuildContext context) {
-  return PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) {
-        _handleBackButton(context);
-      }
-    },
-    child: Scaffold(
-    body: Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/background.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Column(
-                children: [
-                  if (showHud) ...[
-                    const SizedBox(height: 55),
-                    FadeTransition(
-                      opacity: _hudOpacity,
-                      child: ScaleTransition(
-                        scale: _hudScale,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+
+  void _showGoOverlay({String text = 'GO!', Color? color, Color? textColor}) async {
+    if (!mounted) return;
+    setState(() {
+      showingGo = true;
+      goOverlayText = text;
+      goOverlayColor = color ?? const Color(0xFFFFD740);
+      goOverlayTextColor = textColor ?? const Color(0xFF5B6F4A);
+    });
+    await _goController.forward();
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (!mounted) return;
+    await _goController.reverse();
+    if (!mounted) return;
+    setState(() => showingGo = false);
+  }
+
+  Widget _buildHelpButton() {
+    return FloatingActionButton.extended(
+      heroTag: 'helpBtn',
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      icon: const Icon(Icons.help_outline),
+      label: const Text('Need Help?'),
+      onPressed: () {
+        bool showSimple = false;
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) => Dialog(
+              backgroundColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD740),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
                           children: [
-                            _infoCircle(
-                              label: 'Score',
-                              value: '$score',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
                             ),
-                            _infoCircle(
-                              label: 'Round',
-                              value: '$round/$maxRounds',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
-                            ),
-                            _infoCircle(
-                              label: 'Time',
-                              value: '$timeLeft',
-                              circleSize: 110,
-                              valueFontSize: 30,
-                              labelFontSize: 26,
-                              valueColor: timeLeft <= 10 ? Colors.red : const Color(0xFF5B6F4A),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Need Help?',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF5B6F4A),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                  if (showingCountdown)
-                    Expanded(child: _buildCountdownScreen())
-                  else if (!gameStarted)
-                    Expanded(child: Center(child: _buildStartScreenWithInstruction()))
-                  else if (gameStarted && !gameEnded && isShowingTarget)
-                    Expanded(child: Center(child: _buildTargetDisplay()))
-                  else if (gameStarted && !gameEnded && !isShowingTarget)
-                    Expanded(child: Stack(children: [_buildGameGrid()])),
-                ],
-              ),
-             // "GO!" overlay
-if (showingGo)
-  Positioned.fill(
-    child: IgnorePointer(
-      child: FadeTransition(
-        opacity: _goOpacity,
-        child: Container(
-         color: goOverlayText == 'X' || goOverlayText == '✓'
-    ? const Color.fromARGB(83, 0, 0, 0).withOpacity(0.3)  // Gray background for X
-    : const Color.fromARGB(19, 0, 0, 0).withOpacity(0), // Original background for GO!
-          child: Center(
-            child: ScaleTransition(
-              scale: _goScale,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 16),
-                  Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: goOverlayColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.30),
-                          offset: const Offset(0, 8),
-                          blurRadius: 0,
-                          spreadRadius: 8,
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            showSimple
+                                ? 'Look at the object that appears. Remember it! Then find and tap that same object when you see all the objects together.'
+                                : 'Watch carefully as one object is shown to you. When the objects appear together, tap the one you just saw.',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF5B6F4A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (showSimple)
+                          const SizedBox(height: 16),
+                        if (showSimple)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'That\'s the simpler explanation!',
+                              style: TextStyle(
+                                color: Color(0xFF5B6F4A),
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF5B6F4A).withOpacity(0.6),
+                                      blurRadius: 0,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    if (!showSimple) {
+                                      setState(() => showSimple = true);
+                                    } else {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF5B6F4A),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    showSimple ? 'Close' : 'More Help?',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        goOverlayText,
-                        style: TextStyle(
-                          color: goOverlayTextColor,
-                          fontSize: goOverlayText == 'X' ? 80 : 54,
-                          fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackButton(context);
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/background.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Column(
+                    children: [
+                      if (showHud) ...[
+                        const SizedBox(height: 55),
+                        FadeTransition(
+                          opacity: _hudOpacity,
+                          child: ScaleTransition(
+                            scale: _hudScale,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _infoCircle(
+                                  label: 'Score',
+                                  value: '$score',
+                                  circleSize: 110,
+                                  valueFontSize: 30,
+                                  labelFontSize: 26,
+                                ),
+                                _infoCircle(
+                                  label: 'Round',
+                                  value: '$round/$maxRounds',
+                                  circleSize: 110,
+                                  valueFontSize: 30,
+                                  labelFontSize: 26,
+                                ),
+                                _infoCircle(
+                                  label: 'Time',
+                                  value: '$timeLeft',
+                                  circleSize: 110,
+                                  valueFontSize: 30,
+                                  labelFontSize: 26,
+                                  valueColor: timeLeft <= 10 ? Colors.red : const Color(0xFF5B6F4A),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      if (showingCountdown)
+                        Expanded(child: _buildCountdownScreen())
+                      else if (!gameStarted)
+                        Expanded(child: Center(child: _buildStartScreenWithInstruction()))
+                      else if (gameStarted && !gameEnded && isShowingTarget)
+                        Expanded(child: Center(child: _buildTargetDisplay()))
+                      else if (gameStarted && !gameEnded && !isShowingTarget)
+                        Expanded(child: Stack(children: [_buildGameGrid()])),
+                    ],
+                  ),
+                  if (showingGo)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: FadeTransition(
+                          opacity: _goOpacity,
+                          child: Container(
+                            color: goOverlayText == 'X' || goOverlayText == '✓'
+                                ? const Color.fromARGB(83, 0, 0, 0).withOpacity(0.3)
+                                : const Color.fromARGB(19, 0, 0, 0).withOpacity(0),
+                            child: Center(
+                              child: ScaleTransition(
+                                scale: _goScale,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      width: 140,
+                                      height: 140,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: goOverlayColor,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.30),
+                                            offset: const Offset(0, 8),
+                                            blurRadius: 0,
+                                            spreadRadius: 8,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          goOverlayText,
+                                          style: TextStyle(
+                                            color: goOverlayTextColor,
+                                            fontSize: goOverlayText == 'X' ? 80 : 54,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  if (gameStarted && !showingCountdown)
+                    Positioned(
+                      left: 24,
+                      bottom: 24,
+                      child: _buildHelpButton(),
+                    ),
                 ],
               ),
             ),
           ),
         ),
       ),
-    ),
-  ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  ), // End of Scaffold
-); // End of PopScope
-}
+    );
+  }
 
-Widget _buildCountdownScreen() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'Get Ready!',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+  Widget _buildCountdownScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Get Ready!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(height: 40),
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFFFD740),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFFD740).withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              '$countdownNumber',
-              style: const TextStyle(
-                fontSize: 80,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5B6F4A),
+          const SizedBox(height: 40),
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFFD740),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFD740).withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$countdownNumber',
+                style: const TextStyle(
+                  fontSize: 80,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5B6F4A),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 40),
-        Text(
-          'The game will start soon...',
-          style: TextStyle(
-            fontSize: 18,
-            color: Colors.white.withOpacity(0.9),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF5B6F4A), const Color(0xFF6B7F5A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            icon: Icons.score,
-            label: 'Score',
-            value: score.toString(),
-            animation: _scoreAnimation,
-          ),
-          _buildStatItem(
-            icon: Icons.timer,
-            label: 'Time',
-            value: timeLeft.toString(),
-          ),
-          _buildStatItem(
-            icon: Icons.flag,
-            label: 'Round',
-            value: '$round/$maxRounds',
+          const SizedBox(height: 40),
+          Text(
+            'The game will start soon...',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
+  Widget _infoCircle({
     required String label,
     required String value,
-    Animation<double>? animation,
+    double circleSize = 84,
+    double valueFontSize = 18,
+    double labelFontSize = 12,
+    Color? valueColor,
   }) {
-    Widget content = Column(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
       children: [
-        Icon(icon, color: const Color(0xFFFFD740), size: 24),
-        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+            color: Colors.white,
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
+        const SizedBox(height: 8),
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 6),
+                blurRadius: 0,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? const Color(0xFF5B6F4A),
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
       ],
     );
-
-    if (animation != null) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Transform.scale(scale: animation.value, child: content);
-        },
-      );
-    }
-
-    return content;
   }
-Widget _infoCircle({
-  required String label,
-  required String value,
-  double circleSize = 84,
-  double valueFontSize = 18,
-  double labelFontSize = 12,
-  Color? valueColor,
-}) {
-  return Column(
-    children: [
-      Text(
-        label,
-        style: TextStyle(
-          color: Colors.white, // Ensure label text is completely white
-          fontSize: labelFontSize,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Container(
-        width: circleSize,
-        height: circleSize,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              offset: const Offset(0, 6),
-              blurRadius: 0, // solid edge shadow per request
-              spreadRadius: 4,
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          value,
-          style: TextStyle(
-            color: valueColor ?? const Color(0xFF5B6F4A), // Default primary color
-            fontSize: valueFontSize,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-    ],
-  );
-}
+
   Widget _buildTargetDisplay() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1206,100 +1236,6 @@ Widget _infoCircle({
     );
   }
 
-  Widget _buildInstructions() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.search, color: const Color(0xFF5B6F4A), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'How to Play:',
-                style: TextStyle(
-                  color: const Color(0xFF5B6F4A),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '1. Watch the object highlighted for a few seconds.',
-            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '2. Memorize the object and its position.',
-            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '3. Tap the same object when the grid appears.',
-            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '4. Rounds get harder with more objects and less time.',
-            style: TextStyle(color: const Color(0xFF5B6F4A), fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFindPrompt() {
-    final String promptText = targetObject != null
-        ? 'Find the ${targetObject!.name} you just saw.'
-        : 'Find the object you just saw.';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: const Color(0xFF5B6F4A), size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              promptText,
-              style: TextStyle(
-                color: const Color(0xFF5B6F4A),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildGameGrid() {
     if (gameObjects.isEmpty) {
       return Center(
@@ -1312,23 +1248,21 @@ Widget _infoCircle({
       builder: (context, child) {
         return LayoutBuilder(
           builder: (context, constraints) {
-            // Dynamic grid layout based on object count
             int crossAxisCount;
             if (gameObjects.length <= 4) {
-              crossAxisCount = 2; // 2x2
+              crossAxisCount = 2;
             } else if (gameObjects.length <= 6) {
-              crossAxisCount = 3; // 2x3 or 3x2
+              crossAxisCount = 3;
             } else if (gameObjects.length <= 9) {
-              crossAxisCount = 3; // 3x3
+              crossAxisCount = 3;
             } else if (gameObjects.length <= 12) {
-              crossAxisCount = 4; // 3x4 or 4x3
+              crossAxisCount = 4;
             } else {
-              crossAxisCount = 4; // 4x4+
+              crossAxisCount = 4;
             }
 
             int rowCount = (gameObjects.length / crossAxisCount).ceil();
 
-            // Calculate optimal card size
             double spacing = 8.0;
             double availableWidth =
                 constraints.maxWidth - (spacing * (crossAxisCount + 1));
@@ -1339,7 +1273,6 @@ Widget _infoCircle({
             double cardHeight = availableHeight / rowCount;
             double cardSize = min(cardWidth, cardHeight);
 
-            // Set maximum card sizes based on object count for better readability
             if (gameObjects.length <= 4) {
               cardSize = min(cardSize, 180.0);
             } else if (gameObjects.length <= 6) {
@@ -1350,7 +1283,6 @@ Widget _infoCircle({
               cardSize = min(cardSize, 130.0);
             }
 
-            // Ensure minimum readable size
             cardSize = max(cardSize, 100.0);
 
             return Center(
@@ -1484,7 +1416,6 @@ Widget _infoCircle({
     );
   }
 
-  // LightTap-style start / instruction screen for Find Me (panel UI)
   Widget _buildStartScreenWithInstruction() {
     final size = MediaQuery.of(context).size;
     final bool isTablet = size.shortestSide >= 600;
@@ -1665,7 +1596,6 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
         return;
       }
 
-      // PIN is correct
       widget.onPinVerified();
     } catch (e) {
       setState(() {
@@ -1696,7 +1626,7 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
           width: 400,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFD740), // Yellow background like "For Teachers" button
+            color: const Color(0xFFFFD740),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
