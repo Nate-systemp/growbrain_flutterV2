@@ -84,7 +84,33 @@ flutter:
     - assets/logic.png
     - assets/hear.png
     - assets/soundfxforsoundmatch/
-
+    - assets/lighttap.png
+    - assets/arrowright.png
+    - assets/arrowleft.png
+    - assets/whomoved.png
+    - assets/findme.png
+    - assets/attentiongames_banner.png
+    - assets/lighttapbutton.png
+    - assets/whomovedbutton.png
+    - assets/findmebutton.png
+    - assets/rhymetime.png
+    - assets/rhymetimebutton.png
+    - assets/riddletime.png
+    - assets/riddletimebutton.png
+    - assets/picturewords.png
+    - assets/picturewordsbutton.png
+    - assets/matchcards.png
+    - assets/matchcardsbutton.png
+    - assets/fruitshuffle.png
+    - assets/fruitshufflebutton.png
+    - assets/soundmatch.png
+    - assets/soundmatchbutton.png
+    - assets/puzzlegame.png
+    - assets/puzzlegamebutton.png
+    - assets/tictactoe.png
+    - assets/tictactoebutton.png
+    - assets/objecthunt.png
+    - assets/objecthuntbutton.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

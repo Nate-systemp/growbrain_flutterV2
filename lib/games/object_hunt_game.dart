@@ -9,13 +9,16 @@ import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 
 class ObjectHuntGame extends StatefulWidget {
+  
   final String difficulty;
+  
   final Function({
     required int accuracy,
     required int completionTime,
     required String challengeFocus,
     required String gameName,
     required String difficulty,
+    
   })?
   onGameComplete;
 
@@ -36,6 +39,7 @@ class GridCell {
   bool isRevealed;
   bool isShaking;
   bool isTarget;
+  bool isFlipping; // Add this flag
 
   GridCell({
     required this.row,
@@ -44,44 +48,40 @@ class GridCell {
     this.isRevealed = false,
     this.isShaking = false,
     this.isTarget = false,
+    this.isFlipping = false,
   });
 }
 
+
 class _ObjectHuntGameState extends State<ObjectHuntGame>
     with TickerProviderStateMixin {
+// Add at the start of your _ObjectHuntGameState
+Map<String, AnimationController> _flipControllers = {};
+Map<String, Animation<double>> _flipAnimations = {};
+
   List<List<GridCell>> grid = [];
   List<String> availableFruits = [
-    '🍎',
-    '🍊',
-    '🍌',
-    '🍇',
-    '🍓',
-    '🍑',
-    '🥝',
-    '🍉',
-    '🥭',
-    '🍍',
-    '🥥',
-    '🍒',
-    '🍈',
-    '🍋',
-    '🍐',
-    '🫐',
+    '🍎','🍊','🍌','🍇','🍓','🍑','🥝','🍉','🥭','🍍','🥥','🍒','🍈','🍋','🍐','🫐',
   ];
   List<String> targetFruits = [];
   int score = 0;
   int foundCount = 0;
   int totalTargets = 0;
-  int countdown = 0;
   int countdownNumber = 0;
   bool gameStarted = false;
   bool gameActive = false;
-  int currentCol = 0; // Track which column player should guess next (0-4)
+  int currentCol = 0;
   late DateTime gameStartTime;
   Timer? gameTimer;
   int timeLeft = 0;
   Random random = Random();
   String _normalizedDifficulty = 'easy';
+
+  String formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
 
   // Animation controllers
   late AnimationController _shakeController;
@@ -89,90 +89,138 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   late Animation<double> _shakeAnimation;
   late Animation<double> _revealAnimation;
 
-  // App color scheme - Green theme
-  final Color primaryColor = const Color(0xFF2E7D32); // Dark green
-  final Color accentColor = const Color(0xFF4CAF50); // Medium green
-  final Color successColor = const Color(0xFF66BB6A); // Light green
-  final Color errorColor = const Color(0xFFE57373); // Light red
-  final Color backgroundColor = const Color(0xFFE8F5E8); // Very light green
-  final Color cardColor = const Color(0xFFFFFFFF); // White
-  final Color borderColor = const Color(0xFFC8E6C9); // Light green border
+  // GO overlay
+  bool showingGo = false;
+  late AnimationController _goController;
+  late Animation<double> _goOpacity;
+  late Animation<double> _goScale;
+
+  final Color primaryColor = const Color(0xFF2E7D32);
+  final Color accentColor = const Color(0xFF4CAF50);
+  final Color successColor = const Color(0xFF66BB6A);
+  final Color errorColor = const Color(0xFFE57373);
+  final Color backgroundColor = const Color(0xFFE8F5E8);
+  final Color cardColor = const Color(0xFFFFFFFF);
+  final Color borderColor = const Color(0xFFC8E6C9);
 
   @override
   void initState() {
     super.initState();
     BackgroundMusicManager().startGameMusic('Object Hunt');
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
-      widget.difficulty,
-    );
-
-    // Initialize animation controllers
-    _shakeController = AnimationController(
-      duration: Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _revealController = AnimationController(
-      duration: Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
-    );
-
-    _revealAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _revealController, curve: Curves.easeInOut),
-    );
-
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    _shakeController = AnimationController(duration: Duration(milliseconds: 500), vsync: this,);
+    _revealController = AnimationController(duration: Duration(milliseconds: 300), vsync: this,);
+    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0)
+      .animate(CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn));
+    _revealAnimation = Tween<double>(begin: 0.0, end: 1.0)
+      .animate(CurvedAnimation(parent: _revealController, curve: Curves.easeInOut));
+    _goController = AnimationController(vsync: this, duration: const Duration(milliseconds: 350),);
+    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goScale = Tween<double>(begin: 0.90, end: 1.0)
+      .animate(CurvedAnimation(parent: _goController, curve: Curves.easeOutBack));
     _initializeGame();
   }
 
-  void _initializeGame() {
-    // Set difficulty parameters
-    switch (_normalizedDifficulty) {
-      case 'Starter':
-        totalTargets = 5; // All 5 columns
-        timeLeft = 120; // 2 minutes
-        break;
-      case 'Growing':
-        totalTargets = 5; // All 5 columns
-        timeLeft = 150; // 2.5 minutes
-        break;
-      case 'Challenged':
-        totalTargets = 5; // All 5 columns
-        timeLeft = 180; // 3 minutes
-        break;
-      default:
-        totalTargets = 5;
-        timeLeft = 120;
-    }
-
-    _setupGrid();
+  Widget infoCircle({
+    required String label,
+    required String value,
+    double circleSize = 88,
+    double valueFontSize = 18,
+    double labelFontSize = 12,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: const Color(0xFF3E2723),
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.w900,
+            
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            color: const Color(0xFF3E2723),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                offset: const Offset(0, 6),
+                blurRadius: 0,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  void _setupGrid() {
-  // Create 4x5 grid
+ void _initializeGame() {
+  switch (_normalizedDifficulty) {
+    case 'Starter':
+      totalTargets = 5;
+      timeLeft = 180;
+      break;
+    case 'Growing':
+      totalTargets = 5;
+      timeLeft = 150;
+      break;
+    case 'Challenged':
+      totalTargets = 5;
+      timeLeft = 120;
+      break;
+    default:
+      totalTargets = 5;
+      timeLeft = 120;
+  }
+  _setupGrid();
+}
+
+
+void _setupGrid() {
+  // Dispose old controllers first (prevents memory leaks)
+  _flipControllers.values.forEach((controller) => controller.dispose());
+  _flipControllers.clear();
+  _flipAnimations.clear();
+
   grid.clear();
   targetFruits.clear();
   foundCount = 0;
   score = 0;
-
   for (int row = 0; row < 4; row++) {
     List<GridCell> rowCells = [];
     for (int col = 0; col < 5; col++) {
       rowCells.add(GridCell(row: row, col: col));
+      String key = '$row-$col';
+      _flipControllers[key] = AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      );
+      _flipAnimations[key] = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _flipControllers[key]!, curve: Curves.easeInOut)
+      );
     }
     grid.add(rowCells);
   }
-
-  // Select random target fruits
   availableFruits.shuffle();
   targetFruits = availableFruits.take(totalTargets).toList();
-
-  // Place fruits randomly in each column (one fruit per column)
   List<String> fruitsToPlace = List.from(targetFruits);
   fruitsToPlace.shuffle();
-
   int placed = 0;
   for (int col = 0; col < 5; col++) {
     int row = random.nextInt(4);
@@ -180,162 +228,129 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     grid[row][col].isTarget = true;
     placed++;
   }
-
-  // ✅ totalTargets is already set by difficulty (5 columns)
-  // So no need for a separate totalObjects variable anymore.
   totalTargets = placed;
-
   setState(() {});
 }
 
-void _startGame() {
-  setState(() {
-    countdownNumber = 3;
-    gameStarted = true;
-    gameActive = false;
-  });
+  void _startGame() {
+    setState(() {
+      countdownNumber = 3;
+      gameStarted = true;
+      gameActive = false;
+    });
 
-  Timer.periodic(const Duration(seconds: 1), (timer) {
-    if (countdownNumber > 1) {
-      setState(() => countdownNumber--);
-    } else {
-      timer.cancel();
-      setState(() {
-        countdownNumber = 0;
-        gameActive = true;
-        foundCount = 0;
-        score = 0;
-        currentCol = 0;
-        gameStartTime = DateTime.now();
-
-        // Reset cells
-        for (int row = 0; row < 4; row++) {
-          for (int col = 0; col < 5; col++) {
-            grid[row][col].isRevealed = false;
-            grid[row][col].isShaking = false;
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (countdownNumber > 1) {
+        setState(() => countdownNumber--);
+      } else {
+        timer.cancel();
+        setState(() {
+          countdownNumber = 0;
+          foundCount = 0;
+          score = 0;
+          currentCol = 0;
+          gameStartTime = DateTime.now();
+          for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 5; col++) {
+              grid[row][col].isRevealed = false;
+              grid[row][col].isShaking = false;
+            }
           }
-        }
-      });
+        });
+        _showGoOverlay();
+      }
+    });
+  }
 
-      _startTimer();
-    }
+ Future<void> _showGoOverlay() async {
+  if (!mounted) return;
+  setState(() => showingGo = true);
+  await _goController.forward();
+  await Future.delayed(const Duration(milliseconds: 550));
+  if (!mounted) return;
+  await _goController.reverse();
+  if (!mounted) return;
+  setState(() {
+    showingGo = false;
+    gameActive = true;
+    // DO NOT reset timeLeft here! dapat naayos na ito sa _initializeGame bago countdown.
   });
+  gameTimer?.cancel();
+  _startTimer();
 }
 
 
-  void _showInstructions() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: backgroundColor,
-        title: Text(
-          'Object Hunt Challenge',
-          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Find these $totalTargets fruits:',
-              style: TextStyle(color: primaryColor, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: targetFruits
-                  .map((fruit) => Text(fruit, style: TextStyle(fontSize: 24)))
-                  .toList(),
-            ),
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '• Guess column by column starting from column 1\n• Found fruits reveal immediately\n• Empty boxes shake then restart from column 1\n• Continue until time expires or game completed',
-                style: TextStyle(color: primaryColor, fontSize: 14),
-                textAlign: TextAlign.left,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Start Game!',
-              style: TextStyle(
-                color: successColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _startTimer() {
-  timeLeft = 60; // or whatever duration you want
+void _startTimer() {
+  print("Start timer, timeLeft: $timeLeft");
+  gameTimer?.cancel(); // ensure nothing is running
   gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-    setState(() {
-      timeLeft--;
+    setState(() { 
+      timeLeft--; 
+      print("Tick timeLeft: $timeLeft");
     });
-
     if (timeLeft <= 0) {
+      print("Stop timer! timeLeft reached 0");
       timer.cancel();
-      setState(() {
-        gameActive = false;
-      });
-
-      final timeTaken = DateTime.now().difference(gameStartTime!).inSeconds;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => GameOverDialog(
-          title: "Time’s Up!",
-          message: "You found $foundCount objects in $timeTaken seconds!",
-          onPlayAgain: () {
-            Navigator.pop(context);
-            _startGame();
-          },
-          onExit: () {
-            Navigator.pop(context); // close dialog
-            Navigator.pop(context); // back to menu
-          },
-        ),
+      setState(() { gameActive = false; });
+      final timeTaken = DateTime.now().difference(gameStartTime).inSeconds;
+      int accuracy = totalTargets > 0 ? ((foundCount / totalTargets) * 100).round() : 0;
+      _showGameOverDialog(
+        won: false,
+        foundCount: foundCount,
+        timeTaken: timeTaken,
+        accuracy: accuracy,
       );
     }
   });
 }
 
 
+
+
+// Track locked columns to prevent multiple taps per column
+Set<int> _lockedColumns = {};
+
 void _onCellTapped(int row, int col) {
   if (!gameActive || grid[row][col].isRevealed) return;
 
-  // Only allow clicking on the current column
+  // Disable tap if column is locked (already tapped and not reset)
+  if (_lockedColumns.contains(col)) return;
+
+  // Allow tap only in current active column
   if (col != currentCol) return;
 
+  // Lock the tapped column
+  _lockedColumns.add(col);
+
   HapticFeedback.lightImpact();
-  _revealCell(row, col);
-}
+  String key = '$row-$col';
 
-
-
- void _revealCell(int row, int col) {
-  if (grid[row][col].fruit != null) {
-    // Found a fruit!
+  if (_flipControllers != null && _flipControllers[key] != null) {
+    _flipControllers[key]!.forward().then((_) {
+      setState(() {
+        grid[row][col].isRevealed = true;
+      });
+      _revealCell(row, col);
+      _flipControllers[key]!.reset();
+    });
+  } else {
     setState(() {
       grid[row][col].isRevealed = true;
+    });
+    _revealCell(row, col);
+  }
+}
+
+void _revealCell(int row, int col) {
+  if (grid[row][col].fruit != null) {
+    setState(() {
       foundCount++;
       score += 20;
-      currentCol++; // Move to next column
+      currentCol++; // Moves to next column (progress game)
+
+      // Unlock next column taps
+      _lockedColumns.removeWhere((c) => c != currentCol);
     });
 
     _revealController.forward().then((_) {
@@ -345,20 +360,12 @@ void _onCellTapped(int row, int col) {
     HapticFeedback.mediumImpact();
     SoundEffectsManager().playSuccessWithVoice();
 
-    // ✅ Check win
-    if (foundCount >= totalTargets) {
+    if (foundCount >= totalTargets || currentCol >= 5) {
       gameTimer?.cancel();
       _endGame();
     }
-
-    // ✅ Otherwise move to next col
-    else if (currentCol >= 5) {
-      gameTimer?.cancel();
-      _endGame();
-    }
-
   } else {
-    // Empty box - shake animation then restart
+    // If wrong box tapped, unlock column so they can try again
     setState(() {
       grid[row][col].isShaking = true;
     });
@@ -370,14 +377,16 @@ void _onCellTapped(int row, int col) {
       if (mounted) {
         setState(() {
           grid[row][col].isShaking = false;
+          _lockedColumns.remove(col);  // Unlock column for retry
         });
-        _restartGame();
+        _restartGame(); // or retry logic here
       }
     });
 
     HapticFeedback.lightImpact();
   }
 }
+
 
 
   void _restartGame() {
@@ -463,25 +472,20 @@ void _onCellTapped(int row, int col) {
     );
   }
 
-  @override
-  void dispose() {
-    gameTimer?.cancel();
-    _shakeController.dispose();
-    _revealController.dispose();
-    BackgroundMusicManager().stopMusic();
-    super.dispose();
-  }
+ @override
+void dispose() {
+  gameTimer?.cancel();
+  _shakeController.dispose();
+  _revealController.dispose();
+  _goController.dispose();
+  _flipControllers.values.forEach((controller) => controller.dispose());
+  super.dispose();
+}
+
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _handleBackButton(context);
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
@@ -490,33 +494,91 @@ void _onCellTapped(int row, int col) {
             fit: BoxFit.cover,
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            // Custom AppBar
-            Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                left: 16,
-                right: 16,
-                bottom: 16,
+            // InfoCircle TIMER - ipakita lang kapag gameActive == true
+            if (gameActive)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 104),
+                  child: infoCircle(
+                    label: "Time",
+                    value: formatTime(timeLeft),
+                    circleSize: 104,
+                    valueFontSize: 30,
+                    labelFontSize: 26,
+                  ),
+                ),
               ),
+            Column(
+              children: [
+                // ... AppBar and other content ...
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Stack(
+                      children: [
+                        if (countdownNumber == 0)
+                          (gameStarted ? _buildGrid() : _buildStartScreen()),
+                        if (countdownNumber > 0) _buildCountdownScreen(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // Body content
-     Expanded(
-  child: Padding(
-    padding: EdgeInsets.all(20),
-    child: Stack(
-      children: [
-        gameStarted ? _buildGrid() : _buildStartScreen(),
-        if (countdownNumber > 0) _buildCountdownScreen(),
-      ],
-    ),
-  ),
-),
-
-          ],
+            if (showingGo)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: FadeTransition(
+                    opacity: _goOpacity,
+                    child: Container(
+                      color: Colors.black.withOpacity(0.12),
+                      child: Center(
+                        child: ScaleTransition(
+                          scale: _goScale,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                             
+                              const SizedBox(height: 16),
+                              Container(
+                                width: 140,
+                                height: 140,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: accentColor,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.30),
+                                      offset: const Offset(0, 8),
+                                      blurRadius: 0,
+                                      spreadRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'GO!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 53,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+        ],
         ),
-      ),
       ),
     );
   }
@@ -682,9 +744,9 @@ Widget _buildGrid() {
   );
 }
 Widget _buildCountdownScreen() {
-  return Positioned.fill(  // 👈 ensures it covers the entire screen
+  return Positioned.fill(
     child: Container(
-      color: Colors.black.withOpacity(0.6),
+      color: Colors.black.withOpacity(0),  // Dito ang background na may opacity
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -693,11 +755,11 @@ Widget _buildCountdownScreen() {
               'Get Ready!',
               style: TextStyle(
                 fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF3E2723),
                 shadows: [
                   Shadow(
-                    color: Colors.black26,
+                    color: Colors.transparent,
                     offset: Offset(2, 2),
                     blurRadius: 4,
                   ),
@@ -735,9 +797,9 @@ Widget _buildCountdownScreen() {
             Text(
               'The game will start soon...',
               style: TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
+                fontSize: 19,
+                color: const Color(0xFF3E2723),
+                fontWeight: FontWeight.w700,
                 shadows: const [
                   Shadow(
                     color: Colors.black26,
@@ -755,66 +817,85 @@ Widget _buildCountdownScreen() {
 }
 
 
-Widget _buildCountdownOverlay() {
-  return Container(
-    color: Colors.black.withOpacity(0.6),
-    child: Center(
-      child: Text(
-        countdown == 0 ? "GO!" : "$countdown",
-        style: TextStyle(
-          fontSize: 80,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 4),
-              blurRadius: 8,
-              color: Colors.black.withOpacity(0.7),
+
+
+
+Widget _buildCell(int row, int col) {
+  GridCell cell = grid[row][col];
+  String key = '$row-$col';
+
+  // Safety fallback if animation map not ready
+  final flipAnim = _flipAnimations.containsKey(key) ? _flipAnimations[key]! : AlwaysStoppedAnimation(0.0);
+
+  return GestureDetector(
+    onTap: () => _onCellTapped(row, col),
+    child: AnimatedBuilder(
+      animation: Listenable.merge([_shakeAnimation, _revealAnimation, flipAnim]),
+      builder: (context, child) {
+        double shakeOffset = 0;
+        if (cell.isShaking) {
+          shakeOffset = _shakeAnimation.value * (random.nextBool() ? 1 : -1);
+        }
+
+        double animValue = flipAnim.value;
+        double angle = animValue * pi;
+
+        // Animate color and border as before, use side depending on angle
+        Widget content;
+        if (angle <= pi / 2) {
+          // Card BACK (unrevealed side)
+          content = AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: _getCellColor(row, col),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _getBorderColor(row, col), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+            child: Center(child: _buildCellContent(row, col, showFront: false)),
+          );
+        } else {
+          // Card FRONT (revealed side)
+          content = AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: _getCellColor(row, col),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _getBorderColor(row, col), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(child: _buildCellContent(row, col, showFront: true)),
+          );
+        }
+
+        return Transform.translate(
+          offset: Offset(shakeOffset, 0),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(angle),
+            child: content,
+          ),
+        );
+      },
     ),
   );
 }
 
 
-  Widget _buildCell(int row, int col) {
-    GridCell cell = grid[row][col];
-
-    return GestureDetector(
-      onTap: () => _onCellTapped(row, col),
-      child: AnimatedBuilder(
-        animation: Listenable.merge([_shakeAnimation, _revealAnimation]),
-        builder: (context, child) {
-          double shakeOffset = 0;
-          if (cell.isShaking) {
-            shakeOffset = _shakeAnimation.value * (random.nextBool() ? 1 : -1);
-          }
-
-          return Transform.translate(
-            offset: Offset(shakeOffset, 0),
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: _getCellColor(row, col),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _getBorderColor(row, col), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(child: _buildCellContent(row, col)),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Color _getCellColor(int row, int col) {
     GridCell cell = grid[row][col];
@@ -853,33 +934,17 @@ Widget _buildCountdownOverlay() {
     }
     return borderColor;
   }
-
-  Widget _buildCellContent(int row, int col) {
-    GridCell cell = grid[row][col];
-
-    if (cell.isRevealed && cell.fruit != null) {
-      // Show the fruit with bigger size
-      return Text(cell.fruit!, style: TextStyle(fontSize: 66));
-    } else {
-      // Box is not revealed - show question mark
-      return Text(
-        '?',
-        style: TextStyle(
-          fontSize: 48,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF666666),
-        ),
-      );
-    }
+Widget _buildCellContent(int row, int col, {required bool showFront}) {
+  GridCell cell = grid[row][col];
+  // Show fruit emoji on revealed/correct cell
+  if (cell.isRevealed && cell.fruit != null) {
+    return Text(cell.fruit!, style: TextStyle(fontSize: 66));
+  } else {
+    // Card back or unrevealed cell = question mark
+    return Text('?', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Color(0xFF666666)));
   }
+}
 
-  Widget _buildWinScreen() {
-    return Container(); // Return empty container since dialog is handled in _endGame()
-  }
-
-  Widget _buildTimeUpScreen() {
-    return Container(); // Return empty container since dialog is handled in _endGame()
-  }
 
   void _resetGame() {
     setState(() {
@@ -900,88 +965,171 @@ Widget _buildCountdownOverlay() {
   required int timeTaken,
   required int accuracy,
 }) {
+  String result = won ? 'Amazing! 🌟' : 'Good Try! 💪';
+
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        backgroundColor: const Color(0xFF2E7D32), // same dark green as TicTacToe
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                won ? "You Win!" : "Game Over",
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      title: Column(
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: primaryColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withOpacity(0.30),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "You found $foundCount objects\nin $timeTaken seconds",
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Accuracy: $accuracy%",
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _startGame();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF2E7D32),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text("Play Again"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context); // close dialog
-                      Navigator.pop(context); // back to menu
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text("Exit"),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
+            child: Icon(
+              won ? Icons.celebration : Icons.emoji_events,
+              color: Colors.white,
+              size: 48,
+            ),
           ),
+          const SizedBox(height: 16),
+          Text(
+            result,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      content: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      );
-    },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStatRow(Icons.search, 'Objects Found', '$foundCount/$totalTargets'),
+            const SizedBox(height: 12),
+            _buildStatRow(Icons.timer, 'Time', '${timeTaken}s'),
+            const SizedBox(height: 12),
+            _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
+          ],
+        ),
+      ),
+      actions: [
+        if (widget.onGameComplete == null) ...[
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _resetGame();
+                    },
+                    icon: const Icon(Icons.refresh, size: 22),
+                    label: const Text(
+                      'Play Again',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).pop();
+                    },
+                    icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                    label: Text(
+                      'Exit',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: primaryColor, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop();
+                widget.onGameComplete!(
+                  accuracy: accuracy,
+                  completionTime: timeTaken,
+                  challengeFocus: 'Memory & Attention',
+                  gameName: 'Object Hunt',
+                  difficulty: _normalizedDifficulty,
+                );
+              },
+              icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+              label: const Text(
+                'Next Game',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 4,
+              ),
+            ),
+          ),
+        ],
+      ],
+    ),
   );
 }
-
 
 
   Widget _buildStatRow(IconData icon, String label, String value) {
@@ -1243,78 +1391,4 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
     );
   }
 }
-class GameOverDialog extends StatelessWidget {
-  final String title;
-  final String message;
-  final VoidCallback onPlayAgain;
-  final VoidCallback onExit;
 
-  const GameOverDialog({
-    Key? key,
-    required this.title,
-    required this.message,
-    required this.onPlayAgain,
-    required this.onExit,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: const Color(0xFF2E7D32), // green theme
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: onPlayAgain,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2E7D32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text("Play Again"),
-                ),
-                ElevatedButton(
-                  onPressed: onExit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text("Exit"),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

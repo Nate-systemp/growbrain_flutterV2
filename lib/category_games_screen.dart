@@ -32,14 +32,16 @@ class CategoryGamesScreen extends StatefulWidget {
 
 class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   int _selectedGameIndex = 0;
-  PageController _pageController = PageController(viewportFraction: 0.6);
-  
+  final PageController _pageController = PageController(
+    viewportFraction: 6.0, // <-- ito ang mahalaga!
+  );
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
-  
+
   // Define category to game mappings
   final Map<String, List<Map<String, dynamic>>> categoryGames = {
     'Attention': [
@@ -143,14 +145,29 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
       },
     ],
   };
-
+  // ...existing code...
   @override
   Widget build(BuildContext context) {
     final games = categoryGames[widget.category] ?? [];
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.shortestSide >= 600 || screenSize.width >= 900;
 
-    // More generous padding for tablet, tighter for phones
+    // Select background image based on category
+    final String backgroundImage;
+    switch (widget.category.trim().toLowerCase()) {
+      case 'verbal':
+        backgroundImage = 'assets/verbalbg.png';
+        break;
+      case 'logic':
+        backgroundImage = 'assets/logicbg.png';
+        break;
+      case 'memory':
+        backgroundImage = 'assets/memorybg.png';
+        break;
+      default:
+        backgroundImage = 'assets/background.png';
+    }
+
     final horizontalPadding = isTablet
         ? screenSize.width * 0.10
         : screenSize.width * 0.06;
@@ -159,110 +176,11 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(isTablet ? 96 : 72),
-        child: Container(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top,
-            left: 16,
-            right: 16,
-          ),
-          decoration: BoxDecoration(
-            gradient: const RadialGradient(
-              colors: [Color(0xFF5B6F4A), Color(0xFF2F6B3D)],
-              center: Alignment.center,
-              radius: 10.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Material(
-                color: Colors.white.withOpacity(0.06),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: () => Navigator.of(context).pop(),
-                  customBorder: const CircleBorder(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Colors.white,
-                      size: isTablet ? 28 : 22,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${widget.category} Games',
-                      style: GoogleFonts.luckiestGuy(
-                        color: Colors.white,
-                        fontSize: isTablet ? 34 : 22,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.38),
-                            offset: Offset(0, 5),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (widget.isDemoMode)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.14),
-                        blurRadius: 6,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    'DEMO',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-
-      // Body with more breathing room
       body: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF5B6F4A), Color(0xFF5B6F4A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          image: DecorationImage(
+            image: AssetImage(backgroundImage),
+            fit: BoxFit.cover,
           ),
         ),
         child: Padding(
@@ -274,154 +192,79 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
           ),
           child: Column(
             children: [
-              // Instruction card with more breathing room
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: isTablet ? 16 : 12,
-                ),
-                margin: EdgeInsets.only(bottom: isTablet ? 28 : 18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.black.withOpacity(0.06)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.videogame_asset,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Choose a game to start — tap the big tile!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.95),
-                          fontSize: isTablet ? 18 : 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // PSP-Style Horizontal Carousel
+              // ...existing code...
               Expanded(
                 child: Column(
                   children: [
-                    // Navigation arrows
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        IconButton(
-                          onPressed: _selectedGameIndex > 0 ? _previousGame : null,
-                          icon: Icon(
-                            Icons.arrow_back_ios,
-                            color: _selectedGameIndex > 0 
-                                ? Colors.white.withOpacity(0.9)
-                                : Colors.white.withOpacity(0.3),
-                            size: isTablet ? 32 : 24,
+                        // Left Arrow
+                        GestureDetector(
+                          onTap: _selectedGameIndex > 0
+                              ? () => _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                )
+                              : null,
+                          child: Opacity(
+                            opacity: _selectedGameIndex > 0 ? 1.0 : 0.3,
+                            child: Image.asset(
+                              'assets/arrowleft.png',
+                              width: isTablet ? 124 : 68,
+                              height: isTablet ? 124 : 68,
+                            ),
                           ),
                         ),
-                        Text(
-                          '${_selectedGameIndex + 1} / ${games.length}',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: isTablet ? 16 : 14,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(width: 44),
+                        // Game Card (PageView)
+                        Expanded(
+                          child: SizedBox(
+                            height: isTablet ? 640 : 60,
+                            child: PageView.builder(
+                              controller: _pageController,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _selectedGameIndex = index;
+                                });
+                              },
+                              itemCount: games.length,
+                              itemBuilder: (context, index) {
+                                final game = games[index];
+                                return _PSPGameCard(
+                                  icon: game['icon'] as IconData,
+                                  iconColor: game['color'] as Color,
+                                  label: game['name'] as String,
+                                  onTap: () => _startGame(context, game),
+                                  isSelected: index == _selectedGameIndex,
+                                  large: isTablet,
+                                );
+                              },
+                            ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: _selectedGameIndex < games.length - 1 ? _nextGame : null,
-                          icon: Icon(
-                            Icons.arrow_forward_ios,
-                            color: _selectedGameIndex < games.length - 1 
-                                ? Colors.white.withOpacity(0.9)
-                                : Colors.white.withOpacity(0.3),
-                            size: isTablet ? 32 : 24,
+                        const SizedBox(width: 4),
+                        // Right Arrow
+                        GestureDetector(
+                          onTap: _selectedGameIndex < games.length - 1
+                              ? () => _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                )
+                              : null,
+                          child: Opacity(
+                            opacity: _selectedGameIndex < games.length - 1
+                                ? 1.0
+                                : 0.3,
+                            child: Image.asset(
+                              'assets/arrowright.png',
+                              width: isTablet ? 124 : 48,
+                              height: isTablet ? 124 : 48,
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Horizontal carousel
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _selectedGameIndex = index;
-                          });
-                        },
-                        itemCount: games.length,
-                        itemBuilder: (context, index) {
-                          final game = games[index];
-                          final isSelected = index == _selectedGameIndex;
-                          
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            margin: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: isSelected ? 0 : 40,
-                            ),
-                            child: Transform.scale(
-                              scale: isSelected ? 1.0 : 0.85,
-                              child: _PSPGameCard(
-                                icon: game['icon'] as IconData,
-                                iconColor: game['color'] as Color,
-                                label: game['name'] as String,
-                                onTap: () => _startGame(context, game),
-                                isSelected: isSelected,
-                                large: isTablet,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Action button for selected game
-                    Container(
-                      width: double.infinity,
-                      height: isTablet ? 60 : 50,
-                      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                      child: ElevatedButton(
-                        onPressed: () => _startGame(context, games[_selectedGameIndex]),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF5B6F4A),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          elevation: 8,
-                          shadowColor: Colors.black.withOpacity(0.3),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.play_arrow,
-                              size: isTablet ? 28 : 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'START ${games[_selectedGameIndex]['name'].toString().toUpperCase()}',
-                              style: TextStyle(
-                                fontSize: isTablet ? 18 : 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -699,113 +542,425 @@ class _PSPGameCard extends StatelessWidget {
     this.large = false,
     Key? key,
   }) : super(key: key);
+@override
+Widget build(BuildContext context) {
+  final double circleSize = large ? 420 : 370;
 
-  @override
-  Widget build(BuildContext context) {
-    final double cornerRadius = large ? 28 : 24;
-    final double iconSize = large ? 100 : 80;
-    final double labelFont = large ? 32 : 24;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(cornerRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? Colors.white.withOpacity(0.95)
-                : Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(cornerRadius),
-            border: isSelected 
-                ? Border.all(color: iconColor, width: 3)
-                : Border.all(color: Colors.white.withOpacity(0.3), width: 2),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Animated icon container
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: iconSize + (isSelected ? 40 : 30),
-                height: iconSize + (isSelected ? 40 : 30),
-                decoration: BoxDecoration(
-                  color: iconColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(0, 4),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    size: iconSize,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Game title
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 300),
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: labelFont,
-                  color: isSelected ? Colors.black87 : Colors.black54,
-                  shadows: isSelected ? [
-                    Shadow(
-                      offset: const Offset(0, 2),
-                      blurRadius: 4,
-                      color: iconColor.withOpacity(0.3),
-                    ),
-                  ] : [],
-                ),
-                child: Text(
-                  label.toUpperCase(),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              
-              // Selection indicator
-              if (isSelected) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: 60,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: iconColor,
-                    borderRadius: BorderRadius.circular(2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+  return GestureDetector(
+    onTap: onTap,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Light Tap
+        if (label.trim().toLowerCase() == 'light tap') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
                 ),
               ],
-            ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/lighttap.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/lighttapbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Who Moved
+        else if (label.trim().toLowerCase() == 'who moved') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/whomoved.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/whomovedbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Find Me
+        else if (label.trim().toLowerCase() == 'find me') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/findme.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/findmebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Picture Words
+        else if (label.trim().toLowerCase() == 'picture words') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/picturewords.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/picturewordsbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Riddle
+        else if (label.trim().toLowerCase() == 'riddle') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/riddletime.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/riddletimebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Rhyme Time
+        else if (label.trim().toLowerCase() == 'rhyme time') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/rhymetime.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/rhymetimebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Match Cards
+        else if (label.trim().toLowerCase() == 'match cards') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/matchcards.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/matchcardsbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Fruit Shuffle
+        else if (label.trim().toLowerCase() == 'fruit shuffle') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/fruitshuffle.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/fruitshufflebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Sound Match
+        else if (label.trim().toLowerCase() == 'sound match') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/soundmatch.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/soundmatchbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Puzzle
+        else if (label.trim().toLowerCase() == 'puzzle') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/puzzlegame.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/puzzlegamebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Tic Tac Toe
+        else if (label.trim().toLowerCase() == 'tic tac toe') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/tictactoe.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/tictactoebutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Object Hunt
+        else if (label.trim().toLowerCase() == 'object hunt') ...[
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  offset: Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/objecthunt.png',
+                fit: BoxFit.cover,
+                width: circleSize,
+                height: circleSize,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Image.asset(
+            'assets/objecthuntbutton.png',
+            width: large ? 350 : 180,
+            fit: BoxFit.contain,
+          ),
+        ]
+        // Default
+        else
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: BoxDecoration(
+              color: iconColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 7),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.38),
+                  offset: const Offset(8, 12),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(icon, size: large ? 100 : 70, color: Colors.white),
+            ),
+          ),
+      ],
+    ),
+  );
+}
 }
 
 // Keep the old GameCard for backward compatibility
@@ -843,7 +998,7 @@ class _GameCard extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 6, right: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.12),
+                    color: Colors.black.withOpacity(0),
                     borderRadius: BorderRadius.circular(cornerRadius + 4),
                   ),
                 ),
@@ -867,7 +1022,7 @@ class _GameCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(cornerRadius - 6),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.14),
+                            color: Colors.black.withOpacity(0),
                             offset: const Offset(0, 6),
                             blurRadius: 12,
                           ),
@@ -889,12 +1044,12 @@ class _GameCard extends StatelessWidget {
                               color: iconColor,
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: Colors.black.withOpacity(0.14),
+                                color: Colors.black.withOpacity(0),
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.16),
+                                  color: Colors.black.withOpacity(0),
                                   offset: const Offset(0, 6),
                                   blurRadius: 10,
                                 ),
@@ -925,7 +1080,7 @@ class _GameCard extends StatelessWidget {
                                 Shadow(
                                   offset: const Offset(0, 6),
                                   blurRadius: 12,
-                                  color: Colors.black.withOpacity(0.14),
+                                  color: Colors.black.withOpacity(0),
                                 ),
                               ],
                             ),

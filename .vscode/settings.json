@@ -1,4 +1,5 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "codium.codeCompletion.enable": false
+    "codium.codeCompletion.enable": false,
+    "CodeGPT.apiKey": "Anthropic"
 }
