@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/difficulty_utils.dart';
 import '../utils/sound_effects_manager.dart';
+import '../utils/help_tts_manager.dart';
 
 class FindMeGame extends StatefulWidget {
   final String difficulty;
@@ -794,145 +795,161 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Watch carefully as one object is shown to you. When the objects appear together, tap the one you just saw.');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD740),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  width: 320,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF5B6F4A).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Need Help?',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF5B6F4A),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            showSimple
-                                ? 'Look at the object that appears. Remember it! Then find and tap that same object when you see all the objects together.'
-                                : 'Watch carefully as one object is shown to you. When the objects appear together, tap the one you just saw.',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF5B6F4A),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        if (showSimple)
-                          const SizedBox(height: 16),
-                        if (showSimple)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'That\'s the simpler explanation!',
-                              style: TextStyle(
-                                color: Color(0xFF5B6F4A),
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF5B6F4A).withOpacity(0.6),
-                                      blurRadius: 0,
-                                      spreadRadius: 0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: TextButton(
-                                  onPressed: () {
-                                    if (!showSimple) {
-                                      setState(() => showSimple = true);
-                                    } else {
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: const Color(0xFF5B6F4A),
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    showSimple ? 'Close' : 'More Help?',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD740),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
                         ),
                       ],
                     ),
+                    child: SizedBox(
+                      width: 320,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Need Help?',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF5B6F4A),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                showSimple
+                                    ? 'Look at the object that appears. Remember it! Then find and tap that same object when you see all the objects together.'
+                                    : 'Watch carefully as one object is shown to you. When the objects appear together, tap the one you just saw.',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF5B6F4A),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            if (showSimple)
+                              const SizedBox(height: 16),
+                            if (showSimple)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  'That\'s the simpler explanation!',
+                                  style: TextStyle(
+                                    color: Color(0xFF5B6F4A),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF5B6F4A).withOpacity(0.6),
+                                          blurRadius: 0,
+                                          spreadRadius: 0,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () {
+                                        if (!showSimple) {
+                                          setState(() {
+                                            showSimple = true;
+                                            // Speak the simpler explanation
+                                            HelpTtsManager().speak('Look at the object that appears. Remember it! Then find and tap that same object when you see all the objects together.');
+                                          });
+                                        } else {
+                                          HelpTtsManager().stop();
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: const Color(0xFF5B6F4A),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(18),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        showSimple ? 'Close' : 'More Help?',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         );
       },

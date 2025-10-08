@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/help_tts_manager.dart';
 
 class RhymeTimeGame extends StatefulWidget {
   final String difficulty;
@@ -509,27 +510,36 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Tap two words that sound similar at the end. Words that rhyme have the same ending sound. Tap any word to hear it!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: SizedBox(
+                    child: SizedBox(
                   width: 320,
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -616,8 +626,13 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
                                 child: TextButton(
                                   onPressed: () {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                        // Speak the simpler explanation
+                                        HelpTtsManager().speak('Tap two words that sound the same at the end. Like cat and hat - they both end with at sound!');
+                                      });
                                     } else {
+                                      HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -646,8 +661,10 @@ class _RhymeTimeGameState extends State<RhymeTimeGame> with TickerProviderStateM
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

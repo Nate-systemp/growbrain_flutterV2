@@ -8,6 +8,7 @@ import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/help_tts_manager.dart';
 
 class SoundMatchGame extends StatefulWidget {
   final String difficulty;
@@ -413,11 +414,20 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Listen to sounds and match them with the correct picture. Use your ears to find the right answer!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
               backgroundColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               child: DecoratedBox(
@@ -520,8 +530,13 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
                                 child: TextButton(
                                   onPressed: () {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                        // Speak the simpler explanation
+                                        HelpTtsManager().speak('Listen to the sound and tap the picture that makes that sound. Use your ears to find the right picture!');
+                                      });
                                     } else {
+                                      HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -529,6 +544,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
                                     backgroundColor: Colors.white,
                                     foregroundColor: primaryColor,
                                     padding: const EdgeInsets.symmetric(vertical: 16),
+                                  
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(18),
                                     ),
@@ -550,8 +566,10 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

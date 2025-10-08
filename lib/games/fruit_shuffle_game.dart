@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/help_tts_manager.dart';
 
 class FruitShuffleGame extends StatefulWidget {
   final String difficulty;
@@ -592,27 +593,36 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Watch carefully as fruits shuffle in the baskets. Then, drag each fruit to its correct basket based on what you saw.');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD740),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD740),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: SizedBox(
+                    child: SizedBox(
                   width: 320,
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -699,8 +709,13 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
                                 child: TextButton(
                                   onPressed: () {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                        // Speak the simpler explanation
+                                        HelpTtsManager().speak('Watch fruits shuffle inside the baskets. After shuffling, drag the correct fruit to each basket as fast as you can!');
+                                      });
                                     } else {
+                                      HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -729,8 +744,10 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

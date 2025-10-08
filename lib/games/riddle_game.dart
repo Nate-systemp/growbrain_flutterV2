@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/help_tts_manager.dart';
 
 class RiddleGame extends StatefulWidget {
   final String difficulty;
@@ -818,21 +819,31 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
       foregroundColor: Colors.black87,
       icon: const Icon(Icons.help_outline),
       label: const Text('Need Help?'),
-      onPressed: () {
+      onPressed: () async {
         bool showSimple = false;
+        // Speak the initial help text
+        await HelpTtsManager().speak('Read each riddle carefully and choose the correct answer from the options. If you need help, tap the lightbulb icon for a visual hint!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  await HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFD740),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
+                    
                       color: Colors.black.withOpacity(0.18),
                       blurRadius: 24,
                       spreadRadius: 0,
@@ -925,10 +936,15 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                                   ],
                                 ),
                                 child: TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                      });
+                                      // Speak the simpler explanation
+                                      await HelpTtsManager().speak('Read the riddle carefully. Think about what it could be. Pick the answer that makes the most sense. Use the lightbulb if you need a hint!');
                                     } else {
+                                      await HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -957,8 +973,10 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

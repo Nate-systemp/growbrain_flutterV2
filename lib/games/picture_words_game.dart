@@ -8,6 +8,7 @@ import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
 import '../teacher_pin_modal.dart';
+import '../utils/help_tts_manager.dart';
 
 class PictureWordsGame extends StatefulWidget {
   final String difficulty;
@@ -584,27 +585,36 @@ class _PictureWordsGameState extends State<PictureWordsGame>
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Tap a word from the left section, then tap its matching picture on the right section. Match all pairs to win!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD740),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD740),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: SizedBox(
+                    child: SizedBox(
                   width: 320,
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -691,8 +701,13 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                                 child: TextButton(
                                   onPressed: () {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                        // Speak the simpler explanation
+                                        HelpTtsManager().speak('Tap a word from the yellow box on the left. Then tap the matching picture from the purple box on the right. Keep matching until all pairs are found!');
+                                      });
                                     } else {
+                                      HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -721,8 +736,10 @@ class _PictureWordsGameState extends State<PictureWordsGame>
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

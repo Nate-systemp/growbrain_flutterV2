@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/help_tts_manager.dart';
 
 class MatchCardsGame extends StatefulWidget {
   final String difficulty;
@@ -568,27 +569,36 @@ class _MatchCardsGameState extends State<MatchCardsGame>
       label: const Text('Need Help?'),
       onPressed: () {
         bool showSimple = false;
+        // Speak the initial help text
+        HelpTtsManager().speak('Flip two cards. If they match, they stay open. Remember positions and match all pairs as fast as you can!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: SizedBox(
+                    child: SizedBox(
                   width: 320,
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -675,8 +685,13 @@ class _MatchCardsGameState extends State<MatchCardsGame>
                                 child: TextButton(
                                   onPressed: () {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                        // Speak the simpler explanation
+                                        HelpTtsManager().speak('Flip two cards. If they match, they stay open. Remember where the cards are and match all pairs as fast as you can!');
+                                      });
                                     } else {
+                                      HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -705,8 +720,10 @@ class _MatchCardsGameState extends State<MatchCardsGame>
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

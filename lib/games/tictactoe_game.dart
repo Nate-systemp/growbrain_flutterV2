@@ -5,6 +5,7 @@ import 'dart:math';
 import '../utils/background_music_manager.dart';
 import '../utils/sound_effects_manager.dart';
 import '../utils/difficulty_utils.dart';
+import '../utils/help_tts_manager.dart';
 
 enum TicTacToeDifficulty { starter, growing, challenged }
 
@@ -622,16 +623,25 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
       foregroundColor: Colors.black87,
       icon: const Icon(Icons.help_outline),
       label: const Text('Need Help?'),
-      onPressed: () {
+      onPressed: () async {
         bool showSimple = false;
+        // Speak the initial help text
+        await HelpTtsManager().speak('Play against the AI in a best of 3 match! You are squares, AI is triangles. Get three in a row to win!');
+        
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (context) => StatefulBuilder(
-            builder: (context, setState) => Dialog(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: DecoratedBox(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  await HelpTtsManager().stop();
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFD740),
                   borderRadius: BorderRadius.circular(18),
@@ -729,10 +739,15 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
                                   ],
                                 ),
                                 child: TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     if (!showSimple) {
-                                      setState(() => showSimple = true);
+                                      setState(() {
+                                        showSimple = true;
+                                      });
+                                      // Speak the simpler explanation
+                                      await HelpTtsManager().speak('You are squares, the computer is triangles. Take turns putting your shape on the board. Get three in a row to win - across, down, or diagonal!');
                                     } else {
+                                      await HelpTtsManager().stop();
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -761,8 +776,10 @@ class _TicTacToeGameScreenState extends State<TicTacToeGameScreen> with TickerPr
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
