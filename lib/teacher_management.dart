@@ -4808,9 +4808,9 @@ class EnhancedTeacherProfile extends StatelessWidget {
       padding: const EdgeInsets.only(top: 80, left: 24, right: 24, bottom: 24),
       child: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 600),
+          constraints: const BoxConstraints(maxWidth: 800),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -4819,8 +4819,8 @@ class EnhancedTeacherProfile extends StatelessWidget {
                   children: [
                     // Profile Avatar
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFF667eea), Color(0xFF764ba2)],
@@ -4840,14 +4840,14 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         child: Text(
                           _getInitials(name),
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 20),
                     // Title and subtitle
                     Expanded(
                       child: Column(
@@ -4856,17 +4856,17 @@ class EnhancedTeacherProfile extends StatelessWidget {
                           const Text(
                             'Teacher Profile',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 32,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF2C3E50),
                               letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 3,
+                              horizontal: 14,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
@@ -4877,7 +4877,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                             child: const Text(
                               'Educator Dashboard',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -4888,7 +4888,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
 
                 // Information Cards
                 Row(
@@ -4919,7 +4919,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
 
                     // Account Information Card
                     Expanded(
@@ -4948,7 +4948,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // Statistics Cards
                 Row(
@@ -4961,7 +4961,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         color: Colors.orange,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
                         title: 'Sessions',
@@ -4970,7 +4970,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         color: Colors.purple,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
                         title: 'Games',
@@ -4981,7 +4981,7 @@ class EnhancedTeacherProfile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
 
                 // Action Buttons
                 Row(
@@ -4993,8 +4993,8 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                          horizontal: 24,
+                          vertical: 14,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -5002,11 +5002,11 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         elevation: 2,
                       ),
                       onPressed: onLogout,
-                      icon: const Icon(Icons.logout, size: 16),
+                      icon: const Icon(Icons.logout, size: 20),
                       label: const Text(
                         'Log Out',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -5057,7 +5057,7 @@ class _TeacherInfoCard extends StatelessWidget {
           // Card header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: color.withOpacity(0.05),
               borderRadius: const BorderRadius.vertical(
@@ -5067,19 +5067,19 @@ class _TeacherInfoCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: color, size: 16),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: color,
                   ),
@@ -5089,7 +5089,7 @@ class _TeacherInfoCard extends StatelessWidget {
           ),
           // Card content
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(children: children),
           ),
         ],
@@ -5115,19 +5115,19 @@ class _TeacherInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: Colors.grey.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 12, color: Colors.grey[600]),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -5135,16 +5135,16 @@ class _TeacherInfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: valueColor ?? const Color(0xFF2C3E50),
                   ),
@@ -5175,7 +5175,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -5191,28 +5191,28 @@ class _StatCard extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 16),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               color: color,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             title,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
             ),
