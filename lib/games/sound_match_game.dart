@@ -158,7 +158,8 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
     options.addAll(otherSounds.take(3));
     options.shuffle();
     setState(() => _currentOptions = options);
-    _startRoundCountdown();
+    // Play sound immediately on first round (already had countdown)
+    Future.delayed(const Duration(milliseconds: 300), _playCurrentSound);
   }
 
   void _generateNewRound() {
@@ -229,8 +230,7 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
   }
 
   void _onPlayButtonPressed() {
-    setState(() => _showPlayButton = false);
-    _startRoundCountdown();
+    _playCurrentSound();
   }
 
   void _selectOption(SoundItem selectedItem) {
