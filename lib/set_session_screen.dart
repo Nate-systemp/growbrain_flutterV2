@@ -27,7 +27,7 @@ class SetSessionScreen extends StatefulWidget {
   State<SetSessionScreen> createState() => _SetSessionScreenState();
 }
 
-class _SetSessionScreenState extends State<SetSessionScreen> {
+class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerProviderStateMixin {
   final List<String> allGames = ['Attention', 'Verbal', 'Memory', 'Logic'];
   List<String> availableGames = []; // Will be filtered based on student's cognitive needs
   final Set<String> selectedGames = {};
@@ -45,16 +45,42 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
   // Session tracking
   List<Map<String, dynamic>> sessionRecords = [];
   Set<String> completedGames = {};
+  
+  // Game recommendations
+  bool _hasShownRecommendations = false;
+  late AnimationController _recommendationIconController;
+  late Animation<double> _recommendationIconAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeAvailableGames();
     _loadSession();
+    
+    // Initialize animation controller for recommendation icon
+    _recommendationIconController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _recommendationIconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _recommendationIconController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    
+    // Show recommendations after a short delay to let UI settle
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted && !_hasShownRecommendations) {
+        _analyzeAndRecommendGames();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _recommendationIconController.dispose();
     // End session when leaving the screen
     SessionVolumeManager.instance.endSession();
     super.dispose();
@@ -457,6 +483,160 @@ class _SetSessionScreenState extends State<SetSessionScreen> {
     }
   }
 
+  /// Analyze student performance and recommend games based on weak areas
+  Future<void> _analyzeAndRecommendGames() async {
+    if (_hasShownRecommendations) return;
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    final studentId = widget.student['id'] ?? widget.student['fullName'];
+    
+    try {
+      // Fetch all student records from Firebase
+      final recordsSnapshot = await FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(user.uid)
+          .collection('students')
+          .doc(studentId)
+          .collection('records')
+          .orderBy('date', descending: true)
+          .limit(50) // Get last 50 records for analysis
+          .get();
+      
+      if (recordsSnapshot.docs.isEmpty) {
+        // No records yet, don't show recommendations
+        setState(() => _hasShownRecommendations = true);
+        return;
+      }
+      
+      // Analyze performance by challenge focus
+      Map<String, List<int>> focusAreaScores = {
+        'Attention': [],
+        'Verbal': [],
+        'Memory': [],
+        'Logic': [],
+      };
+      
+      for (var doc in recordsSnapshot.docs) {
+        final data = doc.data();
+        final challengeFocus = data['challengeFocus'] as String?;
+        final accuracy = data['accuracy'] as int?;
+        
+        if (challengeFocus != null && accuracy != null && focusAreaScores.containsKey(challengeFocus)) {
+          focusAreaScores[challengeFocus]!.add(accuracy);
+        }
+      }
+      
+      // Calculate average accuracy for each focus area
+      Map<String, double> averageScores = {};
+      for (var entry in focusAreaScores.entries) {
+        if (entry.value.isNotEmpty) {
+          final avg = entry.value.reduce((a, b) => a + b) / entry.value.length;
+          averageScores[entry.key] = avg;
+        }
+      }
+      
+      // Identify weak areas (accuracy < 70%) and sort by weakest first
+      List<MapEntry<String, double>> weakAreas = averageScores.entries
+          .where((entry) => entry.value < 70)
+          .toList()
+        ..sort((a, b) => a.value.compareTo(b.value)); // Weakest first
+      
+      if (weakAreas.isEmpty) {
+        // Student is doing well in all areas!
+        setState(() => _hasShownRecommendations = true);
+        return;
+      }
+      
+      // Generate recommendations based on weak areas and student's cognitive needs
+      List<String> recommendedGames = [];
+      for (var weakArea in weakAreas) {
+        final category = weakArea.key;
+        // Only recommend if student has this cognitive need enabled
+        if (availableGames.contains(category)) {
+          final gamesInCategory = categoryGames[category]!;
+          // Add games from weak area (max 2 per category)
+          for (var game in gamesInCategory.take(2)) {
+            if (!recommendedGames.contains(game)) {
+              recommendedGames.add(game);
+            }
+          }
+        }
+      }
+      
+      // Also add some games from strong areas for balance (1 game)
+      List<MapEntry<String, double>> strongAreas = averageScores.entries
+          .where((entry) => entry.value >= 70)
+          .toList()
+        ..sort((a, b) => b.value.compareTo(a.value)); // Strongest first
+      
+      if (strongAreas.isNotEmpty && recommendedGames.length < 5) {
+        final strongCategory = strongAreas.first.key;
+        if (availableGames.contains(strongCategory)) {
+          final gamesInCategory = categoryGames[strongCategory]!;
+          for (var game in gamesInCategory.take(1)) {
+            if (!recommendedGames.contains(game) && recommendedGames.length < 5) {
+              recommendedGames.add(game);
+            }
+          }
+        }
+      }
+      
+      // Limit to 5 games total
+      recommendedGames = recommendedGames.take(5).toList();
+      
+      if (recommendedGames.isNotEmpty && mounted) {
+        setState(() => _hasShownRecommendations = true);
+        _showRecommendationsDialog(recommendedGames, weakAreas, averageScores);
+      }
+      
+    } catch (e) {
+      print('Error analyzing student performance: $e');
+      setState(() => _hasShownRecommendations = true);
+    }
+  }
+  
+  /// Show recommendations dialog with intelligent game suggestions
+  void _showRecommendationsDialog(
+    List<String> recommendedGames,
+    List<MapEntry<String, double>> weakAreas,
+    Map<String, double> averageScores,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => RecommendationsDialog(
+        studentName: widget.student['fullName'] ?? 'Student',
+        recommendedGames: recommendedGames,
+        weakAreas: weakAreas,
+        averageScores: averageScores,
+        onAccept: () {
+          // Auto-select recommended games
+          setState(() {
+            selectedGames.clear();
+            selectedGames.addAll(recommendedGames);
+            // Set default difficulties for recommended games
+            for (var game in recommendedGames) {
+              gameDifficulties[game] = 'Starter';
+            }
+          });
+          Navigator.of(context).pop();
+        },
+        onDecline: () {
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+  
+  /// Manually trigger recommendations (callable anytime)
+  void _showRecommendationsManually() {
+    // Reset flag to allow re-analysis
+    setState(() => _hasShownRecommendations = false);
+    _analyzeAndRecommendGames();
+  }
+
  @override
 Widget build(BuildContext context) {
   try {
@@ -629,6 +809,39 @@ Widget build(BuildContext context) {
                                                   ),
                                                 ],
                                               ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            // Animated Recommendation Button
+                                            AnimatedBuilder(
+                                              animation: _recommendationIconAnimation,
+                                              builder: (context, child) {
+                                                return Transform.scale(
+                                                  scale: 1.0 + (_recommendationIconAnimation.value * 0.15),
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: const Color(0xFFFFD740).withOpacity(_recommendationIconAnimation.value * 0.4),
+                                                          blurRadius: 8,
+                                                          spreadRadius: 2,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: IconButton(
+                                                      onPressed: _showRecommendationsManually,
+                                                      icon: const Icon(Icons.lightbulb),
+                                                      color: const Color(0xFFFFD740),
+                                                      iconSize: 24,
+                                                      tooltip: 'View AI Recommendations',
+                                                      style: IconButton.styleFrom(
+                                                        backgroundColor: const Color(0xFF5B6F4A),
+                                                        padding: const EdgeInsets.all(8),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ],
                                         ),
@@ -1197,21 +1410,68 @@ Widget build(BuildContext context) {
           ),
           child: Column(
             children: [
-              // Title
-              const Text(
-                'Selected Games',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                'for ${studentName.split(' ').first}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.black54,
-                ),
+              // Title with recommendation button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Selected Games',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        'for ${studentName.split(' ').first}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  // Animated Recommendation Button (compact)
+                  AnimatedBuilder(
+                    animation: _recommendationIconAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: 1.0 + (_recommendationIconAnimation.value * 0.15),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFD740).withOpacity(_recommendationIconAnimation.value * 0.4),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            onPressed: _showRecommendationsManually,
+                            icon: const Icon(Icons.lightbulb),
+                            color: const Color(0xFFFFD740),
+                            iconSize: 18,
+                            tooltip: 'View AI Recommendations',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: const Color(0xFF5B6F4A),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               const Text(
@@ -4038,5 +4298,317 @@ Color _getDifficultyBorderColorFromString(String difficulty) {
       return Colors.red;
     default:
       return Colors.green; // Default to green for Starter
+  }
+}
+
+/// Intelligent Recommendations Dialog
+class RecommendationsDialog extends StatelessWidget {
+  final String studentName;
+  final List<String> recommendedGames;
+  final List<MapEntry<String, double>> weakAreas;
+  final Map<String, double> averageScores;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const RecommendationsDialog({
+    Key? key,
+    required this.studentName,
+    required this.recommendedGames,
+    required this.weakAreas,
+    required this.averageScores,
+    required this.onAccept,
+    required this.onDecline,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF5B6F4A),
+              const Color(0xFF5B6F4A).withOpacity(0.9),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Close button
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                onPressed: onDecline,
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon and title
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD740),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD740).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.lightbulb,
+                          color: Color(0xFF5B6F4A),
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '🎯 Smart Recommendations',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'AI-powered suggestions for $studentName',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Performance analysis
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '📊 Performance Analysis',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (weakAreas.isNotEmpty)
+                          ...weakAreas.map((area) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: area.value < 50
+                                        ? Colors.red[300]
+                                        : Colors.orange[300],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${area.key}: ',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '${area.value.toStringAsFixed(0)}% accuracy',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Recommended games
+                  const Text(
+                    '🎮 Recommended Games',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: recommendedGames.map((game) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD740),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color.fromARGB(255, 181, 187, 17),
+                                  blurRadius: 0,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.stars,
+                                  color: Color(0xFF5B6F4A),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  game,
+                                  style: const TextStyle(
+                                    color: Color(0xFF5B6F4A),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onDecline,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white, width: 2),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'No Thanks',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color.fromARGB(255, 181, 187, 17),
+                                blurRadius: 0,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ElevatedButton(
+                            onPressed: onAccept,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFD740),
+                              foregroundColor: const Color(0xFF5B6F4A),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Use These Games',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
