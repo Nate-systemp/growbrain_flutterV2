@@ -208,6 +208,8 @@ class _LightTapGameState extends State<LightTapGame>
       setState(() {
         countdownNumber = i;
       });
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(milliseconds: 1000));
     }
 
@@ -293,6 +295,8 @@ class _LightTapGameState extends State<LightTapGame>
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;

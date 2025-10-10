@@ -314,6 +314,8 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
     for (int i = 3; i >= 1; i--) {
       if (!mounted) return;
       setState(() => countdownNumber = i);
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(seconds: 1));
     }
     if (!mounted) return;
@@ -337,6 +339,8 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;

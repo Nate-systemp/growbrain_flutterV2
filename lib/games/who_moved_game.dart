@@ -347,6 +347,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
   }
 
   void _startCountdown() {
+    // Speak the current countdown number
+    SoundEffectsManager().speakCountdown(countdownNumber);
+    
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && countdownNumber > 1) {
         setState(() {
@@ -388,6 +391,9 @@ class _WhoMovedGameState extends State<WhoMovedGame>
       showingAnimation = false;
       showingGo = true;
     });
+
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
 
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 450));

@@ -338,7 +338,7 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
       countdownNumber = 3;
       isShowingTarget = false;
     });
-
+    
     _showCountdown();
   }
 
@@ -348,6 +348,8 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
       setState(() {
         countdownNumber = i;
       });
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(milliseconds: 1000));
     }
     if (mounted) {
@@ -778,6 +780,12 @@ class _FindMeGameState extends State<FindMeGame> with TickerProviderStateMixin {
       goOverlayColor = color ?? const Color(0xFFFFD740);
       goOverlayTextColor = textColor ?? const Color(0xFF5B6F4A);
     });
+    
+    // Speak "GO!" only when text is actually "GO!"
+    if (text == 'GO!') {
+      SoundEffectsManager().speakGo();
+    }
+    
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;

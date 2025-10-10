@@ -325,6 +325,8 @@ class _PuzzleGameState extends State<PuzzleGame>
       setState(() {
         countdownNumber = i;
       });
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(milliseconds: 1000));
     }
 
@@ -347,6 +349,8 @@ class _PuzzleGameState extends State<PuzzleGame>
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;

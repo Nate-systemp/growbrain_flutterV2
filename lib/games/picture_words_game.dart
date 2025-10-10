@@ -264,6 +264,8 @@ class _PictureWordsGameState extends State<PictureWordsGame>
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;
@@ -283,8 +285,6 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;
-    await _goController.reverse();
-    if (!mounted) return;
     setState(() => showingStatus = false);
   }
 
@@ -292,6 +292,8 @@ class _PictureWordsGameState extends State<PictureWordsGame>
     for (int i = 3; i >= 1; i--) {
       if (!mounted) return;
       setState(() => countdownNumber = i);
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(seconds: 1));
     }
     if (!mounted) return;

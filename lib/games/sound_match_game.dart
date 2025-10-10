@@ -109,6 +109,8 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => _showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;
@@ -137,6 +139,8 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
     for (int i = 3; i >= 1; i--) {
       if (!mounted) return;
       setState(() => _countdownNumber = i);
+      // Speak the countdown number
+      SoundEffectsManager().speakCountdown(i);
       await Future.delayed(const Duration(seconds: 1));
     }
     if (!mounted) return;
@@ -186,9 +190,14 @@ class _SoundMatchGameState extends State<SoundMatchGame> with TickerProviderStat
       _countdownNumber = 3;
       _showPlayButton = false;
     });
+    // Speak initial countdown number
+    SoundEffectsManager().speakCountdown(_countdownNumber);
+    
     Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdownNumber > 1) {
         setState(() => _countdownNumber--);
+        // Speak the countdown number
+        SoundEffectsManager().speakCountdown(_countdownNumber);
       } else {
         timer.cancel();
         setState(() => _showingCountdown = false);

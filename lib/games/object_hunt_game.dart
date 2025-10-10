@@ -240,9 +240,14 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
       gameActive = false;
     });
 
+    // Speak initial countdown number
+    SoundEffectsManager().speakCountdown(countdownNumber);
+
     Timer.periodic(const Duration(seconds: 1), (timer) {
       if (countdownNumber > 1) {
         setState(() => countdownNumber--);
+        // Speak the countdown number
+        SoundEffectsManager().speakCountdown(countdownNumber);
       } else {
         timer.cancel();
         setState(() {
@@ -266,6 +271,8 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   Future<void> _showGoOverlay() async {
     if (!mounted) return;
     setState(() => showingGo = true);
+    // Speak "GO!"
+    SoundEffectsManager().speakGo();
     await _goController.forward();
     await Future.delayed(const Duration(milliseconds: 550));
     if (!mounted) return;
