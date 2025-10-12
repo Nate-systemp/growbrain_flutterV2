@@ -1,8 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'teacher_management.dart';
 import 'utils/sound_effects_manager.dart';
 
 class CongratulationsScreen extends StatefulWidget {
@@ -19,7 +16,7 @@ class CongratulationsScreen extends StatefulWidget {
   State<CongratulationsScreen> createState() => _CongratulationsScreenState();
 }
 
-class _CongratulationsScreenState extends State<CongratulationsScreen> 
+class _CongratulationsScreenState extends State<CongratulationsScreen>
     with TickerProviderStateMixin {
   late AnimationController _bounceController;
   late AnimationController _sparkleController;
@@ -29,10 +26,10 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Play congratulations sound effect
     SoundEffectsManager().playCongratulations();
-    
+
     // Simple animations only
     _bounceController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -42,23 +39,15 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
-    _bounceAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeOut,
-    ));
-    
-    _sparkleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _sparkleController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _bounceAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _bounceController, curve: Curves.easeOut),
+    );
+
+    _sparkleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _sparkleController, curve: Curves.easeInOut),
+    );
+
     // Start animations
     _bounceController.forward();
     _sparkleController.repeat(reverse: true);
@@ -73,46 +62,50 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Light clean background
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                
-                // Simple celebration header
-                AnimatedBuilder(
-                  animation: _bounceAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _bounceAnimation.value,
-                      child: _buildSimpleCelebrationHeader(),
-                    );
-                  },
-                ),
+    return PopScope(
+      canPop:
+          false, // Prevent back navigation - user must use "Go Back Home" button
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA), // Light clean background
+        body: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
 
-                const SizedBox(height: 32),
+                  // Simple celebration header
+                  AnimatedBuilder(
+                    animation: _bounceAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _bounceAnimation.value,
+                        child: _buildSimpleCelebrationHeader(),
+                      );
+                    },
+                  ),
 
-                // Clear stats section
-                _buildSimpleStatsSection(),
+                  const SizedBox(height: 32),
 
-                const SizedBox(height: 24),
+                  // Clear stats section
+                  _buildSimpleStatsSection(),
 
-                // Game records section
-                if (widget.sessionRecords.isNotEmpty)
-                  _buildSimpleGameRecordsSection(),
+                  const SizedBox(height: 24),
 
-                const SizedBox(height: 40),
+                  // Game records section
+                  if (widget.sessionRecords.isNotEmpty)
+                    _buildSimpleGameRecordsSection(),
 
-                // Big, clear action button
-                _buildSimpleActionButton(),
-                
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 40),
+
+                  // Big, clear action button
+                  _buildSimpleActionButton(),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
@@ -121,136 +114,146 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
   }
 
   Widget _buildSimpleCelebrationHeader() {
-  return Stack(
-    children: [
-      // Animated sparkles/confetti
-      Positioned.fill(
-        child: AnimatedBuilder(
-          animation: _sparkleAnimation,
-          builder: (context, child) {
-            return CustomPaint(
-              painter: _ConfettiPainter(_sparkleAnimation.value),
-            );
-          },
-        ),
-      ),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFDCFDF7), Color(0xFFFEF3C7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Stack(
+      children: [
+        // Animated sparkles/confetti
+        Positioned.fill(
+          child: AnimatedBuilder(
+            animation: _sparkleAnimation,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _ConfettiPainter(_sparkleAnimation.value),
+              );
+            },
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
-        child: Column(
-          children: [
-            // Trophy illustration
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFF59E0B), Color(0xFFFFF9C4)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFDCFDF7), Color(0xFFFEF3C7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Trophy illustration
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFF59E0B), Color(0xFFFFF9C4)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withOpacity(0.3),
+                      blurRadius: 18,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.amber.withOpacity(0.3),
-                    blurRadius: 18,
-                    offset: Offset(0, 6),
-                  ),
+                padding: EdgeInsets.all(18),
+                child: Icon(
+                  Icons.emoji_events,
+                  color: Color(0xFFF59E0B),
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: 18),
+              // Animated stars
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 32),
+                  SizedBox(width: 8),
+                  Icon(Icons.star, color: Colors.amberAccent, size: 40),
+                  SizedBox(width: 8),
+                  Icon(Icons.star, color: Colors.amber, size: 32),
                 ],
               ),
-              padding: EdgeInsets.all(18),
-              child: Icon(Icons.emoji_events, color: Color(0xFFF59E0B), size: 64),
-            ),
-            const SizedBox(height: 18),
-            // Animated stars
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.star, color: Colors.amber, size: 32),
-                SizedBox(width: 8),
-                Icon(Icons.star, color: Colors.amberAccent, size: 40),
-                SizedBox(width: 8),
-                Icon(Icons.star, color: Colors.amber, size: 32),
-              ],
-            ),
-            const SizedBox(height: 18),
-            // Big happy face
-            const Text('😊', style: TextStyle(fontSize: 80)),
-            const SizedBox(height: 18),
-            // Pop-out congratulation text
-            Text(
-              'GREAT JOB!',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF059669),
-                letterSpacing: 2,
-                shadows: [
-                  Shadow(
-                    color: Colors.greenAccent.withOpacity(0.5),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDCFDF7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF059669), width: 1),
-              ),
-              child: const Text(
-                'You finished all your games! 🎮',
+              const SizedBox(height: 18),
+              // Big happy face
+              const Text('😊', style: TextStyle(fontSize: 80)),
+              const SizedBox(height: 18),
+              // Pop-out congratulation text
+              Text(
+                'GREAT JOB!',
                 style: TextStyle(
-                  fontSize: 20,
-                  color: Color(0xFF065F46),
-                  fontWeight: FontWeight.w600,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF059669),
+                  letterSpacing: 2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.greenAccent.withOpacity(0.5),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 24),
-            // Student name - simple and clear
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${widget.student['fullName'] ?? 'Amazing Student'}!',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                textAlign: TextAlign.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFDF7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF059669), width: 1),
+                ),
+                child: const Text(
+                  'You finished all your games! 🎮',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Color(0xFF065F46),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              // Student name - simple and clear
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${widget.student['fullName'] ?? 'Amazing Student'}!',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   Widget _buildSimpleStatsSection() {
     if (widget.sessionRecords.isEmpty) {
@@ -290,14 +293,16 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
     // Safe calculation with division by zero protection
     final avgAccuracy = widget.sessionRecords.isNotEmpty
         ? widget.sessionRecords
-            .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
-            .reduce((a, b) => a + b) / widget.sessionRecords.length
+                  .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+                  .reduce((a, b) => a + b) /
+              widget.sessionRecords.length
         : 0.0;
 
     final avgCompletionTime = widget.sessionRecords.isNotEmpty
         ? widget.sessionRecords
-            .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
-            .reduce((a, b) => a + b) / widget.sessionRecords.length
+                  .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
+                  .reduce((a, b) => a + b) /
+              widget.sessionRecords.length
         : 0.0;
 
     final totalGames = widget.sessionRecords.length;
@@ -346,7 +351,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
             ],
           ),
           const SizedBox(height: 24),
-          
+
           // Simple stat cards in a row
           Row(
             children: [
@@ -383,7 +388,12 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
     );
   }
 
-  Widget _buildSimpleStatCard(String value, String title, IconData icon, Color color) {
+  Widget _buildSimpleStatCard(
+    String value,
+    String title,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -461,17 +471,43 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
             ],
           ),
           const SizedBox(height: 24),
-          
-          // Show only top 3 games to avoid overwhelming
-          ...widget.sessionRecords.take(3).map((record) => 
-            _buildSimpleRecordCard(record)
-          ).toList(),
+
+          // Show all played games in a scrollable container
+          if (widget.sessionRecords.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 400), // Limit height
+              child: SingleChildScrollView(
+                child: Column(
+                  children: widget.sessionRecords
+                      .map((record) => _buildSimpleRecordCard(record))
+                      .toList(),
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: const Text(
+                'No games played yet',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6B7280),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildSimpleRecordCard(Map<String, dynamic> record) {
+    // Safely extract values with fallbacks
+    final gameName = record['game']?.toString() ?? 'Unknown Game';
+    final difficulty = record['difficulty']?.toString() ?? 'Easy';
+    final completionTime = record['completionTime']?.toString() ?? '0';
+    final accuracy = record['accuracy']?.toString() ?? '0';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -487,29 +523,29 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: _getGameColor(record['game'] ?? '').withOpacity(0.1),
+              color: _getGameColor(gameName).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _getGameColor(record['game'] ?? '').withOpacity(0.3),
+                color: _getGameColor(gameName).withOpacity(0.3),
                 width: 2,
               ),
             ),
             child: Center(
               child: Text(
-                _getGameEmoji(record['game'] ?? ''),
+                _getGameEmoji(gameName),
                 style: const TextStyle(fontSize: 28),
               ),
             ),
           ),
           const SizedBox(width: 20),
-          
+
           // Game info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  record['game'] ?? 'Game',
+                  gameName,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -518,7 +554,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${record['difficulty'] ?? 'Easy'} Level',
+                  '$difficulty Level',
                   style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF6B7280),
@@ -526,7 +562,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
                   ),
                 ),
                 Text(
-                  'Time: ${record['completionTime'] ?? 0} seconds',
+                  'Time: ${completionTime}s',
                   style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF6B7280),
@@ -536,7 +572,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
               ],
             ),
           ),
-          
+
           // Score badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -555,7 +591,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
                   ),
                 ),
                 Text(
-                  '${record['accuracy'] ?? 0}%',
+                  '${accuracy}%',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -594,7 +630,9 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
           ),
         ),
         onPressed: () {
-          Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/home', (route) => false);
         },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -636,6 +674,22 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
         return const Color(0xFF3B82F6); // Blue
       case 'scrabble':
         return const Color(0xFF059669); // Teal
+      case 'who moved?':
+        return const Color(0xFF3B82F6); // Blue
+      case 'light tap':
+        return const Color(0xFFF59E0B); // Orange
+      case 'find me':
+        return const Color(0xFF10B981); // Green
+      case 'fruit shuffle':
+        return const Color(0xFFEF4444); // Red
+      case 'object hunt':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'sound match':
+        return const Color(0xFF059669); // Teal
+      case 'rhyme time':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'picture words':
+        return const Color(0xFFF59E0B); // Orange
       default:
         return const Color(0xFF6B7280); // Gray
     }
@@ -667,11 +721,18 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
         return '🍎';
       case 'object hunt':
         return '🕵️';
+      case 'sound match':
+        return '🔊';
+      case 'rhyme time':
+        return '🎵';
+      case 'picture words':
+        return '🖼️';
       default:
         return '🎮';
     }
   }
 }
+
 class _ConfettiPainter extends CustomPainter {
   final double progress;
   _ConfettiPainter(this.progress);

@@ -2422,6 +2422,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       options = records
           .map((r) => r['challengeFocus']?.toString() ?? 'Unknown')
           .toSet()
+          .toList()
+          .where((option) => option.toLowerCase() != 'auditory processing')
           .toList();
     }
 

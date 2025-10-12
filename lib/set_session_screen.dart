@@ -646,409 +646,287 @@ class _SetSessionScreenState extends State<SetSessionScreen>
   Widget build(BuildContext context) {
     try {
       final studentName = widget.student['fullName'] ?? 'Student';
-      return Scaffold(
-        // Remove backgroundColor so image is visible
-        body: Stack(
-          children: [
-            // Background image
-            Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(
-                    'assets/background.png',
-                  ), // Make sure this exists!
-                  fit: BoxFit.cover,
+      // Check if all games are completed to prevent back navigation
+      final bool allGamesCompleted =
+          completedGames.length >= selectedGames.length;
+
+      return PopScope(
+        canPop:
+            !allGamesCompleted, // Prevent back navigation if all games completed
+        child: Scaffold(
+          // Remove backgroundColor so image is visible
+          body: Stack(
+            children: [
+              // Background image
+              Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(
+                      'assets/background.png',
+                    ), // Make sure this exists!
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            ),
-            // Foreground content
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  // Header
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      'set session',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
+              // Foreground content
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    // Header
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        'set session',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Main content - exact Figma layout
-                  Expanded(
-                    child: Row(
-                      children: [
-                        // Left panel - exactly like Figma
-                        SizedBox(
-                          width: 260,
-                          child: Column(
-                            children: [
-                              // Back button
-                              Container(
-                                width: double.infinity,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                                child: MaterialButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  shape: RoundedRectangleBorder(
+                    const SizedBox(height: 20),
+                    // Main content - exact Figma layout
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Left panel - exactly like Figma
+                          SizedBox(
+                            width: 260,
+                            child: Column(
+                              children: [
+                                // Back button
+                                Container(
+                                  width: double.infinity,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(25),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.arrow_back,
-                                        color: Colors.grey[600],
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Back',
-                                        style: TextStyle(
+                                  child: MaterialButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.arrow_back,
                                           color: Colors.grey[600],
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
+                                          size: 20,
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              // Selected Games panel
-                              Expanded(
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [Colors.white, Colors.grey[50]!],
-                                    ),
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                      BoxShadow(
-                                        color: Colors.white.withOpacity(0.8),
-                                        blurRadius: 8,
-                                        offset: const Offset(-2, -2),
-                                      ),
-                                    ],
-                                    border: Border.all(
-                                      color: Colors.grey[200]!,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      // Header with icon
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
-                                          horizontal: 4,
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            // Centered content
-                                            Center(
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      gradient: LinearGradient(
-                                                        colors: [
-                                                          const Color(
-                                                            0xFF5B6F4A,
-                                                          ),
-                                                          const Color(
-                                                            0xFF6B7F5A,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: const Color(
-                                                            0xFF5B6F4A,
-                                                          ).withOpacity(0.3),
-                                                          blurRadius: 6,
-                                                          offset: const Offset(
-                                                            0,
-                                                            2,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.games,
-                                                      color: Colors.white,
-                                                      size: 20,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Flexible(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        Text(
-                                                          'Selected Games',
-                                                          style: TextStyle(
-                                                            fontSize: 18,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: Colors
-                                                                .grey[800],
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          'for ${studentName.split(' ').first}',
-                                                          style: TextStyle(
-                                                            fontSize: 13,
-                                                            color: const Color(
-                                                              0xFF5B6F4A,
-                                                            ),
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                          ),
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  // Animated Recommendation Button
-                                                  AnimatedBuilder(
-                                                    animation:
-                                                        _recommendationIconAnimation,
-                                                    builder: (context, child) {
-                                                      return Transform.scale(
-                                                        scale:
-                                                            1.0 +
-                                                            (_recommendationIconAnimation
-                                                                    .value *
-                                                                0.15),
-                                                        child: Container(
-                                                          decoration: BoxDecoration(
-                                                            shape:
-                                                                BoxShape.circle,
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color:
-                                                                    const Color(
-                                                                      0xFFFFD740,
-                                                                    ).withOpacity(
-                                                                      _recommendationIconAnimation
-                                                                              .value *
-                                                                          0.4,
-                                                                    ),
-                                                                blurRadius: 8,
-                                                                spreadRadius: 2,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: IconButton(
-                                                            onPressed:
-                                                                _showRecommendationsManually,
-                                                            icon: const Icon(
-                                                              Icons.lightbulb,
-                                                            ),
-                                                            color: const Color(
-                                                              0xFFFFD740,
-                                                            ),
-                                                            iconSize: 24,
-                                                            tooltip:
-                                                                'View AI Recommendations',
-                                                            style: IconButton.styleFrom(
-                                                              backgroundColor:
-                                                                  const Color(
-                                                                    0xFF5B6F4A,
-                                                                  ),
-                                                              padding:
-                                                                  const EdgeInsets.all(
-                                                                    8,
-                                                                  ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      // Divider line after header
-                                      Container(
-                                        height: 1,
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.transparent,
-                                              Colors.grey[300]!,
-                                              Colors.transparent,
-                                            ],
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Back',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                // Selected Games panel
+                                Expanded(
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Colors.white,
+                                          Colors.grey[50]!,
+                                        ],
                                       ),
-                                      const SizedBox(height: 20),
-                                      // Game slots - 2x2 grid layout for selected games
-                                      Expanded(
-                                        child: selectedGames.isEmpty
-                                            ? Center(
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                        BoxShadow(
+                                          color: Colors.white.withOpacity(0.8),
+                                          blurRadius: 8,
+                                          offset: const Offset(-2, -2),
+                                        ),
+                                      ],
+                                      border: Border.all(
+                                        color: Colors.grey[200]!,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        // Header with icon
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                            horizontal: 4,
+                                          ),
+                                          child: Stack(
+                                            children: [
+                                              // Centered content
+                                              Center(
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Container(
                                                       padding:
                                                           const EdgeInsets.all(
-                                                            16,
+                                                            8,
                                                           ),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.grey[100],
-                                                        shape: BoxShape.circle,
-                                                        border: Border.all(
-                                                          color:
-                                                              Colors.grey[300]!,
-                                                          width: 2,
-                                                          strokeAlign: BorderSide
-                                                              .strokeAlignInside,
-                                                        ),
+                                                        gradient:
+                                                            LinearGradient(
+                                                              colors: [
+                                                                const Color(
+                                                                  0xFF5B6F4A,
+                                                                ),
+                                                                const Color(
+                                                                  0xFF6B7F5A,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: const Color(
+                                                              0xFF5B6F4A,
+                                                            ).withOpacity(0.3),
+                                                            blurRadius: 6,
+                                                            offset:
+                                                                const Offset(
+                                                                  0,
+                                                                  2,
+                                                                ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                      child: Icon(
-                                                        Icons
-                                                            .videogame_asset_outlined,
-                                                        size: 40,
-                                                        color: Colors.grey[400],
+                                                      child: const Icon(
+                                                        Icons.games,
+                                                        color: Colors.white,
+                                                        size: 20,
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 16),
-                                                    Text(
-                                                      'No games selected',
-                                                      style: TextStyle(
-                                                        color: Colors.grey[600],
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w500,
+                                                    const SizedBox(width: 12),
+                                                    Flexible(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Text(
+                                                            'Selected Games',
+                                                            style: TextStyle(
+                                                              fontSize: 18,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Colors
+                                                                  .grey[800],
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            'for ${studentName.split(' ').first}',
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF5B6F4A,
+                                                                  ),
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 8),
-                                                    Text(
-                                                      'Tap on game categories\nto add games',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: TextStyle(
-                                                        color: Colors.grey[500],
-                                                        fontSize: 12,
-                                                        height: 1.4,
-                                                      ),
+                                                    const SizedBox(width: 8),
+                                                    // Animated Recommendation Button
+                                                    AnimatedBuilder(
+                                                      animation:
+                                                          _recommendationIconAnimation,
+                                                      builder: (context, child) {
+                                                        return Transform.scale(
+                                                          scale:
+                                                              1.0 +
+                                                              (_recommendationIconAnimation
+                                                                      .value *
+                                                                  0.15),
+                                                          child: Container(
+                                                            decoration: BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color:
+                                                                      const Color(
+                                                                        0xFFFFD740,
+                                                                      ).withOpacity(
+                                                                        _recommendationIconAnimation.value *
+                                                                            0.4,
+                                                                      ),
+                                                                  blurRadius: 8,
+                                                                  spreadRadius:
+                                                                      2,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            child: IconButton(
+                                                              onPressed:
+                                                                  _showRecommendationsManually,
+                                                              icon: const Icon(
+                                                                Icons.lightbulb,
+                                                              ),
+                                                              color:
+                                                                  const Color(
+                                                                    0xFFFFD740,
+                                                                  ),
+                                                              iconSize: 24,
+                                                              tooltip:
+                                                                  'View AI Recommendations',
+                                                              style: IconButton.styleFrom(
+                                                                backgroundColor:
+                                                                    const Color(
+                                                                      0xFF5B6F4A,
+                                                                    ),
+                                                                padding:
+                                                                    const EdgeInsets.all(
+                                                                      8,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
                                                   ],
                                                 ),
-                                              )
-                                            : Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 35,
-                                                    ),
-                                                child: GridView.builder(
-                                                  gridDelegate:
-                                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                                        crossAxisCount: 2,
-                                                        mainAxisSpacing: 8,
-                                                        crossAxisSpacing: 8,
-                                                        childAspectRatio: 1.0,
-                                                      ),
-                                                  itemCount:
-                                                      selectedGames.length,
-                                                  shrinkWrap: true,
-                                                  physics:
-                                                      const NeverScrollableScrollPhysics(),
-                                                  itemBuilder: (context, index) {
-                                                    final game = selectedGames
-                                                        .elementAt(index);
-                                                    return GestureDetector(
-                                                      onTap: () =>
-                                                          _showSetDifficultyModal(
-                                                            game,
-                                                          ),
-                                                      child: Container(
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(
-                                                            0xFF5B6F4A,
-                                                          ),
-                                                          shape:
-                                                              BoxShape.circle,
-                                                          border: Border.all(
-                                                            color:
-                                                                _getDifficultyBorderColor(
-                                                                  game,
-                                                                ),
-                                                            width: 5,
-                                                          ),
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors
-                                                                  .black
-                                                                  .withOpacity(
-                                                                    0.1,
-                                                                  ),
-                                                              blurRadius: 4,
-                                                              offset:
-                                                                  const Offset(
-                                                                    0,
-                                                                    2,
-                                                                  ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        child: Center(
-                                                          child: Icon(
-                                                            _getGameIcon(game),
-                                                            color: Colors.white,
-                                                            size: 24,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
                                               ),
-                                      ),
-                                      // Move the instruction text to bottom
-                                      if (selectedGames.isNotEmpty) ...[
+                                            ],
+                                          ),
+                                        ),
                                         const SizedBox(height: 16),
-                                        // Divider line before instructions
+                                        // Divider line after header
                                         Container(
                                           height: 1,
                                           margin: const EdgeInsets.symmetric(
@@ -1064,102 +942,215 @@ class _SetSessionScreenState extends State<SetSessionScreen>
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
-                                        const Text(
-                                          'Tap on selected games to set difficulty',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.visible,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black54,
-                                            fontWeight: FontWeight.bold,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Difficulty indicators
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            _buildDifficultyIndicator(
-                                              'Starter',
-                                              Colors.green,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            _buildDifficultyIndicator(
-                                              'Growing',
-                                              Colors.orange,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            _buildDifficultyIndicator(
-                                              'Challenged',
-                                              Colors.red,
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Control buttons row
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            // Volume Control button
-                                            Container(
-                                              width: 44,
-                                              height: 44,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF5B6F4A),
-                                                borderRadius:
-                                                    BorderRadius.circular(22),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(
-                                                      0xFF5B6F4A,
-                                                    ).withOpacity(0.3),
-                                                    blurRadius: 6,
-                                                    offset: const Offset(0, 3),
+                                        const SizedBox(height: 20),
+                                        // Game slots - 2x2 grid layout for selected games
+                                        Expanded(
+                                          child: selectedGames.isEmpty
+                                              ? Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              16,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color:
+                                                              Colors.grey[100],
+                                                          shape:
+                                                              BoxShape.circle,
+                                                          border: Border.all(
+                                                            color: Colors
+                                                                .grey[300]!,
+                                                            width: 2,
+                                                            strokeAlign: BorderSide
+                                                                .strokeAlignInside,
+                                                          ),
+                                                        ),
+                                                        child: Icon(
+                                                          Icons
+                                                              .videogame_asset_outlined,
+                                                          size: 40,
+                                                          color:
+                                                              Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 16,
+                                                      ),
+                                                      Text(
+                                                        'No games selected',
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors.grey[600],
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'Tap on game categories\nto add games',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors.grey[500],
+                                                          fontSize: 12,
+                                                          height: 1.4,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ],
-                                              ),
-                                              child: Material(
-                                                color: Colors.transparent,
-                                                child: InkWell(
-                                                  borderRadius:
-                                                      BorderRadius.circular(22),
-                                                  onTap:
-                                                      _showVolumeControlDialog,
-                                                  child: Center(
-                                                    child: Icon(
-                                                      _volumeManager.sessionBackgroundMusicVolume >
-                                                                  0 ||
-                                                              _volumeManager
-                                                                      .sessionSoundEffectsVolume >
-                                                                  0
-                                                          ? Icons.music_note
-                                                          : Icons.music_off,
-                                                      color: Colors.white,
-                                                      size: 22,
-                                                    ),
+                                                )
+                                              : Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 35,
+                                                      ),
+                                                  child: GridView.builder(
+                                                    gridDelegate:
+                                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                                          crossAxisCount: 2,
+                                                          mainAxisSpacing: 8,
+                                                          crossAxisSpacing: 8,
+                                                          childAspectRatio: 1.0,
+                                                        ),
+                                                    itemCount:
+                                                        selectedGames.length,
+                                                    shrinkWrap: true,
+                                                    physics:
+                                                        const NeverScrollableScrollPhysics(),
+                                                    itemBuilder: (context, index) {
+                                                      final game = selectedGames
+                                                          .elementAt(index);
+                                                      return GestureDetector(
+                                                        onTap: () =>
+                                                            _showSetDifficultyModal(
+                                                              game,
+                                                            ),
+                                                        child: Container(
+                                                          decoration: BoxDecoration(
+                                                            color: const Color(
+                                                              0xFF5B6F4A,
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            border: Border.all(
+                                                              color:
+                                                                  _getDifficultyBorderColor(
+                                                                    game,
+                                                                  ),
+                                                              width: 5,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .black
+                                                                    .withOpacity(
+                                                                      0.1,
+                                                                    ),
+                                                                blurRadius: 4,
+                                                                offset:
+                                                                    const Offset(
+                                                                      0,
+                                                                      2,
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Center(
+                                                            child: Icon(
+                                                              _getGameIcon(
+                                                                game,
+                                                              ),
+                                                              color:
+                                                                  Colors.white,
+                                                              size: 24,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
                                                 ),
+                                        ),
+                                        // Move the instruction text to bottom
+                                        if (selectedGames.isNotEmpty) ...[
+                                          const SizedBox(height: 16),
+                                          // Divider line before instructions
+                                          Container(
+                                            height: 1,
+                                            margin: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.grey[300]!,
+                                                  Colors.transparent,
+                                                ],
                                               ),
                                             ),
-                                            // Clear All button (only show when games are selected)
-                                            if (selectedGames.isNotEmpty)
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Tap on selected games to set difficulty',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.visible,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black54,
+                                              fontWeight: FontWeight.bold,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // Difficulty indicators
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              _buildDifficultyIndicator(
+                                                'Starter',
+                                                Colors.green,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              _buildDifficultyIndicator(
+                                                'Growing',
+                                                Colors.orange,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              _buildDifficultyIndicator(
+                                                'Challenged',
+                                                Colors.red,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // Control buttons row
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              // Volume Control button
                                               Container(
                                                 width: 44,
                                                 height: 44,
                                                 decoration: BoxDecoration(
                                                   color: const Color(
-                                                    0xFFE57373,
+                                                    0xFF5B6F4A,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(22),
                                                   boxShadow: [
                                                     BoxShadow(
                                                       color: const Color(
-                                                        0xFFE57373,
+                                                        0xFF5B6F4A,
                                                       ).withOpacity(0.3),
                                                       blurRadius: 6,
                                                       offset: const Offset(
@@ -1176,16 +1167,17 @@ class _SetSessionScreenState extends State<SetSessionScreen>
                                                         BorderRadius.circular(
                                                           22,
                                                         ),
-                                                    onTap: () {
-                                                      setState(() {
-                                                        selectedGames.clear();
-                                                        gameDifficulties
-                                                            .clear();
-                                                      });
-                                                    },
-                                                    child: const Center(
+                                                    onTap:
+                                                        _showVolumeControlDialog,
+                                                    child: Center(
                                                       child: Icon(
-                                                        Icons.delete_outline,
+                                                        _volumeManager.sessionBackgroundMusicVolume >
+                                                                    0 ||
+                                                                _volumeManager
+                                                                        .sessionSoundEffectsVolume >
+                                                                    0
+                                                            ? Icons.music_note
+                                                            : Icons.music_off,
                                                         color: Colors.white,
                                                         size: 22,
                                                       ),
@@ -1193,111 +1185,166 @@ class _SetSessionScreenState extends State<SetSessionScreen>
                                                   ),
                                                 ),
                                               ),
-                                          ],
-                                        ),
+                                              // Clear All button (only show when games are selected)
+                                              if (selectedGames.isNotEmpty)
+                                                Container(
+                                                  width: 44,
+                                                  height: 44,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFE57373,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          22,
+                                                        ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: const Color(
+                                                          0xFFE57373,
+                                                        ).withOpacity(0.3),
+                                                        blurRadius: 6,
+                                                        offset: const Offset(
+                                                          0,
+                                                          3,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Material(
+                                                    color: Colors.transparent,
+                                                    child: InkWell(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            22,
+                                                          ),
+                                                      onTap: () {
+                                                        setState(() {
+                                                          selectedGames.clear();
+                                                          gameDifficulties
+                                                              .clear();
+                                                        });
+                                                      },
+                                                      child: const Center(
+                                                        child: Icon(
+                                                          Icons.delete_outline,
+                                                          color: Colors.white,
+                                                          size: 22,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              // Save and Play buttons with images
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Colors.transparent,
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: MaterialButton(
-                                        onPressed: _saving
-                                            ? null
-                                            : _saveSession,
-                                        shape: RoundedRectangleBorder(
+                                const SizedBox(height: 20),
+                                // Save and Play buttons with images
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
                                           borderRadius: BorderRadius.circular(
                                             25,
                                           ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              'assets/save.png',
-                                              height: 80,
-                                              width: 80,
+                                        child: MaterialButton(
+                                          onPressed: _saving
+                                              ? null
+                                              : _saveSession,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              25,
                                             ),
-                                          ],
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Image.asset(
+                                                'assets/save.png',
+                                                height: 80,
+                                                width: 80,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Colors.transparent,
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: MaterialButton(
-                                        onPressed: _showPlayModal,
-                                        shape: RoundedRectangleBorder(
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
                                           borderRadius: BorderRadius.circular(
                                             25,
                                           ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              'assets/play.png',
-                                              height: 100,
-                                              width: 80,
+                                        child: MaterialButton(
+                                          onPressed: _showPlayModal,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              25,
                                             ),
-                                          ],
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Image.asset(
+                                                'assets/play.png',
+                                                height: 100,
+                                                width: 80,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
-                        // Right panel - 2x2 category grid centered and compact
-                        Expanded(
-                          child: Center(
-                            child: SizedBox(
-                              width: 600,
-                              height: 600,
-                              child: GridView.count(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 20,
-                                crossAxisSpacing: 20,
-                                childAspectRatio: 1.0,
-                                physics: const NeverScrollableScrollPhysics(),
-                                children: [
-                                  _buildCategoryCard('Attention'),
-                                  _buildCategoryCard('Verbal'),
-                                  _buildCategoryCard('Memory'),
-                                  _buildCategoryCard('Logic'),
-                                ],
+                          const SizedBox(width: 20),
+                          // Right panel - 2x2 category grid centered and compact
+                          Expanded(
+                            child: Center(
+                              child: SizedBox(
+                                width: 600,
+                                height: 600,
+                                child: GridView.count(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 20,
+                                  crossAxisSpacing: 20,
+                                  childAspectRatio: 1.0,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: [
+                                    _buildCategoryCard('Attention'),
+                                    _buildCategoryCard('Verbal'),
+                                    _buildCategoryCard('Memory'),
+                                    _buildCategoryCard('Logic'),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     } catch (e, st) {

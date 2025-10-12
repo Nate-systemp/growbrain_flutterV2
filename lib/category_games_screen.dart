@@ -169,10 +169,10 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
     }
 
     final horizontalPadding = isTablet
-        ? screenSize.width * 0.10
-        : screenSize.width * 0.06;
-    final topPadding = isTablet ? 56.0 : 24.0;
-    final spacing = isTablet ? 36.0 : 20.0;
+        ? screenSize.width * 0.08
+        : screenSize.width * 0.05;
+    final topPadding = isTablet ? 40.0 : 20.0;
+    final spacing = isTablet ? 28.0 : 16.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -204,16 +204,16 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                       children: [
                         // Simple white triangle button
                         Container(
-                          width: 40.0,
-                          height: 40.0,
+                          width: 32.0,
+                          height: 32.0,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(6.0),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.3),
-                                blurRadius: 4.0,
-                                offset: const Offset(2, 2),
+                                blurRadius: 3.0,
+                                offset: const Offset(1, 1),
                               ),
                             ],
                           ),
@@ -221,7 +221,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                             child: Icon(
                               Icons.arrow_back_ios,
                               color: Colors.grey[800],
-                              size: 18.0,
+                              size: 14.0,
                             ),
                           ),
                         ),
@@ -231,7 +231,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                           'Back',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontSize: 18.0,
+                            fontSize: 14.0,
                             fontWeight: FontWeight.w600,
                             shadows: [
                               Shadow(
@@ -266,16 +266,16 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                             opacity: _selectedGameIndex > 0 ? 1.0 : 0.3,
                             child: Image.asset(
                               'assets/arrowleft.png',
-                              width: isTablet ? 124 : 68,
-                              height: isTablet ? 124 : 68,
+                              width: isTablet ? 80 : 50,
+                              height: isTablet ? 80 : 50,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 44),
+                        const SizedBox(width: 24),
                         // Game Card (PageView)
                         Expanded(
                           child: SizedBox(
-                            height: isTablet ? 640 : 60,
+                            height: isTablet ? 500 : 50,
                             child: PageView.builder(
                               controller: _pageController,
                               onPageChanged: (index) {
@@ -298,7 +298,7 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 24),
                         // Right Arrow
                         GestureDetector(
                           onTap: _selectedGameIndex < games.length - 1
@@ -313,8 +313,8 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
                                 : 0.3,
                             child: Image.asset(
                               'assets/arrowright.png',
-                              width: isTablet ? 124 : 48,
-                              height: isTablet ? 124 : 48,
+                              width: isTablet ? 80 : 40,
+                              height: isTablet ? 80 : 40,
                             ),
                           ),
                         ),
@@ -598,7 +598,7 @@ class _PSPGameCard extends StatelessWidget {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final double circleSize = large ? 420 : 370;
+    final double circleSize = large ? 320 : 280;
 
     return GestureDetector(
       onTap: onTap,
@@ -630,10 +630,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/lighttapbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -662,10 +662,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/whomovedbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -694,10 +694,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/findmebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -726,10 +726,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/picturewordsbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -758,10 +758,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/riddletimebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -790,10 +790,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/rhymetimebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -822,10 +822,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/matchcardsbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -854,10 +854,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/fruitshufflebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -886,10 +886,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/soundmatchbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -918,10 +918,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/puzzlegamebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -950,10 +950,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/tictactoebutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
@@ -982,10 +982,10 @@ class _PSPGameCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Image.asset(
               'assets/objecthuntbutton.png',
-              width: large ? 350 : 180,
+              width: large ? 280 : 140,
               fit: BoxFit.contain,
             ),
           ]
