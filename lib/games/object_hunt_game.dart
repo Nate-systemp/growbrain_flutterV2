@@ -66,6 +66,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
   List<String> targetFruits = [];
   int score = 0;
   int foundCount = 0;
+  int wrongTaps = 0; // Track wrong taps for accuracy calculation
   int totalTargets = 0;
   int countdownNumber = 0;
   bool gameStarted = false;
@@ -202,6 +203,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     grid.clear();
     targetFruits.clear();
     foundCount = 0;
+    wrongTaps = 0;
     score = 0;
     for (int row = 0; row < 4; row++) {
       List<GridCell> rowCells = [];
@@ -253,6 +255,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
         setState(() {
           countdownNumber = 0;
           foundCount = 0;
+          wrongTaps = 0;
           score = 0;
           currentCol = 0;
           gameStartTime = DateTime.now();
@@ -299,7 +302,15 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
         timer.cancel();
         setState(() { gameActive = false; });
         final timeTaken = DateTime.now().difference(gameStartTime).inSeconds;
-        int accuracy = totalTargets > 0 ? ((foundCount / totalTargets) * 100).round() : 0;
+        // Calculate accuracy with wrong taps factored in
+        double accuracyDouble = 0;
+        if (totalTargets > 0) {
+          double completionRate = foundCount / totalTargets;
+          int totalAttempts = foundCount + wrongTaps;
+          double precisionRate = totalAttempts > 0 ? foundCount / totalAttempts : 1.0;
+          accuracyDouble = (completionRate * precisionRate) * 100;
+        }
+        int accuracy = accuracyDouble.round();
         _showGameOverDialog(
           won: false,
           foundCount: foundCount,
@@ -370,6 +381,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
       // If wrong box tapped, unlock column so they can try again
       setState(() {
         grid[row][col].isShaking = true;
+        wrongTaps++; // Increment wrong taps for accuracy calculation
       });
 
       SoundEffectsManager().playWrong();
@@ -413,10 +425,16 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
 
     gameTimer?.cancel();
 
-    // Calculate stats
-    double accuracyDouble = totalTargets > 0
-        ? (foundCount / totalTargets) * 100
-        : 0;
+    // Calculate stats - balance between correct finds and mistakes
+    // Formula: (correctFinds / totalTargets) * (correctFinds / (correctFinds + wrongTaps))
+    // This considers both completion and accuracy
+    double accuracyDouble = 0;
+    if (totalTargets > 0) {
+      double completionRate = foundCount / totalTargets;
+      int totalAttempts = foundCount + wrongTaps;
+      double precisionRate = totalAttempts > 0 ? foundCount / totalAttempts : 1.0;
+      accuracyDouble = (completionRate * precisionRate) * 100;
+    }
     int accuracy = accuracyDouble.round();
     int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
 
@@ -1139,6 +1157,7 @@ class _ObjectHuntGameState extends State<ObjectHuntGame>
     setState(() {
       currentCol = 0;
       foundCount = 0;
+      wrongTaps = 0;
       gameStarted = false;
       gameActive = false;
       score = 0;

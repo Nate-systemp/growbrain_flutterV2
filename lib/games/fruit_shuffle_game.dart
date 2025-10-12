@@ -330,6 +330,9 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
     }
 
     if (correct == totalFruits) {
+      setState(() {
+        correctMatchesCount = totalFruits; // Update count on success
+      });
       SoundEffectsManager().playSuccessWithVoice();
       _showStatusOverlay(text: '✓', color: Colors.green, textColor: Colors.white).then((_) {
         _completeGame(true);
@@ -379,7 +382,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
     stopwatch.stop();
     gameCompleted = true;
     if (widget.onGameComplete != null) {
-      final int accuracy = totalFruits > 0 ? ((correctMatchesCount / totalFruits) * 100).round() : 0;
+      // Calculate accuracy based on efficiency: fewer attempts = higher accuracy
+      final int accuracy = totalAttempts > 0 ? ((1.0 / totalAttempts) * 100).round() : 100;
       final int completionTime = stopwatch.elapsed.inSeconds;
       widget.onGameComplete!(
         accuracy: accuracy,
@@ -911,7 +915,8 @@ class _FruitShuffleGameState extends State<FruitShuffleGame> with TickerProvider
   }
 
   void _showGameOverDialog(bool success) {
-    final accuracy = totalFruits > 0 ? ((correctMatchesCount / totalFruits) * 100).round() : 0;
+    // Calculate accuracy based on efficiency: fewer attempts = higher accuracy
+    final accuracy = totalAttempts > 0 ? ((1.0 / totalAttempts) * 100).round() : 100;
     final completionTime = stopwatch.elapsed.inSeconds;
     timerActive = false;
 

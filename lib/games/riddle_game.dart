@@ -453,7 +453,12 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
       });
       _startCurrentRiddle();
     } else {
-      _endGame();
+      // Increment to trigger completion screen
+      setState(() {
+        currentRiddleIndex++;
+        gameActive = false;
+      });
+      riddleTimer?.cancel();
     }
   }
 
@@ -594,32 +599,6 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  void _endGame() {
-    setState(() {
-      gameActive = false;
-    });
-
-    riddleTimer?.cancel();
-
-    // Calculate game statistics
-    double accuracyDouble = totalRiddles > 0
-        ? (correctAnswers / totalRiddles) * 100
-        : 0;
-    int accuracy = accuracyDouble.round();
-    int completionTime = DateTime.now().difference(gameStartTime).inSeconds;
-
-    // Call completion callback if provided
-    if (widget.onGameComplete != null) {
-      widget.onGameComplete!(
-        accuracy: accuracy,
-        completionTime: completionTime,
-        challengeFocus: 'Logic',
-        gameName: 'Riddle',
-        difficulty: widget.difficulty,
-      );
-    }
   }
 
   // PIN PROTECTION METHODS
