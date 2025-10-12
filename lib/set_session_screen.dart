@@ -27,9 +27,11 @@ class SetSessionScreen extends StatefulWidget {
   State<SetSessionScreen> createState() => _SetSessionScreenState();
 }
 
-class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerProviderStateMixin {
+class _SetSessionScreenState extends State<SetSessionScreen>
+    with SingleTickerProviderStateMixin {
   final List<String> allGames = ['Attention', 'Verbal', 'Memory', 'Logic'];
-  List<String> availableGames = []; // Will be filtered based on student's cognitive needs
+  List<String> availableGames =
+      []; // Will be filtered based on student's cognitive needs
   final Set<String> selectedGames = {};
   final Map<String, List<String>> categoryGames = {
     'Attention': ['Who Moved?', 'Light Tap', 'Find Me'],
@@ -45,7 +47,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
   // Session tracking
   List<Map<String, dynamic>> sessionRecords = [];
   Set<String> completedGames = {};
-  
+
   // Game recommendations
   bool _hasShownRecommendations = false;
   late AnimationController _recommendationIconController;
@@ -56,20 +58,20 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
     super.initState();
     _initializeAvailableGames();
     _loadSession();
-    
+
     // Initialize animation controller for recommendation icon
     _recommendationIconController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _recommendationIconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _recommendationIconController,
         curve: Curves.easeInOut,
       ),
     );
-    
+
     // Show recommendations after a short delay to let UI settle
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted && !_hasShownRecommendations) {
@@ -89,19 +91,19 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
   void _initializeAvailableGames() {
     // Filter games based on student's cognitive needs
     availableGames.clear();
-    
+
     // Check which cognitive needs are enabled for this student
     final bool hasAttention = widget.student['attention'] == true;
     final bool hasVerbal = widget.student['verbal'] == true;
     final bool hasMemory = widget.student['memory'] == true;
     final bool hasLogic = widget.student['logic'] == true;
-    
+
     // Add available game categories based on student's needs
     if (hasAttention) availableGames.add('Attention');
     if (hasVerbal) availableGames.add('Verbal');
     if (hasMemory) availableGames.add('Memory');
     if (hasLogic) availableGames.add('Logic');
-    
+
     // If no cognitive needs are selected, show all games (fallback)
     if (availableGames.isEmpty) {
       availableGames.addAll(allGames);
@@ -112,10 +114,10 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final studentId = widget.student['id'] ?? widget.student['fullName'];
-    
+
     // Start session with SessionVolumeManager
     await _volumeManager.startSession(studentId);
-    
+
     try {
       final doc = await FirebaseFirestore.instance
           .collection('teachers')
@@ -184,13 +186,11 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
           .doc(user.uid)
           .collection('students')
           .doc(studentId)
-          .set({
-            'session': selectedGames.toList(),
-          }, SetOptions(merge: true));
-      
+          .set({'session': selectedGames.toList()}, SetOptions(merge: true));
+
       // Save session volumes through SessionVolumeManager
       await _volumeManager.saveSessionVolumes(studentId);
-      
+
       // Show fun and modern success dialog
       _showModernSuccessDialog();
     } catch (e) {
@@ -203,7 +203,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
 
   void _showModernSuccessDialog() {
     OverlayEntry? overlayEntry;
-    
+
     overlayEntry = OverlayEntry(
       builder: (BuildContext context) {
         return ModernSuccessDialog(
@@ -212,10 +212,10 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
         );
       },
     );
-    
+
     // Insert the overlay
     Overlay.of(context).insert(overlayEntry);
-    
+
     // Remove overlay after animation completes
     Future.delayed(const Duration(milliseconds: 4000), () {
       overlayEntry?.remove();
@@ -408,7 +408,8 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
       context: context,
       barrierDismissible: true,
       builder: (ctx) => VolumeControlDialog(
-        initialBackgroundMusicVolume: _volumeManager.sessionBackgroundMusicVolume,
+        initialBackgroundMusicVolume:
+            _volumeManager.sessionBackgroundMusicVolume,
         initialSoundEffectsVolume: _volumeManager.sessionSoundEffectsVolume,
         onBackgroundMusicVolumeChanged: (volume) async {
           await _volumeManager.setSessionBackgroundMusicVolume(volume);
@@ -431,10 +432,12 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
   }) async {
     // Prevent duplicate game records for the same game in this session
     if (completedGames.contains(gameName)) {
-      print('Game $gameName already completed in this session, skipping duplicate record');
+      print(
+        'Game $gameName already completed in this session, skipping duplicate record',
+      );
       return;
     }
-    
+
     final user = FirebaseAuth.instance.currentUser;
     final studentId = widget.student['id'] ?? widget.student['fullName'];
     final now = DateTime.now();
@@ -463,7 +466,9 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
       completedGames.add(gameName);
     });
 
-    print('Session progress: ${completedGames.length}/${selectedGames.length} games completed');
+    print(
+      'Session progress: ${completedGames.length}/${selectedGames.length} games completed',
+    );
     print('Completed games: ${completedGames.toList()}');
     print('Session records count: ${sessionRecords.length}');
 
@@ -486,12 +491,12 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
   /// Analyze student performance and recommend games based on weak areas
   Future<void> _analyzeAndRecommendGames() async {
     if (_hasShownRecommendations) return;
-    
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     final studentId = widget.student['id'] ?? widget.student['fullName'];
-    
+
     try {
       // Fetch all student records from Firebase
       final recordsSnapshot = await FirebaseFirestore.instance
@@ -503,13 +508,13 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
           .orderBy('date', descending: true)
           .limit(50) // Get last 50 records for analysis
           .get();
-      
+
       if (recordsSnapshot.docs.isEmpty) {
         // No records yet, don't show recommendations
         setState(() => _hasShownRecommendations = true);
         return;
       }
-      
+
       // Analyze performance by challenge focus
       Map<String, List<int>> focusAreaScores = {
         'Attention': [],
@@ -517,17 +522,19 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
         'Memory': [],
         'Logic': [],
       };
-      
+
       for (var doc in recordsSnapshot.docs) {
         final data = doc.data();
         final challengeFocus = data['challengeFocus'] as String?;
         final accuracy = data['accuracy'] as int?;
-        
-        if (challengeFocus != null && accuracy != null && focusAreaScores.containsKey(challengeFocus)) {
+
+        if (challengeFocus != null &&
+            accuracy != null &&
+            focusAreaScores.containsKey(challengeFocus)) {
           focusAreaScores[challengeFocus]!.add(accuracy);
         }
       }
-      
+
       // Calculate average accuracy for each focus area
       Map<String, double> averageScores = {};
       for (var entry in focusAreaScores.entries) {
@@ -536,19 +543,18 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
           averageScores[entry.key] = avg;
         }
       }
-      
+
       // Identify weak areas (accuracy < 70%) and sort by weakest first
-      List<MapEntry<String, double>> weakAreas = averageScores.entries
-          .where((entry) => entry.value < 70)
-          .toList()
-        ..sort((a, b) => a.value.compareTo(b.value)); // Weakest first
-      
+      List<MapEntry<String, double>> weakAreas =
+          averageScores.entries.where((entry) => entry.value < 70).toList()
+            ..sort((a, b) => a.value.compareTo(b.value)); // Weakest first
+
       if (weakAreas.isEmpty) {
         // Student is doing well in all areas!
         setState(() => _hasShownRecommendations = true);
         return;
       }
-      
+
       // Generate recommendations based on weak areas and student's cognitive needs
       List<String> recommendedGames = [];
       for (var weakArea in weakAreas) {
@@ -564,39 +570,38 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
           }
         }
       }
-      
+
       // Also add some games from strong areas for balance (1 game)
-      List<MapEntry<String, double>> strongAreas = averageScores.entries
-          .where((entry) => entry.value >= 70)
-          .toList()
-        ..sort((a, b) => b.value.compareTo(a.value)); // Strongest first
-      
+      List<MapEntry<String, double>> strongAreas =
+          averageScores.entries.where((entry) => entry.value >= 70).toList()
+            ..sort((a, b) => b.value.compareTo(a.value)); // Strongest first
+
       if (strongAreas.isNotEmpty && recommendedGames.length < 5) {
         final strongCategory = strongAreas.first.key;
         if (availableGames.contains(strongCategory)) {
           final gamesInCategory = categoryGames[strongCategory]!;
           for (var game in gamesInCategory.take(1)) {
-            if (!recommendedGames.contains(game) && recommendedGames.length < 5) {
+            if (!recommendedGames.contains(game) &&
+                recommendedGames.length < 5) {
               recommendedGames.add(game);
             }
           }
         }
       }
-      
+
       // Limit to 5 games total
       recommendedGames = recommendedGames.take(5).toList();
-      
+
       if (recommendedGames.isNotEmpty && mounted) {
         setState(() => _hasShownRecommendations = true);
         _showRecommendationsDialog(recommendedGames, weakAreas, averageScores);
       }
-      
     } catch (e) {
       print('Error analyzing student performance: $e');
       setState(() => _hasShownRecommendations = true);
     }
   }
-  
+
   /// Show recommendations dialog with intelligent game suggestions
   void _showRecommendationsDialog(
     List<String> recommendedGames,
@@ -629,7 +634,7 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   /// Manually trigger recommendations (callable anytime)
   void _showRecommendationsManually() {
     // Reset flag to allow re-analysis
@@ -637,560 +642,686 @@ class _SetSessionScreenState extends State<SetSessionScreen> with SingleTickerPr
     _analyzeAndRecommendGames();
   }
 
- @override
-Widget build(BuildContext context) {
-  try {
-    final studentName = widget.student['fullName'] ?? 'Student';
-    return Scaffold(
-      // Remove backgroundColor so image is visible
-      body: Stack(
-        children: [
-          // Background image
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/background.png'), // Make sure this exists!
-                fit: BoxFit.cover,
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final studentName = widget.student['fullName'] ?? 'Student';
+      return Scaffold(
+        // Remove backgroundColor so image is visible
+        body: Stack(
+          children: [
+            // Background image
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(
+                    'assets/background.png',
+                  ), // Make sure this exists!
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          // Foreground content
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                // Header
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    'set session',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
+            // Foreground content
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  // Header
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      'set session',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Main content - exact Figma layout
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Left panel - exactly like Figma
-                      SizedBox(
-                        width: 260,
-                        child: Column(
+                  const SizedBox(height: 20),
+                  // Main content - exact Figma layout
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // Left panel - exactly like Figma
+                        SizedBox(
+                          width: 260,
+                          child: Column(
                             children: [
-                            // Back button
-                            Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: MaterialButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                Icon(
-                                  Icons.arrow_back,
-                                  color: Colors.grey[600],
-                                  size: 20,
+                              // Back button
+                              Container(
+                                width: double.infinity,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(25),
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Back',
-                                  style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
+                                child: MaterialButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
                                   ),
-                                ),
-                                ],
-                              ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            // Selected Games panel
-                            Expanded(
-                              child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white,
-                                    Colors.grey[50]!,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                  BoxShadow(
-                                    color: Colors.white.withOpacity(0.8),
-                                    blurRadius: 8,
-                                    offset: const Offset(-2, -2),
-                                  ),
-                                ],
-                                border: Border.all(
-                                  color: Colors.grey[200]!,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                // Header with icon
-                                Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                  child: Stack(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      // Centered content
-                                      Center(
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
+                                      Icon(
+                                        Icons.arrow_back,
+                                        color: Colors.grey[600],
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Back',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              // Selected Games panel
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Colors.white, Colors.grey[50]!],
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.white.withOpacity(0.8),
+                                        blurRadius: 8,
+                                        offset: const Offset(-2, -2),
+                                      ),
+                                    ],
+                                    border: Border.all(
+                                      color: Colors.grey[200]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Header with icon
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 4,
+                                        ),
+                                        child: Stack(
                                           children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    const Color(0xFF5B6F4A),
-                                                    const Color(0xFF6B7F5A),
-                                                  ],
-                                                ),
-                                                borderRadius: BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xFF5B6F4A).withOpacity(0.3),
-                                                    blurRadius: 6,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: const Icon(
-                                                Icons.games,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Flexible(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                            // Centered content
+                                            Center(
+                                              child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Text(
-                                                    'Selected Games',
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.grey[800],
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    'for ${studentName.split(' ').first}',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      color: const Color(0xFF5B6F4A),
-                                                      fontWeight: FontWeight.w500,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            // Animated Recommendation Button
-                                            AnimatedBuilder(
-                                              animation: _recommendationIconAnimation,
-                                              builder: (context, child) {
-                                                return Transform.scale(
-                                                  scale: 1.0 + (_recommendationIconAnimation.value * 0.15),
-                                                  child: Container(
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(8),
                                                     decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
+                                                      gradient: LinearGradient(
+                                                        colors: [
+                                                          const Color(
+                                                            0xFF5B6F4A,
+                                                          ),
+                                                          const Color(
+                                                            0xFF6B7F5A,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: const Color(0xFFFFD740).withOpacity(_recommendationIconAnimation.value * 0.4),
-                                                          blurRadius: 8,
-                                                          spreadRadius: 2,
+                                                          color: const Color(
+                                                            0xFF5B6F4A,
+                                                          ).withOpacity(0.3),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
-                                                    child: IconButton(
-                                                      onPressed: _showRecommendationsManually,
-                                                      icon: const Icon(Icons.lightbulb),
-                                                      color: const Color(0xFFFFD740),
-                                                      iconSize: 24,
-                                                      tooltip: 'View AI Recommendations',
-                                                      style: IconButton.styleFrom(
-                                                        backgroundColor: const Color(0xFF5B6F4A),
-                                                        padding: const EdgeInsets.all(8),
-                                                      ),
+                                                    child: const Icon(
+                                                      Icons.games,
+                                                      color: Colors.white,
+                                                      size: 20,
                                                     ),
                                                   ),
-                                                );
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Divider line after header
-                                Container(
-                                  height: 1,
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.transparent,
-                                        Colors.grey[300]!,
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                // Game slots - 2x2 grid layout for selected games
-                                Expanded(
-                                  child: selectedGames.isEmpty
-                                    ? Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[100],
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.grey[300]!,
-                                                width: 2,
-                                                strokeAlign: BorderSide.strokeAlignInside,
+                                                  const SizedBox(width: 12),
+                                                  Flexible(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          'Selected Games',
+                                                          style: TextStyle(
+                                                            fontSize: 18,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Colors
+                                                                .grey[800],
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          'for ${studentName.split(' ').first}',
+                                                          style: TextStyle(
+                                                            fontSize: 13,
+                                                            color: const Color(
+                                                              0xFF5B6F4A,
+                                                            ),
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  // Animated Recommendation Button
+                                                  AnimatedBuilder(
+                                                    animation:
+                                                        _recommendationIconAnimation,
+                                                    builder: (context, child) {
+                                                      return Transform.scale(
+                                                        scale:
+                                                            1.0 +
+                                                            (_recommendationIconAnimation
+                                                                    .value *
+                                                                0.15),
+                                                        child: Container(
+                                                          decoration: BoxDecoration(
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color:
+                                                                    const Color(
+                                                                      0xFFFFD740,
+                                                                    ).withOpacity(
+                                                                      _recommendationIconAnimation
+                                                                              .value *
+                                                                          0.4,
+                                                                    ),
+                                                                blurRadius: 8,
+                                                                spreadRadius: 2,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: IconButton(
+                                                            onPressed:
+                                                                _showRecommendationsManually,
+                                                            icon: const Icon(
+                                                              Icons.lightbulb,
+                                                            ),
+                                                            color: const Color(
+                                                              0xFFFFD740,
+                                                            ),
+                                                            iconSize: 24,
+                                                            tooltip:
+                                                                'View AI Recommendations',
+                                                            style: IconButton.styleFrom(
+                                                              backgroundColor:
+                                                                  const Color(
+                                                                    0xFF5B6F4A,
+                                                                  ),
+                                                              padding:
+                                                                  const EdgeInsets.all(
+                                                                    8,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                            child: Icon(
-                                              Icons.videogame_asset_outlined,
-                                              size: 40,
-                                              color: Colors.grey[400],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'No games selected',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Tap on game categories\nto add games',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: Colors.grey[500],
-                                              fontSize: 12,
-                                              height: 1.4,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                    : Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 35),
-                                      child: GridView.builder(
-                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        mainAxisSpacing: 8,
-                                        crossAxisSpacing: 8,
-                                        childAspectRatio: 1.0,
-                                      ),
-                                      itemCount: selectedGames.length,
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemBuilder: (context, index) {
-                                        final game = selectedGames.elementAt(index);
-                                        return GestureDetector(
-                                        onTap: () => _showSetDifficultyModal(game),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                          color: const Color(0xFF5B6F4A),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: _getDifficultyBorderColor(game),
-                                            width: 5,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                            color: Colors.black.withOpacity(0.1),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                            ),
                                           ],
-                                          ),
-                                          child: Center(
-                                          child: Icon(
-                                            _getGameIcon(game),
-                                            color: Colors.white,
-                                            size: 24,
-                                          ),
-                                          ),
                                         ),
-                                        );
-                                      },
                                       ),
-                                    ),
-                                ),
-                                // Move the instruction text to bottom
-                                if (selectedGames.isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-                                  // Divider line before instructions
-                                  Container(
-                                    height: 1,
-                                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.grey[300]!,
-                                          Colors.transparent,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Tap on selected games to set difficulty',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.visible,
-                                    style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black54,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Control buttons row
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      // Volume Control button
+                                      const SizedBox(height: 16),
+                                      // Divider line after header
                                       Container(
-                                        width: 44,
-                                        height: 44,
+                                        height: 1,
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF5B6F4A),
-                                          borderRadius: BorderRadius.circular(22),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF5B6F4A).withOpacity(0.3),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(22),
-                                            onTap: _showVolumeControlDialog,
-                                            child: Center(
-                                              child: Icon(
-                                                _volumeManager.sessionBackgroundMusicVolume > 0 || _volumeManager.sessionSoundEffectsVolume > 0 
-                                                  ? Icons.music_note 
-                                                  : Icons.music_off,
-                                                color: Colors.white,
-                                                size: 22,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      // Clear All button (only show when games are selected)
-                                      if (selectedGames.isNotEmpty)
-                                        Container(
-                                          width: 44,
-                                          height: 44,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFE57373),
-                                            borderRadius: BorderRadius.circular(22),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFFE57373).withOpacity(0.3),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3),
-                                              ),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.transparent,
+                                              Colors.grey[300]!,
+                                              Colors.transparent,
                                             ],
                                           ),
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              borderRadius: BorderRadius.circular(22),
-                                              onTap: () {
-                                                setState(() {
-                                                  selectedGames.clear();
-                                                  gameDifficulties.clear();
-                                                });
-                                              },
-                                              child: const Center(
-                                                child: Icon(
-                                                  Icons.delete_outline,
-                                                  color: Colors.white,
-                                                  size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      // Game slots - 2x2 grid layout for selected games
+                                      Expanded(
+                                        child: selectedGames.isEmpty
+                                            ? Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            16,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey[100],
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color:
+                                                              Colors.grey[300]!,
+                                                          width: 2,
+                                                          strokeAlign: BorderSide
+                                                              .strokeAlignInside,
+                                                        ),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons
+                                                            .videogame_asset_outlined,
+                                                        size: 40,
+                                                        color: Colors.grey[400],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    Text(
+                                                      'No games selected',
+                                                      style: TextStyle(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Tap on game categories\nto add games',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: Colors.grey[500],
+                                                        fontSize: 12,
+                                                        height: 1.4,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            : Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 35,
+                                                    ),
+                                                child: GridView.builder(
+                                                  gridDelegate:
+                                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                                        crossAxisCount: 2,
+                                                        mainAxisSpacing: 8,
+                                                        crossAxisSpacing: 8,
+                                                        childAspectRatio: 1.0,
+                                                      ),
+                                                  itemCount:
+                                                      selectedGames.length,
+                                                  shrinkWrap: true,
+                                                  physics:
+                                                      const NeverScrollableScrollPhysics(),
+                                                  itemBuilder: (context, index) {
+                                                    final game = selectedGames
+                                                        .elementAt(index);
+                                                    return GestureDetector(
+                                                      onTap: () =>
+                                                          _showSetDifficultyModal(
+                                                            game,
+                                                          ),
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(
+                                                            0xFF5B6F4A,
+                                                          ),
+                                                          shape:
+                                                              BoxShape.circle,
+                                                          border: Border.all(
+                                                            color:
+                                                                _getDifficultyBorderColor(
+                                                                  game,
+                                                                ),
+                                                            width: 5,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors
+                                                                  .black
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  ),
+                                                              blurRadius: 4,
+                                                              offset:
+                                                                  const Offset(
+                                                                    0,
+                                                                    2,
+                                                                  ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Center(
+                                                          child: Icon(
+                                                            _getGameIcon(game),
+                                                            color: Colors.white,
+                                                            size: 24,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                      ),
+                                      // Move the instruction text to bottom
+                                      if (selectedGames.isNotEmpty) ...[
+                                        const SizedBox(height: 16),
+                                        // Divider line before instructions
+                                        Container(
+                                          height: 1,
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.grey[300]!,
+                                                Colors.transparent,
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'Tap on selected games to set difficulty',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.visible,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black54,
+                                            fontWeight: FontWeight.bold,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        // Difficulty indicators
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            _buildDifficultyIndicator(
+                                              'Starter',
+                                              Colors.green,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            _buildDifficultyIndicator(
+                                              'Growing',
+                                              Colors.orange,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            _buildDifficultyIndicator(
+                                              'Challenged',
+                                              Colors.red,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        // Control buttons row
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            // Volume Control button
+                                            Container(
+                                              width: 44,
+                                              height: 44,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF5B6F4A),
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: const Color(
+                                                      0xFF5B6F4A,
+                                                    ).withOpacity(0.3),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 3),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  borderRadius:
+                                                      BorderRadius.circular(22),
+                                                  onTap:
+                                                      _showVolumeControlDialog,
+                                                  child: Center(
+                                                    child: Icon(
+                                                      _volumeManager.sessionBackgroundMusicVolume >
+                                                                  0 ||
+                                                              _volumeManager
+                                                                      .sessionSoundEffectsVolume >
+                                                                  0
+                                                          ? Icons.music_note
+                                                          : Icons.music_off,
+                                                      color: Colors.white,
+                                                      size: 22,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
+                                            // Clear All button (only show when games are selected)
+                                            if (selectedGames.isNotEmpty)
+                                              Container(
+                                                width: 44,
+                                                height: 44,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFFE57373,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(22),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                        0xFFE57373,
+                                                      ).withOpacity(0.3),
+                                                      blurRadius: 6,
+                                                      offset: const Offset(
+                                                        0,
+                                                        3,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  child: InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          22,
+                                                        ),
+                                                    onTap: () {
+                                                      setState(() {
+                                                        selectedGames.clear();
+                                                        gameDifficulties
+                                                            .clear();
+                                                      });
+                                                    },
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.delete_outline,
+                                                        color: Colors.white,
+                                                        size: 22,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              // Save and Play buttons with images
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: MaterialButton(
+                                        onPressed: _saving
+                                            ? null
+                                            : _saveSession,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            25,
                                           ),
                                         ),
-                                    ],
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Image.asset(
+                                              'assets/save.png',
+                                              height: 80,
+                                              width: 80,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  // Difficulty indicators
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildDifficultyIndicator('Starter', Colors.green),
-                                      const SizedBox(width: 12),
-                                      _buildDifficultyIndicator('Growing', Colors.orange),
-                                      const SizedBox(width: 12),
-                                      _buildDifficultyIndicator('Challenged', Colors.red),
-                                    ],
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: MaterialButton(
+                                        onPressed: _showPlayModal,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            25,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Image.asset(
+                                              'assets/play.png',
+                                              height: 100,
+                                              width: 80,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
-                                ],
                               ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            // Save and Play buttons with images
-                            Row(
-                              children: [
-                              Expanded(
-                                child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.transparent,
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                                child: MaterialButton(
-                                  onPressed: _saving ? null : _saveSession,
-                                  shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                    'assets/save.png',
-                                    height: 80,
-                                    width: 80,
-                                    ),
-                                    
-                                  ],
-                                  ),
-                                ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.transparent,
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                                child: MaterialButton(
-                                  onPressed: _showPlayModal,
-                                  shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                    'assets/play.png',
-                                     height: 100,
-                                    width: 80,
-                                    ),
-                                  ],
-                                  ),
-                                ),
-                                ),
-                              ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 20),
-                      // Right panel - 2x2 category grid centered and compact
-                      Expanded(
-                        child: Center(
-                          child: SizedBox(
-                            width: 600,
-                            height: 600,
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 20,
-                              crossAxisSpacing: 20,
-                              childAspectRatio: 1.0,
-                              physics: const NeverScrollableScrollPhysics(),
-                              children: [
-                                _buildCategoryCard('Attention'),
-                                _buildCategoryCard('Verbal'),
-                                _buildCategoryCard('Memory'),
-                                _buildCategoryCard('Logic'),
-                              ],
+                        const SizedBox(width: 20),
+                        // Right panel - 2x2 category grid centered and compact
+                        Expanded(
+                          child: Center(
+                            child: SizedBox(
+                              width: 600,
+                              height: 600,
+                              child: GridView.count(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 20,
+                                crossAxisSpacing: 20,
+                                childAspectRatio: 1.0,
+                                physics: const NeverScrollableScrollPhysics(),
+                                children: [
+                                  _buildCategoryCard('Attention'),
+                                  _buildCategoryCard('Verbal'),
+                                  _buildCategoryCard('Memory'),
+                                  _buildCategoryCard('Logic'),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  } catch (e, st) {
-    debugPrint('Error in SetSessionScreen build: $e\n$st');
-    return Scaffold(
-      backgroundColor: const Color(0xFF5B6F4A),
-      body: const Center(
-        child: Text(
-          'Error loading session screen',
-          style: TextStyle(color: Colors.white, fontSize: 18),
+          ],
         ),
-      ),
-    );
+      );
+    } catch (e, st) {
+      debugPrint('Error in SetSessionScreen build: $e\n$st');
+      return Scaffold(
+        backgroundColor: const Color(0xFF5B6F4A),
+        body: const Center(
+          child: Text(
+            'Error loading session screen',
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+      );
+    }
   }
-}
+
   Widget _buildGameSlot(int index) {
     final hasGame = selectedGames.length > index;
     final game = hasGame ? selectedGames.elementAt(index) : null;
-    
+
     if (!hasGame) {
       return Container(); // Return empty container for slots without games
     }
-    
+
     return GestureDetector(
       onTap: () => _showSetDifficultyModal(game!),
       child: Container(
@@ -1206,11 +1337,7 @@ Widget build(BuildContext context) {
           ],
         ),
         child: Center(
-          child: Icon(
-            _getGameIcon(game!),
-            color: Colors.white,
-            size: 24,
-          ),
+          child: Icon(_getGameIcon(game!), color: Colors.white, size: 24),
         ),
       ),
     );
@@ -1220,7 +1347,7 @@ Widget build(BuildContext context) {
     final games = categoryGames[category] ?? [];
     final isSelected = selectedGames.any((game) => games.contains(game));
     final isEnabled = availableGames.contains(category);
-    
+
     return GestureDetector(
       onTap: isEnabled ? () => _openCategoryModal(category) : null,
       child: Stack(
@@ -1253,11 +1380,7 @@ Widget build(BuildContext context) {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 22),
               ),
             ),
         ],
@@ -1305,7 +1428,7 @@ Widget build(BuildContext context) {
       case 'Attention':
         return const Color(0xFFFFD740); // Yellow
       case 'Verbal':
-        return const Color(0xFF42A5F5); // Blue  
+        return const Color(0xFF42A5F5); // Blue
       case 'Memory':
         return const Color(0xFFFFE0B2); // Light peach/cream
       case 'Logic':
@@ -1366,10 +1489,7 @@ Widget build(BuildContext context) {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color,
-          width: 2,
-        ),
+        border: Border.all(color: color, width: 2),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
@@ -1440,13 +1560,16 @@ Widget build(BuildContext context) {
                     animation: _recommendationIconAnimation,
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: 1.0 + (_recommendationIconAnimation.value * 0.15),
+                        scale:
+                            1.0 + (_recommendationIconAnimation.value * 0.15),
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFFFD740).withOpacity(_recommendationIconAnimation.value * 0.4),
+                                color: const Color(0xFFFFD740).withOpacity(
+                                  _recommendationIconAnimation.value * 0.4,
+                                ),
                                 blurRadius: 6,
                                 spreadRadius: 1,
                               ),
@@ -1486,7 +1609,7 @@ Widget build(BuildContext context) {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Game slots - compact grid
               Expanded(
                 child: GridView.count(
@@ -1501,10 +1624,13 @@ Widget build(BuildContext context) {
                             ? selectedGames.elementAt(i)
                             : null,
                         difficulty: selectedGames.length > i
-                            ? gameDifficulties[selectedGames.elementAt(i)] ?? 'Starter'
+                            ? gameDifficulties[selectedGames.elementAt(i)] ??
+                                  'Starter'
                             : null,
                         onTap: selectedGames.length > i
-                            ? () => _showSetDifficultyModal(selectedGames.elementAt(i))
+                            ? () => _showSetDifficultyModal(
+                                selectedGames.elementAt(i),
+                              )
                             : null,
                       ),
                   ],
@@ -1513,9 +1639,9 @@ Widget build(BuildContext context) {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Action buttons - compact
         Container(
           width: double.infinity,
@@ -1544,11 +1670,10 @@ Widget build(BuildContext context) {
             ),
           ),
         ),
-        
       ],
     );
   }
-  
+
   Widget _buildSelectedGamesPanel(String studentName) {
     return _buildCompactSelectedGamesPanel(studentName);
   }
@@ -1569,14 +1694,14 @@ Widget build(BuildContext context) {
               (g) => categoryGames[category]!.contains(g),
             ),
             enabled: availableGames.contains(category),
-            onTap: availableGames.contains(category) 
+            onTap: availableGames.contains(category)
                 ? () => _openCategoryModal(category)
                 : () {},
           ),
       ],
     );
   }
-  
+
   Widget _buildGameCategoriesPanel() {
     return _buildCompactGameCategoriesPanel();
   }
@@ -1639,7 +1764,8 @@ class _CompactGameSlot extends StatelessWidget {
   final String? difficulty;
   final VoidCallback? onTap;
 
-  const _CompactGameSlot({Key? key, this.game, this.difficulty, this.onTap}) : super(key: key);
+  const _CompactGameSlot({Key? key, this.game, this.difficulty, this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -1650,30 +1776,28 @@ class _CompactGameSlot extends StatelessWidget {
         decoration: BoxDecoration(
           color: hasGame ? const Color(0xFF5B6F4A) : Colors.grey[300],
           shape: BoxShape.circle,
-          border: hasGame ? Border.all(
-            color: _getDifficultyBorderColorFromString(difficulty ?? 'Starter'),
-            width: 4,
-          ) : null,
-          boxShadow: hasGame ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
+          border: hasGame
+              ? Border.all(
+                  color: _getDifficultyBorderColorFromString(
+                    difficulty ?? 'Starter',
+                  ),
+                  width: 4,
+                )
+              : null,
+          boxShadow: hasGame
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Center(
           child: hasGame
-              ? Icon(
-                  _getGameIcon(game!),
-                  color: Colors.white,
-                  size: 20,
-                )
-              : Icon(
-                  Icons.add,
-                  color: Colors.grey[500],
-                  size: 20,
-                ),
+              ? Icon(_getGameIcon(game!), color: Colors.white, size: 20)
+              : Icon(Icons.add, color: Colors.grey[500], size: 20),
         ),
       ),
     );
@@ -1764,13 +1888,7 @@ class _CompactGameCard extends StatelessWidget {
                   color: color.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 40,
-                  ),
-                ),
+                child: Center(child: Icon(icon, color: color, size: 40)),
               ),
               const SizedBox(height: 12),
               Text(
@@ -1789,7 +1907,8 @@ class _CompactGameCard extends StatelessWidget {
   }
 }
 
-class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixin {
+class _GameCardState extends State<_GameCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -1801,13 +1920,9 @@ class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixi
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -1856,51 +1971,53 @@ class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixi
               height: 210,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
               decoration: BoxDecoration(
-                gradient: widget.enabled 
-                  ? LinearGradient(
-                      colors: _isPressed
-                        ? [Colors.grey[100]!, Colors.white]
-                        : [Colors.white, Colors.grey[50]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : LinearGradient(
-                      colors: [Colors.grey[200]!, Colors.grey[100]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                gradient: widget.enabled
+                    ? LinearGradient(
+                        colors: _isPressed
+                            ? [Colors.grey[100]!, Colors.white]
+                            : [Colors.white, Colors.grey[50]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : LinearGradient(
+                        colors: [Colors.grey[200]!, Colors.grey[100]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                 borderRadius: BorderRadius.circular(36),
-                boxShadow: widget.enabled ? [
-                  BoxShadow(
-                    color: _isPressed 
-                      ? Colors.black.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.15),
-                    blurRadius: _isPressed ? 6 : 12,
-                    offset: _isPressed 
-                      ? const Offset(1, 4)
-                      : const Offset(2, 8),
-                  ),
-                  if (!_isPressed && widget.selected)
-                    BoxShadow(
-                      color: widget.color.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                ] : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
-                    offset: const Offset(1, 4),
-                  ),
-                ],
-                border: widget.selected 
-                  ? Border.all(color: widget.color, width: 4) 
-                  : Border.all(
-                      color: widget.enabled 
-                        ? Colors.grey.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.1), 
-                      width: 2,
-                    ),
+                boxShadow: widget.enabled
+                    ? [
+                        BoxShadow(
+                          color: _isPressed
+                              ? Colors.black.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.15),
+                          blurRadius: _isPressed ? 6 : 12,
+                          offset: _isPressed
+                              ? const Offset(1, 4)
+                              : const Offset(2, 8),
+                        ),
+                        if (!_isPressed && widget.selected)
+                          BoxShadow(
+                            color: widget.color.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(1, 4),
+                        ),
+                      ],
+                border: widget.selected
+                    ? Border.all(color: widget.color, width: 4)
+                    : Border.all(
+                        color: widget.enabled
+                            ? Colors.grey.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                        width: 2,
+                      ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1910,29 +2027,31 @@ class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixi
                     height: 90,
                     decoration: BoxDecoration(
                       gradient: widget.enabled
-                        ? LinearGradient(
-                            colors: [
-                              widget.color.withOpacity(0.1),
-                              widget.color.withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : LinearGradient(
-                            colors: [
-                              Colors.grey.withOpacity(0.1),
-                              Colors.grey.withOpacity(0.05),
-                            ],
-                          ),
+                          ? LinearGradient(
+                              colors: [
+                                widget.color.withOpacity(0.1),
+                                widget.color.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : LinearGradient(
+                              colors: [
+                                Colors.grey.withOpacity(0.1),
+                                Colors.grey.withOpacity(0.05),
+                              ],
+                            ),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: widget.enabled ? widget.color.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+                        color: widget.enabled
+                            ? widget.color.withOpacity(0.3)
+                            : Colors.grey.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
                     child: Icon(
-                      widget.icon, 
-                      size: 50, 
+                      widget.icon,
+                      size: 50,
                       color: widget.enabled ? widget.color : Colors.grey[400],
                     ),
                   ),
@@ -1941,25 +2060,25 @@ class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixi
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      gradient: widget.enabled 
-                        ? LinearGradient(
-                            colors: [
-                              const Color(0xFFF7F7F7),
-                              const Color(0xFFEFEFEF),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          )
-                        : LinearGradient(
-                            colors: [Colors.grey[100]!, Colors.grey[50]!],
-                          ),
+                      gradient: widget.enabled
+                          ? LinearGradient(
+                              colors: [
+                                const Color(0xFFF7F7F7),
+                                const Color(0xFFEFEFEF),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            )
+                          : LinearGradient(
+                              colors: [Colors.grey[100]!, Colors.grey[50]!],
+                            ),
                       borderRadius: const BorderRadius.vertical(
                         bottom: Radius.circular(32),
                       ),
                       border: Border.all(
-                        color: widget.enabled 
-                          ? Colors.grey.withOpacity(0.1)
-                          : Colors.grey.withOpacity(0.05),
+                        color: widget.enabled
+                            ? Colors.grey.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.05),
                         width: 1,
                       ),
                     ),
@@ -1972,7 +2091,9 @@ class _GameCardState extends State<_GameCard> with SingleTickerProviderStateMixi
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
-                            color: widget.enabled ? const Color(0xFF393C48) : Colors.grey[500],
+                            color: widget.enabled
+                                ? const Color(0xFF393C48)
+                                : Colors.grey[500],
                             fontFamily: 'Nunito',
                             letterSpacing: 1.0,
                           ),
@@ -2051,7 +2172,8 @@ class _YellowButton extends StatefulWidget {
   State<_YellowButton> createState() => _YellowButtonState();
 }
 
-class _YellowButtonState extends State<_YellowButton> with SingleTickerProviderStateMixin {
+class _YellowButtonState extends State<_YellowButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -2063,13 +2185,9 @@ class _YellowButtonState extends State<_YellowButton> with SingleTickerProviderS
       duration: const Duration(milliseconds: 100),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -2116,37 +2234,34 @@ class _YellowButtonState extends State<_YellowButton> with SingleTickerProviderS
               height: 60,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: _isPressed 
-                    ? [const Color(0xFFE6C200), const Color(0xFFFFD740)]
-                    : [const Color(0xFFFFD740), const Color(0xFFFFC107)],
+                  colors: _isPressed
+                      ? [const Color(0xFFE6C200), const Color(0xFFFFD740)]
+                      : [const Color(0xFFFFD740), const Color(0xFFFFC107)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.circular(22),
-                boxShadow: _isPressed 
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 6),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFFFFD740).withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                border: Border.all(
-                  color: const Color(0xFFE6C200),
-                  width: 2,
-                ),
+                boxShadow: _isPressed
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFFFD740).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                border: Border.all(color: const Color(0xFFE6C200), width: 2),
               ),
               child: Center(
                 child: Text(
@@ -2183,7 +2298,8 @@ class _StyledButton extends StatefulWidget {
   State<_StyledButton> createState() => _StyledButtonState();
 }
 
-class _StyledButtonState extends State<_StyledButton> with SingleTickerProviderStateMixin {
+class _StyledButtonState extends State<_StyledButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -2195,13 +2311,9 @@ class _StyledButtonState extends State<_StyledButton> with SingleTickerProviderS
       duration: const Duration(milliseconds: 100),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -2248,33 +2360,33 @@ class _StyledButtonState extends State<_StyledButton> with SingleTickerProviderS
               height: 56,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: _isPressed 
-                    ? [widget.color.withOpacity(0.8), widget.color]
-                    : [widget.color, widget.color.withOpacity(0.8)],
+                  colors: _isPressed
+                      ? [widget.color.withOpacity(0.8), widget.color]
+                      : [widget.color, widget.color.withOpacity(0.8)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.circular(22),
-                boxShadow: _isPressed 
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 6),
-                      ),
-                      BoxShadow(
-                        color: widget.color.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                boxShadow: _isPressed
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: widget.color.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                 border: Border.all(
                   color: widget.color.withOpacity(0.7),
                   width: 2,
@@ -2406,7 +2518,8 @@ class _CategoryGamesModalState extends State<CategoryGamesModal> {
                       setState(() {
                         if (selected) {
                           localSelected.remove(g);
-                        } else if (widget.allSelected.length < widget.maxTotal) {
+                        } else if (widget.allSelected.length <
+                            widget.maxTotal) {
                           localSelected.add(g);
                         }
                       });
@@ -2436,7 +2549,9 @@ class _CategoryGamesModalState extends State<CategoryGamesModal> {
                             Icon(
                               _iconForGame(g),
                               size: 36,
-                              color: selected ? Colors.lime[700] : Colors.grey[500],
+                              color: selected
+                                  ? Colors.lime[700]
+                                  : Colors.grey[500],
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -2445,7 +2560,9 @@ class _CategoryGamesModalState extends State<CategoryGamesModal> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: selected ? Colors.lime[700] : Colors.black87,
+                                color: selected
+                                    ? Colors.lime[700]
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -2967,8 +3084,6 @@ class PlaySessionModal extends StatefulWidget {
 }
 
 class _PlaySessionModalState extends State<PlaySessionModal> {
-
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -3046,12 +3161,15 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                                         vertical: 6,
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
                                               g,
-                                              style: const TextStyle(fontSize: 18),
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                              ),
                                             ),
                                           ),
                                           Container(
@@ -3061,10 +3179,14 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFF5B6F4A),
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             child: Text(
-                                              DifficultyUtils.getDifficultyDisplayName(widget.gameDifficulties[g] ?? 'Starter'),
+                                              DifficultyUtils.getDifficultyDisplayName(
+                                                widget.gameDifficulties[g] ??
+                                                    'Starter',
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 color: Colors.white,
@@ -3165,7 +3287,11 @@ class _PlaySessionModalState extends State<PlaySessionModal> {
                       color: Colors.red,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 28),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
                 ),
               ),
@@ -3271,11 +3397,7 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.tune,
-                        size: 32,
-                        color: Colors.white,
-                      ),
+                      Icon(Icons.tune, size: 32, color: Colors.white),
                       const SizedBox(height: 8),
                       Text(
                         'Set Difficulty',
@@ -3288,7 +3410,10 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
                       ),
                       const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -3352,7 +3477,9 @@ class _SetDifficultyModalState extends State<SetDifficultyModal> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
                         ),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(
@@ -3448,30 +3575,28 @@ class _DifficultyOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = value == groupValue;
-    
+
     return GestureDetector(
       onTap: () => onChanged(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? Colors.white 
-              : Colors.white.withOpacity(0.1),
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected 
-                ? color 
-                : Colors.white.withOpacity(0.3),
+            color: isSelected ? color : Colors.white.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ] : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           children: [
@@ -3480,7 +3605,9 @@ class _DifficultyOption extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: isSelected ? color.withOpacity(0.1) : Colors.white.withOpacity(0.2),
+                color: isSelected
+                    ? color.withOpacity(0.1)
+                    : Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -3509,7 +3636,9 @@ class _DifficultyOption extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSelected ? Colors.grey[600] : Colors.white.withOpacity(0.8),
+                      color: isSelected
+                          ? Colors.grey[600]
+                          : Colors.white.withOpacity(0.8),
                       fontFamily: 'Nunito',
                     ),
                   ),
@@ -3529,11 +3658,7 @@ class _DifficultyOption extends StatelessWidget {
                 color: isSelected ? color : Colors.transparent,
               ),
               child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 12,
-                    )
+                  ? const Icon(Icons.check, color: Colors.white, size: 12)
                   : null,
             ),
           ],
@@ -3581,18 +3706,20 @@ class _LightBulbPainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    
+
     final center = Offset(size.width / 2, size.height / 2);
-    
+
     // Draw lightbulb body (more bulb-like shape)
     final bulbPath = Path();
-    bulbPath.addOval(Rect.fromCenter(
-      center: Offset(center.dx, center.dy + 2),
-      width: size.width * 0.5,
-      height: size.width * 0.6,
-    ));
+    bulbPath.addOval(
+      Rect.fromCenter(
+        center: Offset(center.dx, center.dy + 2),
+        width: size.width * 0.5,
+        height: size.width * 0.6,
+      ),
+    );
     canvas.drawPath(bulbPath, paint);
-    
+
     // Draw bulb base/screw
     paint.color = Colors.grey[400]!;
     final baseRect = Rect.fromCenter(
@@ -3601,20 +3728,20 @@ class _LightBulbPainter extends CustomPainter {
       height: size.height * 0.15,
     );
     canvas.drawRect(baseRect, paint);
-    
+
     // Draw rays around lightbulb
     paint.color = const Color(0xFFFFD740); // Yellow rays
     paint.strokeWidth = 2;
     paint.style = PaintingStyle.stroke;
     paint.strokeCap = StrokeCap.round;
-    
+
     for (int i = 0; i < 8; i++) {
       final angle = (i * 45) * (3.14159 / 180);
       final startX = center.dx + (size.width * 0.35) * math.cos(angle);
       final startY = center.dy + (size.width * 0.35) * math.sin(angle);
       final endX = center.dx + (size.width * 0.45) * math.cos(angle);
       final endY = center.dy + (size.width * 0.45) * math.sin(angle);
-      
+
       canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
     }
   }
@@ -3627,44 +3754,58 @@ class _StrawberryPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    
+
     // Draw two strawberries side by side
-    _drawStrawberry(canvas, Offset(center.dx - 8, center.dy), size.width * 0.35);
-    _drawStrawberry(canvas, Offset(center.dx + 8, center.dy), size.width * 0.35);
-    
+    _drawStrawberry(
+      canvas,
+      Offset(center.dx - 8, center.dy),
+      size.width * 0.35,
+    );
+    _drawStrawberry(
+      canvas,
+      Offset(center.dx + 8, center.dy),
+      size.width * 0.35,
+    );
+
     // Draw small hearts around strawberries
     final heartPaint = Paint()
       ..color = const Color(0xFFE91E63)
       ..style = PaintingStyle.fill;
-    
+
     _drawHeart(canvas, Offset(center.dx - 12, center.dy - 8), 3, heartPaint);
     _drawHeart(canvas, Offset(center.dx + 12, center.dy - 8), 3, heartPaint);
     _drawHeart(canvas, Offset(center.dx, center.dy + 10), 2, heartPaint);
   }
-  
+
   void _drawStrawberry(Canvas canvas, Offset center, double size) {
     final paint = Paint()
       ..color = const Color(0xFFE53935)
       ..style = PaintingStyle.fill;
-    
+
     // Draw strawberry body
     final path = Path();
     path.moveTo(center.dx, center.dy - size * 0.4);
     path.quadraticBezierTo(
-      center.dx + size * 0.4, center.dy - size * 0.2,
-      center.dx + size * 0.3, center.dy + size * 0.4,
+      center.dx + size * 0.4,
+      center.dy - size * 0.2,
+      center.dx + size * 0.3,
+      center.dy + size * 0.4,
     );
     path.quadraticBezierTo(
-      center.dx, center.dy + size * 0.5,
-      center.dx - size * 0.3, center.dy + size * 0.4,
+      center.dx,
+      center.dy + size * 0.5,
+      center.dx - size * 0.3,
+      center.dy + size * 0.4,
     );
     path.quadraticBezierTo(
-      center.dx - size * 0.4, center.dy - size * 0.2,
-      center.dx, center.dy - size * 0.4,
+      center.dx - size * 0.4,
+      center.dy - size * 0.2,
+      center.dx,
+      center.dy - size * 0.4,
     );
     path.close();
     canvas.drawPath(path, paint);
-    
+
     // Draw strawberry leaves
     paint.color = const Color(0xFF4CAF50);
     final leafPath = Path();
@@ -3675,7 +3816,7 @@ class _StrawberryPainter extends CustomPainter {
     leafPath.lineTo(center.dx + size * 0.2, center.dy - size * 0.4);
     leafPath.close();
     canvas.drawPath(leafPath, paint);
-    
+
     // Draw seeds
     paint.color = Colors.yellow;
     for (int i = 0; i < 4; i++) {
@@ -3686,19 +3827,25 @@ class _StrawberryPainter extends CustomPainter {
       );
     }
   }
-  
+
   void _drawHeart(Canvas canvas, Offset center, double size, Paint paint) {
     final path = Path();
     path.moveTo(center.dx, center.dy + size);
     path.cubicTo(
-      center.dx - size, center.dy,
-      center.dx - size, center.dy - size * 0.5,
-      center.dx, center.dy - size * 0.3,
+      center.dx - size,
+      center.dy,
+      center.dx - size,
+      center.dy - size * 0.5,
+      center.dx,
+      center.dy - size * 0.3,
     );
     path.cubicTo(
-      center.dx + size, center.dy - size * 0.5,
-      center.dx + size, center.dy,
-      center.dx, center.dy + size,
+      center.dx + size,
+      center.dy - size * 0.5,
+      center.dx + size,
+      center.dy,
+      center.dx,
+      center.dy + size,
     );
     canvas.drawPath(path, paint);
   }
@@ -3713,75 +3860,99 @@ class _BrainPainter extends CustomPainter {
     final paint = Paint()
       ..color = const Color(0xFFFF7043)
       ..style = PaintingStyle.fill;
-    
+
     final center = Offset(size.width / 2, size.height / 2);
-    
+
     // Draw brain shape with more realistic curves
     final path = Path();
-    
+
     // Left hemisphere
     path.moveTo(center.dx - size.width * 0.1, center.dy - size.height * 0.3);
     path.quadraticBezierTo(
-      center.dx - size.width * 0.4, center.dy - size.height * 0.4,
-      center.dx - size.width * 0.35, center.dy - size.height * 0.1,
+      center.dx - size.width * 0.4,
+      center.dy - size.height * 0.4,
+      center.dx - size.width * 0.35,
+      center.dy - size.height * 0.1,
     );
     path.quadraticBezierTo(
-      center.dx - size.width * 0.4, center.dy + size.height * 0.1,
-      center.dx - size.width * 0.2, center.dy + size.height * 0.3,
+      center.dx - size.width * 0.4,
+      center.dy + size.height * 0.1,
+      center.dx - size.width * 0.2,
+      center.dy + size.height * 0.3,
     );
-    
+
     // Bottom connection
     path.quadraticBezierTo(
-      center.dx - size.width * 0.1, center.dy + size.height * 0.35,
-      center.dx, center.dy + size.height * 0.3,
+      center.dx - size.width * 0.1,
+      center.dy + size.height * 0.35,
+      center.dx,
+      center.dy + size.height * 0.3,
     );
-    
+
     // Right hemisphere
     path.quadraticBezierTo(
-      center.dx + size.width * 0.1, center.dy + size.height * 0.35,
-      center.dx + size.width * 0.2, center.dy + size.height * 0.3,
+      center.dx + size.width * 0.1,
+      center.dy + size.height * 0.35,
+      center.dx + size.width * 0.2,
+      center.dy + size.height * 0.3,
     );
     path.quadraticBezierTo(
-      center.dx + size.width * 0.4, center.dy + size.height * 0.1,
-      center.dx + size.width * 0.35, center.dy - size.height * 0.1,
+      center.dx + size.width * 0.4,
+      center.dy + size.height * 0.1,
+      center.dx + size.width * 0.35,
+      center.dy - size.height * 0.1,
     );
     path.quadraticBezierTo(
-      center.dx + size.width * 0.4, center.dy - size.height * 0.4,
-      center.dx + size.width * 0.1, center.dy - size.height * 0.3,
+      center.dx + size.width * 0.4,
+      center.dy - size.height * 0.4,
+      center.dx + size.width * 0.1,
+      center.dy - size.height * 0.3,
     );
-    
+
     // Top connection
     path.quadraticBezierTo(
-      center.dx, center.dy - size.height * 0.35,
-      center.dx - size.width * 0.1, center.dy - size.height * 0.3,
+      center.dx,
+      center.dy - size.height * 0.35,
+      center.dx - size.width * 0.1,
+      center.dy - size.height * 0.3,
     );
-    
+
     path.close();
     canvas.drawPath(path, paint);
-    
+
     // Add brain folds/wrinkles
     paint.color = const Color(0xFFD84315);
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 1.5;
-    
+
     // Left hemisphere wrinkles
     final wrinkle1 = Path();
-    wrinkle1.moveTo(center.dx - size.width * 0.25, center.dy - size.height * 0.15);
+    wrinkle1.moveTo(
+      center.dx - size.width * 0.25,
+      center.dy - size.height * 0.15,
+    );
     wrinkle1.quadraticBezierTo(
-      center.dx - size.width * 0.15, center.dy - size.height * 0.05,
-      center.dx - size.width * 0.2, center.dy + size.height * 0.1,
+      center.dx - size.width * 0.15,
+      center.dy - size.height * 0.05,
+      center.dx - size.width * 0.2,
+      center.dy + size.height * 0.1,
     );
     canvas.drawPath(wrinkle1, paint);
-    
-    // Right hemisphere wrinkles  
+
+    // Right hemisphere wrinkles
     final wrinkle2 = Path();
-    wrinkle2.moveTo(center.dx + size.width * 0.25, center.dy - size.height * 0.15);
+    wrinkle2.moveTo(
+      center.dx + size.width * 0.25,
+      center.dy - size.height * 0.15,
+    );
     wrinkle2.quadraticBezierTo(
-      center.dx + size.width * 0.15, center.dy - size.height * 0.05,
-      center.dx + size.width * 0.2, center.dy + size.height * 0.1,
+      center.dx + size.width * 0.15,
+      center.dy - size.height * 0.05,
+      center.dx + size.width * 0.2,
+      center.dy + size.height * 0.1,
     );
     canvas.drawPath(wrinkle2, paint);
-    
+
     // Center division
     canvas.drawLine(
       Offset(center.dx, center.dy - size.height * 0.2),
@@ -3891,7 +4062,8 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
       if (already) {
         localSelected.remove(game);
       } else {
-        final totalIfAdded = widget.currentTotalSelected -
+        final totalIfAdded =
+            widget.currentTotalSelected -
             _initialLocalCount +
             localSelected.length +
             1;
@@ -3918,7 +4090,8 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
     setState(() {
       for (final g in visible) {
         if (!localSelected.contains(g)) {
-          final totalIfAdded = widget.currentTotalSelected -
+          final totalIfAdded =
+              widget.currentTotalSelected -
               _initialLocalCount +
               localSelected.length +
               1;
@@ -3968,8 +4141,10 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(16),
@@ -4006,8 +4181,10 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                   hintText: 'Search games',
                   hintStyle: TextStyle(color: Colors.white70),
                   border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),
@@ -4067,7 +4244,9 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                                     ),
                                   ],
                                   border: Border.all(
-                                    color: selected ? Colors.lime : Colors.grey[300]!,
+                                    color: selected
+                                        ? Colors.lime
+                                        : Colors.grey[300]!,
                                     width: 4,
                                   ),
                                 ),
@@ -4077,7 +4256,9 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                                     Icon(
                                       _iconForGame(g),
                                       size: 36,
-                                      color: selected ? Colors.lime[700] : Colors.grey[500],
+                                      color: selected
+                                          ? Colors.lime[700]
+                                          : Colors.grey[500],
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
@@ -4086,7 +4267,9 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
-                                        color: selected ? Colors.lime[700] : Colors.black87,
+                                        color: selected
+                                            ? Colors.lime[700]
+                                            : Colors.black87,
                                       ),
                                     ),
                                   ],
@@ -4146,7 +4329,8 @@ class _GameSelectionModalState extends State<_GameSelectionModal> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(localSelected.toList()),
+                  onPressed: () =>
+                      Navigator.of(context).pop(localSelected.toList()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber[700],
                     foregroundColor: Colors.white,
@@ -4199,31 +4383,28 @@ class _ModernSuccessDialogState extends State<ModernSuccessDialog>
   @override
   void initState() {
     super.initState();
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(1.0, 0.0), // Start from right
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutBack,
-    ));
-    
+
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(1.0, 0.0), // Start from right
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack),
+        );
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeIn,
-    ));
-    
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeIn));
+
     // Start animation
     _slideController.forward();
-    
+
     // Auto-dismiss after 3 seconds
     Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) {
@@ -4255,19 +4436,12 @@ class _ModernSuccessDialogState extends State<ModernSuccessDialog>
               decoration: BoxDecoration(
                 color: Colors.green[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.green[200]!,
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.green[200]!, width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green[600],
-                    size: 20,
-                  ),
+                  Icon(Icons.check_circle, color: Colors.green[600], size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Session saved!',
@@ -4416,7 +4590,7 @@ class RecommendationsDialog extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Performance analysis
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -4441,42 +4615,44 @@ class RecommendationsDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         if (weakAreas.isNotEmpty)
-                          ...weakAreas.map((area) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: area.value < 50
-                                        ? Colors.red[300]
-                                        : Colors.orange[300],
-                                    shape: BoxShape.circle,
+                          ...weakAreas.map(
+                            (area) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: area.value < 50
+                                          ? Colors.red[300]
+                                          : Colors.orange[300],
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${area.key}: ',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${area.key}: ',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${area.value.toStringAsFixed(0)}% accuracy',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
+                                  Text(
+                                    '${area.value.toStringAsFixed(0)}% accuracy',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          )),
+                          ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Recommended games
                   const Text(
                     '🎮 Recommended Games',
@@ -4487,7 +4663,7 @@ class RecommendationsDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   Flexible(
                     child: SingleChildScrollView(
                       child: Wrap(
@@ -4504,7 +4680,12 @@ class RecommendationsDialog extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color.fromARGB(255, 181, 187, 17),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    181,
+                                    187,
+                                    17,
+                                  ),
                                   blurRadius: 0,
                                   offset: const Offset(0, 4),
                                 ),
@@ -4535,7 +4716,7 @@ class RecommendationsDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Action buttons
                   Row(
                     children: [
@@ -4544,7 +4725,10 @@ class RecommendationsDialog extends StatelessWidget {
                           onPressed: onDecline,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white, width: 2),
+                            side: const BorderSide(
+                              color: Colors.white,
+                              width: 2,
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),

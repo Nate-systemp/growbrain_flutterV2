@@ -46,16 +46,16 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   final Map<String, List<Map<String, dynamic>>> categoryGames = {
     'Attention': [
       {
-        'name': 'Light Tap',
-        'icon': Icons.lightbulb_outline,
-        'color': Colors.amber,
-        'game': LightTapGame(difficulty: 'Easy', requirePinOnExit: false),
-      },
-      {
         'name': 'Who Moved',
         'icon': Icons.swap_horiz,
         'color': Colors.blue,
         'game': WhoMovedGame(difficulty: 'Easy'),
+      },
+      {
+        'name': 'Light Tap',
+        'icon': Icons.lightbulb_outline,
+        'color': Colors.amber,
+        'game': LightTapGame(difficulty: 'Easy', requirePinOnExit: false),
       },
       {
         'name': 'Find Me',
@@ -65,6 +65,12 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
       },
     ],
     'Verbal': [
+      {
+        'name': 'Sound Match',
+        'icon': Icons.hearing,
+        'color': Colors.indigo,
+        'game': SoundMatchGame(difficulty: 'Easy'),
+      },
       {
         'name': 'Rhyme Time',
         'icon': Icons.music_note,
@@ -76,12 +82,6 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         'icon': Icons.image,
         'color': Colors.orange,
         'game': PictureWordsGame(difficulty: 'Easy'),
-      },
-      {
-        'name': 'Riddle',
-        'icon': Icons.psychology,
-        'color': Colors.teal,
-        'game': RiddleGame(difficulty: 'Easy'),
       },
     ],
     'Memory': [
@@ -106,10 +106,10 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         ),
       },
       {
-        'name': 'Sound Match',
-        'icon': Icons.hearing,
-        'color': Colors.indigo,
-        'game': SoundMatchGame(difficulty: 'Easy'),
+        'name': 'Object Hunt',
+        'icon': Icons.visibility,
+        'color': Colors.brown,
+        'game': ObjectHuntGame(difficulty: 'Easy'),
       },
     ],
     'Logic': [
@@ -138,10 +138,10 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
         ),
       },
       {
-        'name': 'Object Hunt',
-        'icon': Icons.visibility,
-        'color': Colors.brown,
-        'game': ObjectHuntGame(difficulty: 'Easy'),
+        'name': 'Riddle',
+        'icon': Icons.psychology,
+        'color': Colors.teal,
+        'game': RiddleGame(difficulty: 'Easy'),
       },
     ],
   };
@@ -192,7 +192,61 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
           ),
           child: Column(
             children: [
-              // ...existing code...
+              // Back Button
+              Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Simple white triangle button
+                        Container(
+                          width: 40.0,
+                          height: 40.0,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4.0,
+                                offset: const Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.arrow_back_ios,
+                              color: Colors.grey[800],
+                              size: 18.0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12.0),
+                        // Back text
+                        Text(
+                          'Back',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 18.0,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 2.0,
+                                offset: const Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
                 child: Column(
                   children: [
@@ -542,425 +596,425 @@ class _PSPGameCard extends StatelessWidget {
     this.large = false,
     Key? key,
   }) : super(key: key);
-@override
-Widget build(BuildContext context) {
-  final double circleSize = large ? 420 : 370;
+  @override
+  Widget build(BuildContext context) {
+    final double circleSize = large ? 420 : 370;
 
-  return GestureDetector(
-    onTap: onTap,
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Light Tap
-        if (label.trim().toLowerCase() == 'light tap') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Light Tap
+          if (label.trim().toLowerCase() == 'light tap') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/lighttap.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
                 ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/lighttap.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/lighttapbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Who Moved
-        else if (label.trim().toLowerCase() == 'who moved') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/lighttapbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/whomoved.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Who Moved
+          else if (label.trim().toLowerCase() == 'who moved') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/whomoved.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/whomovedbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Find Me
-        else if (label.trim().toLowerCase() == 'find me') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/whomovedbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/findme.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Find Me
+          else if (label.trim().toLowerCase() == 'find me') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/findme.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/findmebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Picture Words
-        else if (label.trim().toLowerCase() == 'picture words') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/findmebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/picturewords.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Picture Words
+          else if (label.trim().toLowerCase() == 'picture words') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/picturewords.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/picturewordsbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Riddle
-        else if (label.trim().toLowerCase() == 'riddle') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/picturewordsbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/riddletime.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Riddle
+          else if (label.trim().toLowerCase() == 'riddle') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/riddletime.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/riddletimebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Rhyme Time
-        else if (label.trim().toLowerCase() == 'rhyme time') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/riddletimebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/rhymetime.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Rhyme Time
+          else if (label.trim().toLowerCase() == 'rhyme time') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/rhymetime.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/rhymetimebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Match Cards
-        else if (label.trim().toLowerCase() == 'match cards') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/rhymetimebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/matchcards.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Match Cards
+          else if (label.trim().toLowerCase() == 'match cards') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/matchcards.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/matchcardsbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Fruit Shuffle
-        else if (label.trim().toLowerCase() == 'fruit shuffle') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/matchcardsbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/fruitshuffle.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Fruit Shuffle
+          else if (label.trim().toLowerCase() == 'fruit shuffle') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/fruitshuffle.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/fruitshufflebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Sound Match
-        else if (label.trim().toLowerCase() == 'sound match') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/fruitshufflebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/soundmatch.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Sound Match
+          else if (label.trim().toLowerCase() == 'sound match') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/soundmatch.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/soundmatchbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Puzzle
-        else if (label.trim().toLowerCase() == 'puzzle') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/soundmatchbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/puzzlegame.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Puzzle
+          else if (label.trim().toLowerCase() == 'puzzle') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/puzzlegame.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/puzzlegamebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Tic Tac Toe
-        else if (label.trim().toLowerCase() == 'tic tac toe') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/puzzlegamebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/tictactoe.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Tic Tac Toe
+          else if (label.trim().toLowerCase() == 'tic tac toe') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/tictactoe.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/tictactoebutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Object Hunt
-        else if (label.trim().toLowerCase() == 'object hunt') ...[
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  offset: Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/tictactoebutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/objecthunt.png',
-                fit: BoxFit.cover,
-                width: circleSize,
-                height: circleSize,
+          ]
+          // Object Hunt
+          else if (label.trim().toLowerCase() == 'object hunt') ...[
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    offset: Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/objecthunt.png',
+                  fit: BoxFit.cover,
+                  width: circleSize,
+                  height: circleSize,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Image.asset(
-            'assets/objecthuntbutton.png',
-            width: large ? 350 : 180,
-            fit: BoxFit.contain,
-          ),
-        ]
-        // Default
-        else
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: BoxDecoration(
-              color: iconColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 7),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.38),
-                  offset: const Offset(8, 12),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                ),
-              ],
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/objecthuntbutton.png',
+              width: large ? 350 : 180,
+              fit: BoxFit.contain,
             ),
-            child: Center(
-              child: Icon(icon, size: large ? 100 : 70, color: Colors.white),
+          ]
+          // Default
+          else
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: BoxDecoration(
+                color: iconColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 7),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.38),
+                    offset: const Offset(8, 12),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(icon, size: large ? 100 : 70, color: Colors.white),
+              ),
             ),
-          ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 }
 
 // Keep the old GameCard for backward compatibility

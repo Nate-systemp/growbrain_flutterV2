@@ -143,6 +143,13 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  web:
+    generate: true
+    image_path: "assets/growbrain_logo.png"
+  windows:
+    generate: true
+    image_path: "assets/growbrain_logo.png"
   image_path: "assets/growbrain_logo.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/growbrain_logo.png"
+  remove_alpha_ios: true

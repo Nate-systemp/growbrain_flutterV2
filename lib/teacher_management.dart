@@ -256,8 +256,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       final allRecords = await _fetchAllStudentRecords();
       final games = <String>{};
       for (final r in allRecords) {
-        final game =
-            (r['game'] ?? r['lastPlayed'])?.toString() ?? '';
+        final game = (r['game'] ?? r['lastPlayed'])?.toString() ?? '';
         if (game.isNotEmpty) games.add(game);
       }
       if (mounted) {
@@ -624,7 +623,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               return Container(
                                 margin: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Colors.transparent,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: const Color(0xFFE8F5E8),
@@ -632,7 +631,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF2E7D32).withOpacity(0.15),
+                                      color: const Color(
+                                        0xFF2E7D32,
+                                      ).withOpacity(0.15),
                                       blurRadius: 0,
                                       offset: const Offset(0, 6),
                                       spreadRadius: 0,
@@ -863,7 +864,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
             // Calculate additional analytics
             // Game performance analysis
             final gamePerformance = <String, Map<String, double>>{};
-            
+
             for (final record in allRecords) {
               final game = record['game'] ?? record['lastPlayed'] ?? 'Unknown';
               final accuracy = (record['accuracy'] as num?)?.toDouble() ?? 0.0;
@@ -966,7 +967,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Color(0xFFE5E7EB)),
                       ),
@@ -1043,7 +1044,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Color(0xFFE5E7EB)),
                       ),
@@ -1069,9 +1070,12 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               const Spacer(),
                               // Month Filter Dropdown
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Color(0xFFF9FAFB),
+                                  color: Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: Color(0xFFE5E7EB)),
                                 ),
@@ -1084,12 +1088,14 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                       color: Color(0xFF374151),
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    items: _getAvailableMonths(accuracyTrend).map((String month) {
-                                      return DropdownMenuItem<String>(
-                                        value: month,
-                                        child: Text(month),
-                                      );
-                                    }).toList(),
+                                    items: _getAvailableMonths(accuracyTrend)
+                                        .map((String month) {
+                                          return DropdownMenuItem<String>(
+                                            value: month,
+                                            child: Text(month),
+                                          );
+                                        })
+                                        .toList(),
                                     onChanged: (String? newValue) {
                                       setState(() {
                                         _selectedMonth = newValue ?? 'All';
@@ -1103,13 +1109,21 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           const SizedBox(height: 16),
                           Builder(
                             builder: (context) {
-                              final filteredData = _filterTrendData(accuracyTrend, _selectedMonth);
+                              final filteredData = _filterTrendData(
+                                accuracyTrend,
+                                _selectedMonth,
+                              );
                               final filteredValues = filteredData
-                                  .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
+                                  .map(
+                                    (r) =>
+                                        (r['accuracy'] as num?)?.toDouble() ??
+                                        0.0,
+                                  )
                                   .toList();
                               final filteredLabels = filteredData.map((r) {
                                 if (r['date'] is Timestamp) {
-                                  final date = (r['date'] as Timestamp).toDate();
+                                  final date = (r['date'] as Timestamp)
+                                      .toDate();
                                   return '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
                                 } else if (r['date'] is String) {
                                   final date = DateTime.tryParse(r['date']);
@@ -1119,7 +1133,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                 }
                                 return '';
                               }).toList();
-                              
+
                               return MinimalTrendChart(
                                 values: filteredValues,
                                 xLabels: filteredLabels,
@@ -1139,7 +1153,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Color(0xFFE5E7EB)),
                             ),
@@ -1195,7 +1209,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Color(0xFFE5E7EB)),
                             ),
@@ -1256,7 +1270,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Color(0xFFE5E7EB)),
                         ),
@@ -1298,7 +1312,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Color(0xFFE5E7EB)),
                       ),
@@ -1451,7 +1465,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Color(0xFFF9FAFB),
+                                color: Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: Color(0xFFE5E7EB)),
                               ),
@@ -1510,7 +1524,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Color(0xFF10B981).withOpacity(0.1),
+                                      color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1529,7 +1543,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Color(0xFF8B5CF6).withOpacity(0.1),
+                                      color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1740,7 +1754,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
             width: 700,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.blueAccent, width: 2),
             ),
@@ -2044,7 +2058,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.blueAccent.withOpacity(0.1),
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Colors.blueAccent),
                           ),
@@ -2140,7 +2154,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[200],
+                                          color: Colors.grey[100],
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -2330,7 +2344,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -2366,7 +2380,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: accuracyColor.withOpacity(0.1),
+                    color: Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -2502,7 +2516,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                     Flexible(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0xFFE5E7EB)),
                         ),
@@ -2952,7 +2966,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Color(0xFFF9FAFB),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: Color(0xFFE5E7EB)),
                               ),
@@ -3007,7 +3021,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Color(0xFFF9FAFB),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: Color(0xFFE5E7EB)),
                               ),
@@ -3064,7 +3078,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Color(0xFFF9FAFB),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Color(0xFFE5E7EB)),
                         ),
@@ -3186,7 +3200,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Color(0xFFE5E7EB)),
       ),
@@ -3227,7 +3241,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFFF9FAFB),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Color(0xFFE5E7EB)),
       ),
@@ -3499,10 +3513,21 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
   List<String> _getAvailableMonths(List<Map<String, dynamic>> trendData) {
     final months = <String>{'All'};
     final monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    
+
     for (final record in trendData) {
       DateTime? date;
       if (record['date'] is Timestamp) {
@@ -3510,13 +3535,13 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       } else if (record['date'] is String) {
         date = DateTime.tryParse(record['date']);
       }
-      
+
       if (date != null) {
         final monthYear = '${monthNames[date.month]} ${date.year}';
         months.add(monthYear);
       }
     }
-    
+
     final sortedMonths = months.toList();
     // Keep 'All' at the beginning, sort the rest
     final monthsWithoutAll = sortedMonths.where((m) => m != 'All').toList();
@@ -3528,37 +3553,53 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
         final aYear = int.tryParse(aParts[1]) ?? 0;
         final bYear = int.tryParse(bParts[1]) ?? 0;
         if (aYear != bYear) return bYear.compareTo(aYear); // Recent years first
-        
+
         final aMonth = monthNames.indexOf(aParts[0]);
         final bMonth = monthNames.indexOf(bParts[0]);
         return bMonth.compareTo(aMonth); // Recent months first
       }
       return 0;
     });
-    
+
     return ['All', ...monthsWithoutAll];
   }
 
   // Helper method to filter trend data by selected month
-  List<Map<String, dynamic>> _filterTrendData(List<Map<String, dynamic>> trendData, String selectedMonth) {
+  List<Map<String, dynamic>> _filterTrendData(
+    List<Map<String, dynamic>> trendData,
+    String selectedMonth,
+  ) {
     if (selectedMonth == 'All') {
       // Limit to last 30 data points for better visualization
-      return trendData.length > 30 ? trendData.sublist(trendData.length - 30) : trendData;
+      return trendData.length > 30
+          ? trendData.sublist(trendData.length - 30)
+          : trendData;
     }
-    
+
     final monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    
+
     final parts = selectedMonth.split(' ');
     if (parts.length != 2) return [];
-    
+
     final targetMonth = monthNames.indexOf(parts[0]);
     final targetYear = int.tryParse(parts[1]);
-    
+
     if (targetMonth == -1 || targetYear == null) return [];
-    
+
     return trendData.where((record) {
       DateTime? date;
       if (record['date'] is Timestamp) {
@@ -3566,8 +3607,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen>
       } else if (record['date'] is String) {
         date = DateTime.tryParse(record['date']);
       }
-      
-      return date != null && date.month == targetMonth && date.year == targetYear;
+
+      return date != null &&
+          date.month == targetMonth &&
+          date.year == targetYear;
     }).toList();
   }
 }
@@ -4661,7 +4704,7 @@ class _InfoCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -4886,6 +4929,29 @@ class EnhancedTeacherProfile extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // Logout text on the side
+                    GestureDetector(
+                      onTap: onLogout,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red[300]!, width: 1),
+                        ),
+                        child: Text(
+                          'Log Out',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red[600],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 28),
@@ -4982,37 +5048,6 @@ class EnhancedTeacherProfile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 28),
-
-                // Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logout Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
-                      ),
-                      onPressed: onLogout,
-                      icon: const Icon(Icons.logout, size: 20),
-                      label: const Text(
-                        'Log Out',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -5040,7 +5075,7 @@ class _TeacherInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -5276,7 +5311,7 @@ class DonutChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // light mode
+        color: Colors.transparent, // light mode
         borderRadius: BorderRadius.circular(100),
         boxShadow: [
           BoxShadow(
@@ -5400,7 +5435,7 @@ class LineChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // light mode
+        color: Colors.transparent, // light mode
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -5731,7 +5766,7 @@ class StudentBarChart extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
@@ -5813,7 +5848,7 @@ class ModernLineChart extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
@@ -5957,7 +5992,7 @@ class ModernVerticalBarChart extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
@@ -7065,10 +7100,13 @@ class MinimalGameChart extends StatelessWidget {
     final itemHeight = 40.0; // Increased for better spacing
     final topPadding = 15.0;
     final bottomPadding = 15.0;
-    final calculatedHeight = (gameData.length * itemHeight) + topPadding + bottomPadding;
+    final calculatedHeight =
+        (gameData.length * itemHeight) + topPadding + bottomPadding;
     final maxHeight = 500.0; // Increased max height
-    final finalHeight = calculatedHeight > maxHeight ? maxHeight : calculatedHeight;
-    
+    final finalHeight = calculatedHeight > maxHeight
+        ? maxHeight
+        : calculatedHeight;
+
     return Container(
       height: finalHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -7117,12 +7155,7 @@ class MinimalGamePainter extends CustomPainter {
 
       // Draw bar fill
       if (fillWidth > 0) {
-        final rect = Rect.fromLTWH(
-          barStartX,
-          y + 11,
-          fillWidth,
-          18,
-        );
+        final rect = Rect.fromLTWH(barStartX, y + 11, fillWidth, 18);
         final paint = Paint()..color = Color(0xFF3B82F6);
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, Radius.circular(9)),
@@ -7135,7 +7168,7 @@ class MinimalGamePainter extends CustomPainter {
       if (gameName.length > 11) {
         gameName = '${gameName.substring(0, 11)}...';
       }
-      
+
       final namePainter = TextPainter(
         text: TextSpan(
           text: gameName,

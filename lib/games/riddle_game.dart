@@ -79,10 +79,21 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
   // Simple instruction toggle
   bool showSimpleInstruction = false;
 
+  // Explanation display state
+  bool showingExplanation = false;
+  String currentExplanation = '';
+  bool isCurrentExplanationCorrect = false;
+  String displayedExplanationText = '';
+  int explanationTextIndex = 0;
+  Timer? explanationTypingTimer;
+  Timer? explanationAutoCloseTimer;
+
   Random random = Random();
-  
+
   // App color scheme
-  final Color primaryColor = const Color(0xFF5D83B9); // Blue to match background
+  final Color primaryColor = const Color(
+    0xFF5D83B9,
+  ); // Blue to match background
   final Color accentColor = const Color(0xFFFFD740);
 
   // Riddle sets organized by difficulty
@@ -248,17 +259,20 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
     super.initState();
     // Start background music for this game
     BackgroundMusicManager().startGameMusic('Riddle Game');
-    
+
     // Initialize animations
     _goController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goOpacity = CurvedAnimation(
+      parent: _goController,
+      curve: Curves.easeInOut,
+    );
     _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
       CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
     );
-    
+
     _initializeGame();
   }
 
@@ -387,7 +401,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
     if (riddleAnswered || !gameActive) return;
 
     riddleTimer?.cancel();
-    
+
     Riddle currentRiddle = gameRiddles[currentRiddleIndex];
     bool isCorrect = answer == currentRiddle.correctAnswer;
 
@@ -412,7 +426,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
     _showRiddleResult(isCorrect, currentRiddle.explanation ?? "");
   }
 
-  Future<void> _showStatusOverlay({required String text, required Color color, Color textColor = Colors.white}) async {
+  Future<void> _showStatusOverlay({
+    required String text,
+    required Color color,
+    Color textColor = Colors.white,
+  }) async {
     if (!mounted) return;
     setState(() {
       overlayText = text;
@@ -429,21 +447,79 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
   }
 
   void _showRiddleResult(bool isCorrect, String explanation) {
-    // Only show overlay for correct answers
+    // Show status overlay first
     if (isCorrect) {
       _showStatusOverlay(
         text: '✓',
         color: Colors.green,
         textColor: Colors.white,
       ).then((_) {
-        _nextRiddle();
+        // Show explanation in the same card area
+        if (explanation.isNotEmpty) {
+          _showExplanationInCard(explanation, isCorrect);
+        } else {
+          _nextRiddle();
+        }
       });
     } else {
-      // For wrong answers, just wait a moment then move to next riddle
-      Future.delayed(const Duration(milliseconds: 1000)).then((_) {
-        _nextRiddle();
+      _showStatusOverlay(
+        text: '✗',
+        color: Colors.red,
+        textColor: Colors.white,
+      ).then((_) {
+        // Show explanation in the same card area
+        if (explanation.isNotEmpty) {
+          _showExplanationInCard(explanation, isCorrect);
+        } else {
+          _nextRiddle();
+        }
       });
     }
+  }
+
+  void _showExplanationInCard(String explanation, bool isCorrect) {
+    setState(() {
+      showingExplanation = true;
+      currentExplanation = explanation;
+      isCurrentExplanationCorrect = isCorrect;
+      displayedExplanationText = '';
+      explanationTextIndex = 0;
+    });
+
+    // Start typing animation
+    _startExplanationTyping();
+
+    // Auto close after 5 seconds
+    explanationAutoCloseTimer = Timer(Duration(seconds: 5), () {
+      _closeExplanationAndNext();
+    });
+  }
+
+  void _startExplanationTyping() {
+    explanationTypingTimer = Timer.periodic(Duration(milliseconds: 50), (
+      timer,
+    ) {
+      if (explanationTextIndex < currentExplanation.length) {
+        setState(() {
+          displayedExplanationText += currentExplanation[explanationTextIndex];
+          explanationTextIndex++;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _closeExplanationAndNext() {
+    explanationTypingTimer?.cancel();
+    explanationAutoCloseTimer?.cancel();
+    setState(() {
+      showingExplanation = false;
+      currentExplanation = '';
+      displayedExplanationText = '';
+      explanationTextIndex = 0;
+    });
+    _nextRiddle();
   }
 
   void _nextRiddle() {
@@ -476,10 +552,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: accentColor,
-              width: 3,
-            ),
+            border: Border.all(color: accentColor, width: 3),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
@@ -511,11 +584,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.lightbulb,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                    child: Icon(Icons.lightbulb, color: Colors.white, size: 28),
                   ),
                   SizedBox(width: 12),
                   Text(
@@ -536,10 +605,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 decoration: BoxDecoration(
                   color: Color(0xFFF5DDA9),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Color(0xFFE5C77A),
-                    width: 3,
-                  ),
+                  border: Border.all(color: Color(0xFFE5C77A), width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -620,7 +686,9 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
         return _TeacherPinDialog(
           onPinVerified: () {
             Navigator.of(dialogContext).pop();
-            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
           },
           onCancel: () {
             Navigator.of(dialogContext).pop();
@@ -633,6 +701,8 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
   @override
   void dispose() {
     riddleTimer?.cancel();
+    explanationTypingTimer?.cancel();
+    explanationAutoCloseTimer?.cancel();
     _goController.dispose();
     // Stop background music when leaving the game
     BackgroundMusicManager().stopMusic();
@@ -649,128 +719,131 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/verbalbg.png'),
-            fit: BoxFit.cover,
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/verbalbg.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                // Body content
-                Expanded(
-                  child: SafeArea(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: showingCountdown
-                          ? _buildCountdownScreen()
-                          : (gameStarted ? _buildGameArea() : _buildStartScreen()),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  // Body content
+                  Expanded(
+                    child: SafeArea(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: showingCountdown
+                            ? _buildCountdownScreen()
+                            : (gameStarted
+                                  ? _buildGameArea()
+                                  : _buildStartScreen()),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            // GO overlay
-            if (showingGo)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: FadeTransition(
-                    opacity: _goOpacity,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.12),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _goScale,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Get Ready!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black26,
-                                      offset: Offset(2, 2),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
+                ],
+              ),
+              // GO overlay
+              if (showingGo)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Get Ready!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black26,
+                                        offset: Offset(2, 2),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              Container(
-                                width: 140,
-                                height: 140,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: accentColor,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      offset: const Offset(0, 6),
-                                      blurRadius: 0,
-                                      spreadRadius: 0,
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'GO!',
-                                    style: TextStyle(
-                                      color: primaryColor,
-                                      fontSize: 54,
-                                      fontWeight: FontWeight.bold,
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: 140,
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: accentColor,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        offset: const Offset(0, 6),
+                                        blurRadius: 0,
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'GO!',
+                                      style: TextStyle(
+                                        color: primaryColor,
+                                        fontSize: 54,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // Status overlay (✓ or X)
-            if (showingStatus)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: FadeTransition(
-                    opacity: _goOpacity,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.12),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _goScale,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: overlayColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.30),
-                                  offset: const Offset(0, 8),
-                                  blurRadius: 0,
-                                  spreadRadius: 8,
-                                ),
                               ],
                             ),
-                            child: Center(
-                              child: Text(
-                                overlayText,
-                                style: TextStyle(
-                                  color: overlayTextColor,
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Status overlay (✓ or X)
+              if (showingStatus)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _goOpacity,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.12),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: _goScale,
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: overlayColor,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.30),
+                                    offset: const Offset(0, 8),
+                                    blurRadius: 0,
+                                    spreadRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  overlayText,
+                                  style: TextStyle(
+                                    color: overlayTextColor,
+                                    fontSize: 72,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
@@ -780,17 +853,12 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-              ),
-            // Need Help button - shown only during gameplay
-            if (gameStarted && !showingCountdown)
-              Positioned(
-                left: 24,
-                bottom: 24,
-                child: _buildHelpButton(),
-              ),
-          ],
+              // Need Help button - shown only during gameplay
+              if (gameStarted && !showingCountdown)
+                Positioned(left: 24, bottom: 24, child: _buildHelpButton()),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -805,8 +873,10 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
       onPressed: () async {
         bool showSimple = false;
         // Speak the initial help text
-        await HelpTtsManager().speak('Read each riddle carefully and choose the correct answer from the options. If you need help, tap the lightbulb icon for a visual hint!');
-        
+        await HelpTtsManager().speak(
+          'Read each riddle carefully and choose the correct answer from the options. If you need help, tap the lightbulb icon for a visual hint!',
+        );
+
         showDialog(
           context: context,
           barrierDismissible: true,
@@ -819,143 +889,153 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 },
                 child: Dialog(
                   backgroundColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                   child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD740),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                    
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  width: 320,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.help_outline, color: primaryColor, size: 28),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Need Help?',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF5D83B9),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            showSimple
-                                ? 'Read the riddle carefully. Think about what it could be. Pick the answer that makes the most sense. Use the lightbulb if you need a hint!'
-                                : 'Read each riddle carefully and choose the correct answer from the options. If you need help, tap the lightbulb icon for a visual hint!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        if (showSimple)
-                          const SizedBox(height: 16),
-                        if (showSimple)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'That\'s the simpler explanation!',
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: primaryColor.withOpacity(0.6),
-                                      blurRadius: 0,
-                                      spreadRadius: 0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: TextButton(
-                                  onPressed: () async {
-                                    if (!showSimple) {
-                                      setState(() {
-                                        showSimple = true;
-                                      });
-                                      // Speak the simpler explanation
-                                      await HelpTtsManager().speak('Read the riddle carefully. Think about what it could be. Pick the answer that makes the most sense. Use the lightbulb if you need a hint!');
-                                    } else {
-                                      await HelpTtsManager().stop();
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: primaryColor,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    showSimple ? 'Close' : 'More Help?',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD740),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 24,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 12),
                         ),
                       ],
                     ),
-                  ),
-                ),
+                    child: SizedBox(
+                      width: 320,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.help_outline,
+                                    color: primaryColor,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Need Help?',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF5D83B9),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                showSimple
+                                    ? 'Read the riddle carefully. Think about what it could be. Pick the answer that makes the most sense. Use the lightbulb if you need a hint!'
+                                    : 'Read each riddle carefully and choose the correct answer from the options. If you need help, tap the lightbulb icon for a visual hint!',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            if (showSimple) const SizedBox(height: 16),
+                            if (showSimple)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'That\'s the simpler explanation!',
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: primaryColor.withOpacity(0.6),
+                                          blurRadius: 0,
+                                          spreadRadius: 0,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () async {
+                                        if (!showSimple) {
+                                          setState(() {
+                                            showSimple = true;
+                                          });
+                                          // Speak the simpler explanation
+                                          await HelpTtsManager().speak(
+                                            'Read the riddle carefully. Think about what it could be. Pick the answer that makes the most sense. Use the lightbulb if you need a hint!',
+                                          );
+                                        } else {
+                                          await HelpTtsManager().stop();
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: primaryColor,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        showSimple ? 'Close' : 'More Help?',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -973,7 +1053,9 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
 
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: min(size.width * 0.9, panelMaxWidth)),
+        constraints: BoxConstraints(
+          maxWidth: min(size.width * 0.9, panelMaxWidth),
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           decoration: BoxDecoration(
@@ -1086,9 +1168,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentColor,
                     foregroundColor: primaryColor,
-                    padding: EdgeInsets.symmetric(
-                      vertical: isTablet ? 18 : 14,
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: isTablet ? 18 : 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -1210,7 +1290,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.question_mark_rounded, color: primaryColor, size: 20),
+                    Icon(
+                      Icons.question_mark_rounded,
+                      color: primaryColor,
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Riddle ${currentRiddleIndex + 1}/$totalRiddles',
@@ -1272,15 +1356,24 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Riddle question card
+                    // Riddle question card or explanation card
                     Container(
-                      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      margin: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       padding: EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: questionColor,
+                        color: showingExplanation
+                            ? Color(0xFFE3F2FD)
+                            : questionColor,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: primaryColor.withOpacity(0.3),
+                          color: showingExplanation
+                              ? (isCurrentExplanationCorrect
+                                    ? Colors.green.withOpacity(0.3)
+                                    : Colors.red.withOpacity(0.3))
+                              : primaryColor.withOpacity(0.3),
                           width: 2,
                         ),
                         boxShadow: [
@@ -1295,46 +1388,117 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                       child: Column(
                         children: [
                           Icon(
-                            Icons.question_answer,
-                            color: primaryColor,
+                            showingExplanation
+                                ? (isCurrentExplanationCorrect
+                                      ? Icons.check_circle
+                                      : Icons.info_outline)
+                                : Icons.question_answer,
+                            color: showingExplanation
+                                ? (isCurrentExplanationCorrect
+                                      ? Colors.green
+                                      : Colors.red)
+                                : primaryColor,
                             size: 40,
                           ),
                           SizedBox(height: 16),
-                          Text(
-                            currentRiddle.question,
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              height: 1.4,
+                          if (showingExplanation) ...[
+                            Text(
+                              isCurrentExplanationCorrect
+                                  ? 'Correct!'
+                                  : 'Explanation',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (currentRiddle.visualHint != null) ...[
                             SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: riddleAnswered ? null : _showHintDialog,
-                              icon: Icon(Icons.lightbulb_outline, size: 20),
-                              label: Text(
-                                'Show Hint',
+                            Container(
+                              constraints: BoxConstraints(minHeight: 60),
+                              child: Text(
+                                displayedExplanationText,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: accentColor,
-                                foregroundColor: primaryColor,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 0,
+                                textAlign: TextAlign.center,
                               ),
                             ),
+                            SizedBox(height: 16),
+                            // Progress indicator
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.3),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.3),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.3),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            Text(
+                              currentRiddle.question,
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                height: 1.4,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (currentRiddle.visualHint != null) ...[
+                              SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: riddleAnswered
+                                    ? null
+                                    : _showHintDialog,
+                                icon: Icon(Icons.lightbulb_outline, size: 20),
+                                label: Text(
+                                  'Show Hint',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: accentColor,
+                                  foregroundColor: primaryColor,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       ),
@@ -1364,11 +1528,16 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                       }
 
                       return Container(
-                        margin: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 6,
+                        ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: riddleAnswered ? null : () => _onAnswerSelected(option),
+                            onTap: riddleAnswered
+                                ? null
+                                : () => _onAnswerSelected(option),
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -1382,9 +1551,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                                   color: showResult && isCorrect
                                       ? Colors.green.shade700
                                       : (showResult && isSelected
-                                          ? Colors.red.shade700
-                                          : primaryColor.withOpacity(0.3)),
-                                  width: showResult && (isCorrect || isSelected) ? 3 : 2,
+                                            ? Colors.red.shade700
+                                            : primaryColor.withOpacity(0.3)),
+                                  width: showResult && (isCorrect || isSelected)
+                                      ? 3
+                                      : 2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -1430,44 +1601,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                       );
                     }).toList(),
 
-                    // Show explanation after answering
-                    if (riddleAnswered && currentRiddle.explanation != null) ...[
-                      SizedBox(height: 20),
-                      Container(
-                        margin: EdgeInsets.symmetric(horizontal: 20),
-                        padding: EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: primaryColor.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: primaryColor,
-                              size: 24,
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                currentRiddle.explanation!,
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
+                    // Show explanation after answering - now handled by modal
                     SizedBox(height: 24),
                   ],
                 ),
@@ -1520,7 +1654,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              child: const Icon(Icons.psychology, color: Colors.white, size: 48),
+              child: const Icon(
+                Icons.psychology,
+                color: Colors.white,
+                size: 48,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -1552,7 +1690,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
             children: [
               _buildStatRow(Icons.star_rounded, 'Score', '$score points'),
               const SizedBox(height: 12),
-              _buildStatRow(Icons.check_circle, 'Correct', '$correctAnswers/$totalRiddles'),
+              _buildStatRow(
+                Icons.check_circle,
+                'Correct',
+                '$correctAnswers/$totalRiddles',
+              ),
               const SizedBox(height: 12),
               _buildStatRow(Icons.track_changes, 'Accuracy', '$accuracy%'),
               const SizedBox(height: 12),
@@ -1588,7 +1730,10 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                       icon: const Icon(Icons.refresh, size: 22),
                       label: const Text(
                         'Play Again',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
@@ -1609,7 +1754,11 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                         Navigator.of(context).pop();
                         Navigator.of(context).pop();
                       },
-                      icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                      icon: Icon(
+                        Icons.exit_to_app,
+                        size: 22,
+                        color: primaryColor,
+                      ),
                       label: Text(
                         'Exit',
                         style: TextStyle(
@@ -1638,7 +1787,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 onPressed: () async {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop();
-                  
+
                   if (widget.onGameComplete != null) {
                     await widget.onGameComplete!(
                       accuracy: accuracy,
@@ -1652,10 +1801,7 @@ class _RiddleGameState extends State<RiddleGame> with TickerProviderStateMixin {
                 icon: const Icon(Icons.arrow_forward_rounded, size: 22),
                 label: const Text(
                   'Next Game',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
@@ -1823,7 +1969,11 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                       color: const Color(0xFF5B6F4A).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.lock, color: Color(0xFF5B6F4A), size: 28),
+                    child: const Icon(
+                      Icons.lock,
+                      color: Color(0xFF5B6F4A),
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(

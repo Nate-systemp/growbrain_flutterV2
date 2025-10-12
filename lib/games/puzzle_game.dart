@@ -17,10 +17,11 @@ class PuzzleGame extends StatefulWidget {
     required String challengeFocus,
     required String gameName,
     required String difficulty,
-  })? onGameComplete;
+  })?
+  onGameComplete;
 
   const PuzzleGame({Key? key, required this.difficulty, this.onGameComplete})
-      : super(key: key);
+    : super(key: key);
 
   @override
   _PuzzleGameState createState() => _PuzzleGameState();
@@ -35,8 +36,7 @@ class PuzzleTile {
   bool get isEmpty => value == 0;
 }
 
-class _PuzzleGameState extends State<PuzzleGame>
-    with TickerProviderStateMixin {
+class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
   List<PuzzleTile> tiles = [];
   int gridSize = 3;
   int moves = 0;
@@ -99,7 +99,10 @@ class _PuzzleGameState extends State<PuzzleGame>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _goOpacity = CurvedAnimation(parent: _goController, curve: Curves.easeInOut);
+    _goOpacity = CurvedAnimation(
+      parent: _goController,
+      curve: Curves.easeInOut,
+    );
     _goScale = Tween<double>(begin: 0.90, end: 1.0).animate(
       CurvedAnimation(parent: _goController, curve: Curves.easeOutBack),
     );
@@ -120,7 +123,9 @@ class _PuzzleGameState extends State<PuzzleGame>
 
   void _initializeGame() {
     // Normalize difficulty
-    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(widget.difficulty);
+    _normalizedDifficulty = DifficultyUtils.normalizeDifficulty(
+      widget.difficulty,
+    );
 
     // Set grid size based on difficulty
     switch (_normalizedDifficulty) {
@@ -230,13 +235,16 @@ class _PuzzleGameState extends State<PuzzleGame>
         slidingToPosition = _getPositionOffset(emptyIndex);
       });
 
-      _slideAnimation = Tween<Offset>(
-        begin: slidingFromPosition!,
-        end: slidingToPosition!,
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeOutCubic,
-      ));
+      _slideAnimation =
+          Tween<Offset>(
+            begin: slidingFromPosition!,
+            end: slidingToPosition!,
+          ).animate(
+            CurvedAnimation(
+              parent: _slideController,
+              curve: Curves.easeOutCubic,
+            ),
+          );
 
       _slideController.reset();
       _slideController.forward().then((_) {
@@ -296,10 +304,7 @@ class _PuzzleGameState extends State<PuzzleGame>
     int col = index % gridSize;
     double tileSize = 80.0; // Approximate tile size
     double spacing = 4.0;
-    return Offset(
-      col * (tileSize + spacing),
-      row * (tileSize + spacing),
-    );
+    return Offset(col * (tileSize + spacing), row * (tileSize + spacing));
   }
 
   bool _checkIfSolved() {
@@ -401,7 +406,9 @@ class _PuzzleGameState extends State<PuzzleGame>
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20),
           title: Column(
             children: [
@@ -419,11 +426,7 @@ class _PuzzleGameState extends State<PuzzleGame>
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.celebration,
-                  color: Colors.white,
-                  size: 48,
-                ),
+                child: Icon(Icons.celebration, color: Colors.white, size: 48),
               ),
               const SizedBox(height: 16),
               Text(
@@ -477,7 +480,10 @@ class _PuzzleGameState extends State<PuzzleGame>
                         icon: const Icon(Icons.refresh, size: 22),
                         label: const Text(
                           'Play Again',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
@@ -498,7 +504,11 @@ class _PuzzleGameState extends State<PuzzleGame>
                           Navigator.of(context).pop();
                           Navigator.of(context).pop();
                         },
-                        icon: Icon(Icons.exit_to_app, size: 22, color: primaryColor),
+                        icon: Icon(
+                          Icons.exit_to_app,
+                          size: 22,
+                          color: primaryColor,
+                        ),
                         label: Text(
                           'Exit',
                           style: TextStyle(
@@ -531,10 +541,7 @@ class _PuzzleGameState extends State<PuzzleGame>
                   icon: const Icon(Icons.arrow_forward_rounded, size: 22),
                   label: const Text(
                     'Next Game',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
@@ -652,10 +659,7 @@ class _PuzzleGameState extends State<PuzzleGame>
           ),
           content: Text(
             'Are you sure you want to skip this puzzle and move to the next game?',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 16),
             textAlign: TextAlign.center,
           ),
           actions: [
@@ -684,30 +688,31 @@ class _PuzzleGameState extends State<PuzzleGame>
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop(); // Close dialog
-                      
+
                       // Mark game as completed with skip
                       setState(() {
                         gameCompleted = true;
                         isPuzzleSolved = false; // Not actually solved
                       });
-                      
+
                       // Stop timers
                       gameTimer?.cancel();
                       nextGameTimer?.cancel();
-                      
+
                       // Give a default accuracy for skipped games
                       int accuracy = 30; // Low accuracy for skip
-                      
+
                       if (widget.onGameComplete != null) {
                         widget.onGameComplete!(
                           accuracy: accuracy,
                           completionTime: timeElapsed,
-                          challengeFocus: 'Problem-solving and spatial reasoning',
+                          challengeFocus:
+                              'Problem-solving and spatial reasoning',
                           gameName: 'Puzzle Game',
                           difficulty: _normalizedDifficulty,
                         );
                       }
-                      
+
                       _showSkipCompletionDialog();
                     },
                     style: ElevatedButton.styleFrom(
@@ -771,10 +776,7 @@ class _PuzzleGameState extends State<PuzzleGame>
               SizedBox(height: 8),
               Text(
                 'Time: ${_formatTime(timeElapsed)}',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -798,10 +800,7 @@ class _PuzzleGameState extends State<PuzzleGame>
                 ),
                 child: Text(
                   'Next Game',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -829,7 +828,9 @@ class _PuzzleGameState extends State<PuzzleGame>
         return _TeacherPinDialog(
           onPinVerified: () {
             Navigator.of(dialogContext).pop();
-            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/home', (route) => false);
           },
           onCancel: () {
             Navigator.of(dialogContext).pop();
@@ -849,8 +850,10 @@ class _PuzzleGameState extends State<PuzzleGame>
       onPressed: () {
         bool showSimple = false;
         // Speak the initial help text
-        HelpTtsManager().speak('Slide the tiles to arrange them in order. Tap a tile next to the empty space to move it.');
-        
+        HelpTtsManager().speak(
+          'Slide the tiles to arrange them in order. Tap a tile next to the empty space to move it.',
+        );
+
         showDialog(
           context: context,
           barrierDismissible: true,
@@ -863,7 +866,9 @@ class _PuzzleGameState extends State<PuzzleGame>
                 },
                 child: Dialog(
                   backgroundColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFD740),
@@ -878,128 +883,142 @@ class _PuzzleGameState extends State<PuzzleGame>
                       ],
                     ),
                     child: SizedBox(
-                  width: 320,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+                      width: 320,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF5B6F4A,
+                                    ).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.help_outline,
+                                    color: Color(0xFF5B6F4A),
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Need Help?',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF5B6F4A),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF5B6F4A).withOpacity(0.2),
+                                color: Colors.white.withOpacity(0.8),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.help_outline, color: Color(0xFF5B6F4A), size: 28),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
                               child: Text(
-                                'Need Help?',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
+                                showSimple
+                                    ? 'Tap any tile next to the empty dark box to move it there. Keep moving tiles until all numbers are in order from 1 to ${gridSize * gridSize - 1}!'
+                                    : 'Slide the tiles to arrange them in order from 1 to ${gridSize * gridSize - 1}. Tap a tile next to the empty space to move it.',
+                                style: const TextStyle(
+                                  fontSize: 16,
                                   color: Color(0xFF5B6F4A),
+                                  fontWeight: FontWeight.w600,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            showSimple
-                                ? 'Tap any tile next to the empty dark box to move it there. Keep moving tiles until all numbers are in order from 1 to ${gridSize * gridSize - 1}!'
-                                : 'Slide the tiles to arrange them in order from 1 to ${gridSize * gridSize - 1}. Tap a tile next to the empty space to move it.',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF5B6F4A),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        if (showSimple)
-                          const SizedBox(height: 16),
-                        if (showSimple)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'That\'s the simpler explanation!',
-                              style: TextStyle(
-                                color: Color(0xFF5B6F4A),
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DecoratedBox(
+                            if (showSimple) const SizedBox(height: 16),
+                            if (showSimple)
+                              Container(
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF5B6F4A).withOpacity(0.6),
-                                      blurRadius: 0,
-                                      spreadRadius: 0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                                  color: Colors.white.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: TextButton(
-                                  onPressed: () {
-                                    if (!showSimple) {
-                                      setState(() {
-                                        showSimple = true;
-                                        // Speak the simpler explanation
-                                        HelpTtsManager().speak('Tap any tile next to the empty dark box to move it there. Keep moving tiles until all numbers are in order!');
-                                      });
-                                    } else {
-                                      HelpTtsManager().stop();
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: const Color(0xFF5B6F4A),
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    elevation: 0,
+                                child: const Text(
+                                  'That\'s the simpler explanation!',
+                                  style: TextStyle(
+                                    color: Color(0xFF5B6F4A),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  child: Text(
-                                    showSimple ? 'Close' : 'More Help?',
-                                    style: const
-                                    TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF5B6F4A,
+                                          ).withOpacity(0.6),
+                                          blurRadius: 0,
+                                          spreadRadius: 0,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () {
+                                        if (!showSimple) {
+                                          setState(() {
+                                            showSimple = true;
+                                            // Speak the simpler explanation
+                                            HelpTtsManager().speak(
+                                              'Tap any tile next to the empty dark box to move it there. Keep moving tiles until all numbers are in order!',
+                                            );
+                                          });
+                                        } else {
+                                          HelpTtsManager().stop();
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: const Color(
+                                          0xFF5B6F4A,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        showSimple ? 'Close' : 'More Help?',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
                   ),
                 ),
               );
@@ -1039,7 +1058,9 @@ class _PuzzleGameState extends State<PuzzleGame>
                       Expanded(
                         child: showingCountdown
                             ? _buildCountdownScreen()
-                            : (gameStarted ? _buildGameArea() : _buildStartScreen()),
+                            : (gameStarted
+                                  ? _buildGameArea()
+                                  : _buildStartScreen()),
                       ),
                     ],
                   ),
@@ -1110,11 +1131,7 @@ class _PuzzleGameState extends State<PuzzleGame>
                 ),
               // Show Need Help button ONLY when in-game
               if (gameStarted && !showingCountdown && !gameCompleted)
-                Positioned(
-                  left: 24,
-                  bottom: 24,
-                  child: _buildHelpButton(),
-                ),
+                Positioned(left: 24, bottom: 24, child: _buildHelpButton()),
             ],
           ),
         ),
@@ -1193,155 +1210,297 @@ class _PuzzleGameState extends State<PuzzleGame>
   Widget _buildStartScreen() {
     final size = MediaQuery.of(context).size;
     final bool isTablet = size.shortestSide >= 600;
-    final double panelMaxWidth = isTablet ? 560.0 : 420.0;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: min(size.width * 0.9, panelMaxWidth),
+    // Calculate sizes based on tablet dimensions
+    final double centralButtonSize = isTablet ? 200.0 : 160.0;
+    final double textButtonWidth = isTablet ? 280.0 : 220.0;
+    final double textButtonHeight = isTablet ? 80.0 : 60.0;
+    final double navArrowSize = isTablet ? 60.0 : 50.0;
+    final double backButtonSize = isTablet ? 50.0 : 40.0;
+
+    return Stack(
+      children: [
+        // Back Button (Top-Left)
+        Positioned(
+          top: 20,
+          left: 20,
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: backButtonSize,
+                  height: backButtonSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(2, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.grey[800],
+                      size: backButtonSize * 0.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Back',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isTablet ? 20 : 16,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 2,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: primaryColor.withOpacity(0.25),
-                offset: const Offset(0, 12),
-                blurRadius: 24,
-                spreadRadius: 2,
+
+        // Left Navigation Arrow
+        Positioned(
+          left: 40,
+          top: size.height * 0.5 - navArrowSize * 0.5,
+          child: GestureDetector(
+            onTap: () {
+              // Add navigation logic here if needed
+            },
+            child: Container(
+              width: navArrowSize,
+              height: navArrowSize,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
+                ],
               ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.5),
-                offset: const Offset(0, -4),
-                blurRadius: 12,
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.grey[800],
+                  size: navArrowSize * 0.4,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Right Navigation Arrow
+        Positioned(
+          right: 40,
+          top: size.height * 0.5 - navArrowSize * 0.5,
+          child: GestureDetector(
+            onTap: () {
+              // Add navigation logic here if needed
+            },
+            child: Container(
+              width: navArrowSize,
+              height: navArrowSize,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.grey[800],
+                  size: navArrowSize * 0.4,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Central Content
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Central Puzzle Button
+              GestureDetector(
+                onTap: _startGame,
+                child: Container(
+                  width: centralButtonSize,
+                  height: centralButtonSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFFFB399), // Light peach
+                        Color(0xFFFF8A65), // Darker peach
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 0,
+                        offset: const Offset(4, 8),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.extension,
+                      size: centralButtonSize * 0.4,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Text Button
+              GestureDetector(
+                onTap: _startGame,
+                child: Container(
+                  width: textButtonWidth,
+                  height: textButtonHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(2, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      'PUZZLE\nGAME',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isTablet ? 24 : 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.grey[800],
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+
+        // Top-Right Icons
+        Positioned(
+          top: 20,
+          right: 20,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Puzzle Game',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: isTablet ? 42 : 34,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
+              // Lightbulb Icon
               Container(
-                width: isTablet ? 100 : 84,
-                height: isTablet ? 100 : 84,
+                width: isTablet ? 40 : 32,
+                height: isTablet ? 40 : 32,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: primaryColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 0,
-                      offset: Offset(0, 4),
-                      spreadRadius: 0,
-                    ),
-                  ],
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  Icons.extension,
-                  size: isTablet ? 56 : 48,
-                  color: Colors.white,
+                child: Center(
+                  child: Icon(
+                    Icons.lightbulb_outline,
+                    size: isTablet ? 24 : 20,
+                    color: Colors.grey[600],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Solve the puzzle!',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: isTablet ? 22 : 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 200),
-                crossFadeState: showSimpleInstruction
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                firstChild: Text(
-                  'Slide the tiles to arrange them in order from 1 to ${gridSize * gridSize - 1}. Tap a tile next to the empty space to move it.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: primaryColor.withOpacity(0.85),
-                    fontSize: isTablet ? 18 : 15,
-                    height: 1.35,
-                  ),
+              // Brain Icon
+              Container(
+                width: isTablet ? 40 : 32,
+                height: isTablet ? 40 : 32,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                secondChild: Text(
-                  'Tap any tile next to the empty dark box to move it there. Keep moving tiles until all numbers are in order from 1 to ${gridSize * gridSize - 1}!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: primaryColor.withOpacity(0.9),
-                    fontSize: isTablet ? 18 : 15,
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    showSimpleInstruction = !showSimpleInstruction;
-                  });
-                },
-                icon: Icon(Icons.help_outline, color: primaryColor),
-                label: Text(
-                  showSimpleInstruction
-                      ? 'Show Original Instruction'
-                      : 'Need a simpler explanation?',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: isTablet ? 16 : 14,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _startGame,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      vertical: isTablet ? 18 : 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 4,
-                    shadowColor: primaryColor.withOpacity(0.5),
-                  ),
-                  child: Text(
-                    'START GAME',
-                    style: TextStyle(
-                      fontSize: isTablet ? 22 : 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                    ),
+                child: Center(
+                  child: Icon(
+                    Icons.psychology_outlined,
+                    size: isTablet ? 24 : 20,
+                    color: Colors.grey[600],
                   ),
                 ),
               ),
             ],
           ),
         ),
-      ),
+
+        // Bottom-Left Decorative Elements
+        Positioned(
+          bottom: 40,
+          left: 40,
+          child: Column(
+            children: [
+              // Plus Sign
+              Container(
+                width: isTablet ? 30 : 24,
+                height: isTablet ? 30 : 24,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add,
+                    size: isTablet ? 20 : 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Minus Sign
+              Container(
+                width: isTablet ? 30 : 24,
+                height: isTablet ? 30 : 24,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.remove,
+                    size: isTablet ? 20 : 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1350,23 +1509,44 @@ class _PuzzleGameState extends State<PuzzleGame>
       children: [
         // Main puzzle area
         Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 500,
-              maxHeight: 500,
-            ),
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: Container(
-                padding: EdgeInsets.all(12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate optimal grid size based on available space
+              final availableSize = min(
+                constraints.maxWidth,
+                constraints.maxHeight,
+              );
+              final gridContainerSize = min(
+                availableSize * 0.7,
+                400.0,
+              ); // Use 70% of available space, max 400px
+
+              // Calculate tile size accounting for padding, margins, and spacing
+              final padding = 12.0; // Container padding
+              final margin =
+                  2.0; // Tile margin (2px on each side = 4px total per tile)
+              final spacing = 4.0; // Spacing between tiles
+              final totalMarginSpacing =
+                  (gridSize - 1) * (margin * 2 + spacing);
+              final tileSize =
+                  (gridContainerSize - padding * 2 - totalMarginSpacing) /
+                  gridSize;
+
+              return Container(
+                width: gridContainerSize,
+                height: gridContainerSize,
+                padding: EdgeInsets.all(padding),
                 decoration: BoxDecoration(
                   color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
+                  border: Border.all(
+                    color: primaryColor.withOpacity(0.3),
+                    width: 2,
+                  ),
                 ),
-                child: _buildPuzzleGrid(),
-              ),
-            ),
+                child: _buildPuzzleGridWithFixedSize(tileSize),
+              );
+            },
           ),
         ),
         // Game stats
@@ -1419,10 +1599,7 @@ class _PuzzleGameState extends State<PuzzleGame>
                   SizedBox(width: 6),
                   Text(
                     'Next Game',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1515,6 +1692,37 @@ class _PuzzleGameState extends State<PuzzleGame>
     );
   }
 
+  Widget _buildPuzzleGridWithFixedSize(double tileSize) {
+    return Stack(
+      children: [
+        // Grid background with fixed tile sizes
+        Column(
+          children: List.generate(gridSize, (row) {
+            return Row(
+              children: List.generate(gridSize, (col) {
+                final index = row * gridSize + col;
+                return Container(
+                  width: tileSize,
+                  height: tileSize,
+                  margin: EdgeInsets.all(2.0), // Consistent 2px margin
+                  child: _buildTile(index),
+                );
+              }),
+            );
+          }),
+        ),
+        // Animated sliding tile
+        if (isAnimating && slidingTileIndex != null)
+          AnimatedBuilder(
+            animation: _slideAnimation,
+            builder: (context, child) {
+              return _buildSlidingTileWithSize(tileSize);
+            },
+          ),
+      ],
+    );
+  }
+
   Widget _buildTile(int index) {
     PuzzleTile tile = tiles[index];
 
@@ -1577,7 +1785,7 @@ class _PuzzleGameState extends State<PuzzleGame>
     if (slidingTileIndex == null) return SizedBox.shrink();
 
     PuzzleTile tile = tiles[slidingTileIndex!];
-    
+
     return Positioned(
       left: _slideAnimation.value.dx,
       top: _slideAnimation.value.dy,
@@ -1604,6 +1812,47 @@ class _PuzzleGameState extends State<PuzzleGame>
             '${tile.value}',
             style: TextStyle(
               fontSize: gridSize == 3 ? 32 : (gridSize == 4 ? 24 : 20),
+              fontWeight: FontWeight.bold,
+              color: tileTextColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlidingTileWithSize(double tileSize) {
+    if (slidingTileIndex == null) return SizedBox.shrink();
+
+    PuzzleTile tile = tiles[slidingTileIndex!];
+
+    return Positioned(
+      left: _slideAnimation.value.dx,
+      top: _slideAnimation.value.dy,
+      child: Container(
+        width: tileSize,
+        height: tileSize,
+        margin: EdgeInsets.all(2.0), // Consistent 2px margin
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [tileColor, tileColor.withOpacity(0.8)],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 6,
+              offset: Offset(3, 3),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            '${tile.value}',
+            style: TextStyle(
+              fontSize: tileSize * 0.4, // Scale font size based on tile size
               fontWeight: FontWeight.bold,
               color: tileTextColor,
             ),
@@ -1724,7 +1973,11 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                       color: const Color(0xFF5B6F4A).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.lock, color: const Color(0xFF5B6F4A), size: 28),
+                    child: Icon(
+                      Icons.lock,
+                      color: const Color(0xFF5B6F4A),
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1749,9 +2002,10 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                 child: Text(
                   'Enter your 6-digit PIN to exit the session and access teacher features.',
                   style: TextStyle(
-                      fontSize: 16,
-                      color: const Color(0xFF5B6F4A),
-                      fontWeight: FontWeight.w600),
+                    fontSize: 16,
+                    color: const Color(0xFF5B6F4A),
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -1776,26 +2030,35 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                   obscureText: true,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 24,
-                      letterSpacing: 8,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5B6F4A)),
+                    fontSize: 24,
+                    letterSpacing: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5B6F4A),
+                  ),
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: '••••••',
                     hintStyle: TextStyle(
-                        color: const Color(0xFF5B6F4A).withOpacity(0.4),
-                        letterSpacing: 8),
+                      color: const Color(0xFF5B6F4A).withOpacity(0.4),
+                      letterSpacing: 8,
+                    ),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                     focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: const Color(0xFF5B6F4A), width: 2)),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF5B6F4A),
+                        width: 2,
+                      ),
+                    ),
                     errorText: _error,
                     errorStyle: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
                     fillColor: Colors.white,
                     filled: true,
                   ),
@@ -1811,10 +2074,11 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.grey.withOpacity(0.6),
-                              blurRadius: 0,
-                              spreadRadius: 0,
-                              offset: Offset(0, 4))
+                            color: Colors.grey.withOpacity(0.6),
+                            blurRadius: 0,
+                            spreadRadius: 0,
+                            offset: Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: TextButton(
@@ -1830,12 +2094,17 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                           foregroundColor: const Color(0xFF5B6F4A),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18)),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                           elevation: 0,
                         ),
-                        child: const Text('Cancel',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w900)),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1846,10 +2115,11 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                              color: const Color(0xFF5B6F4A).withOpacity(0.6),
-                              blurRadius: 0,
-                              spreadRadius: 0,
-                              offset: Offset(0, 4))
+                            color: const Color(0xFF5B6F4A).withOpacity(0.6),
+                            blurRadius: 0,
+                            spreadRadius: 0,
+                            offset: Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: ElevatedButton(
@@ -1859,7 +2129,8 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                           foregroundColor: const Color(0xFFFFD740),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18)),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                           elevation: 0,
                         ),
                         child: _isLoading
@@ -1867,12 +2138,19 @@ class _TeacherPinDialogState extends State<_TeacherPinDialog> {
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Color(0xFFFFD740))))
-                            : const Text('Verify',
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFFFD740),
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Verify',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w900)),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                       ),
                     ),
                   ),
