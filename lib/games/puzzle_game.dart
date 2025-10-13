@@ -109,6 +109,11 @@ class _PuzzleGameState extends State<PuzzleGame> with TickerProviderStateMixin {
 
     BackgroundMusicManager().startGameMusic('Puzzle');
     _initializeGame();
+
+    // Auto-start the game to skip the start screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startGame();
+    });
   }
 
   @override
