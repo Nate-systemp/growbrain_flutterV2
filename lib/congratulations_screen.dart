@@ -78,39 +78,6 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
         : 0.0;
     final totalGames = widget.sessionRecords.length;
 
-    // For game icons in circles
-    List<Widget> gameCircles = List.generate(5, (i) {
-      if (i < widget.sessionRecords.length) {
-        final record = widget.sessionRecords[i];
-        final gameName = record['game']?.toString() ?? '';
-        final icon = _getGameIcon(gameName);
-        return Container(
-          width: 42,
-          height: 42,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.black.withOpacity(0.18), width: 2),
-          ),
-          child: Center(
-            child: Icon(icon, size: 20, color: Colors.black.withOpacity(0.7)),
-          ),
-        );
-      } else {
-        return Container(
-          width: 42,
-          height: 42,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.black.withOpacity(0.18), width: 2),
-          ),
-        );
-      }
-    });
-
     return Scaffold(
       backgroundColor: const Color(0xFF5B6F4A),
       body: Stack(
@@ -130,28 +97,24 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
             child: Center(
               child: SingleChildScrollView(
                 child: Container(
-                  width: 820,
-                  height: 650,
+                  width: 600,
                   margin: const EdgeInsets.symmetric(
                     vertical: 72,
                     horizontal: 12,
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 72,
-                    vertical: 28,
+                    horizontal: 48,
+                    vertical: 48,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFDF6E3),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                      color: const Color(0xFF3BB3FF),
-                      width: 2,
-                    ),
+                    borderRadius: BorderRadius.circular(40),
+                  
                     boxShadow: [
                       BoxShadow(
-                        color: const Color.fromARGB(255, 27, 48, 22).withOpacity(0.45), // dark green
+                        color: Colors.black.withOpacity(0.25),
                         blurRadius: 0,
-                        offset: const Offset(0, 12),
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
@@ -162,169 +125,133 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
                       Text(
                         'Congratulations',
                         style: GoogleFonts.poppins(
-                          fontSize: 52,
+                          fontSize: 48,
                           fontWeight: FontWeight.w900,
-                          color: Colors.black.withOpacity(0.85),
-                          shadows: [
-                            Shadow(
-                              color: const Color.fromARGB(255, 48, 48, 48).withOpacity(0.18),
-                              offset: Offset(0, 3),
-                              blurRadius: 0,
-                            ),
-                          ],
+                          color: const Color(0xFF00A651),
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       // Student Name
                       Text(
                         widget.student['fullName'] ?? '',
                         style: GoogleFonts.poppins(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black.withOpacity(0.9),
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.10),
-                              offset: Offset(0, 2),
-                              blurRadius: 1,
-                            ),
-                          ],
+                          fontSize: 28,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black.withOpacity(0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 32),
                       // Divider with label
                       Row(
                         children: [
                           Expanded(
                             child: Container(
-                              height: 7,
-                              color: Colors.black.withOpacity(.7),
+                              height: 3,
+                              color: const Color(0xFF00A651),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Text(
                             'Your Results',
                             style: GoogleFonts.poppins(
-                              fontSize: 38,
+                              fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: Colors.black.withOpacity(0.7),
-                              letterSpacing: 1,
+                              color: const Color(0xFF00A651),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Container(
-                              height: 7,
-                              color: Colors.black.withOpacity(.7),
+                              height: 3,
+                              color: const Color(0xFF00A651),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 58),
-                      // Stats
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'SCORE',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.black.withOpacity(0.7),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  'TIME',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.black.withOpacity(0.7),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  'GAMES',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.black.withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${avgAccuracy.toStringAsFixed(0)}%',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black.withOpacity(0.8),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  avgCompletionTime >= 60
-                                      ? '${(avgCompletionTime / 60).round()}mins'
-                                      : '${avgCompletionTime.toStringAsFixed(0)}s',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black.withOpacity(0.8),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: gameCircles,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 32),
+                      // Stats with icons
+                      _buildStatRow(
+                        icon: Icons.emoji_events,
+                        iconColor: Colors.amber,
+                        label: 'SCORE',
+                        value: '${avgAccuracy.toStringAsFixed(0)}%',
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
+                      _buildStatRow(
+                        icon: Icons.schedule,
+                        iconColor: Colors.orange,
+                        label: 'TIME',
+                        value: avgCompletionTime >= 60
+                            ? '${(avgCompletionTime / 60).round()}mins'
+                            : '${avgCompletionTime.toStringAsFixed(0)}s',
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGamesRow(totalGames),
+                      const SizedBox(height: 32),
+                      // Motivational message
+                      Text(
+                        'Great job, ${widget.student['fullName']?.split(' ').first ?? ''}! You\'re improving!',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF00A651),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
                       // Home Button
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5B6F4A),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/home',
+                            (route) => false,
+                          );
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 23,
+                            vertical: 16,
                           ),
-                          icon: const Icon(Icons.home, size: 24),
-                          label: Text(
-                            'HOME',
-                            style: GoogleFonts.poppins(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFA500),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6B4423),
+                                offset: const Offset(0, 6),
+                                blurRadius: 0,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(0, 8),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
-                          onPressed: () {
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                              '/home',
-                              (route) => false,
-                            );
-                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.home,
+                                size: 28,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'HOME',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -337,36 +264,70 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
       ),
     );
   }
+  Widget _buildStatRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 40, color: iconColor),
+        const SizedBox(width: 16),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: Colors.black.withOpacity(0.8),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF00A651),
+          ),
+        ),
+      ],
+    );
+  }
 
-  // Helper for icon per game name - aligned with game icons
-  IconData _getGameIcon(String gameName) {
-    switch (gameName.toLowerCase()) {
-      case 'who moved?':
-        return Icons.visibility;
-      case 'light tap':
-        return Icons.touch_app;
-      case 'find me':
-        return Icons.search;
-      case 'sound match':
-        return Icons.music_note;
-      case 'rhyme time':
-        return Icons.record_voice_over;
-      case 'picture words':
-        return Icons.image;
-      case 'match cards':
-        return Icons.style;
-      case 'fruit shuffle':
-        return Icons.apple;
-      case 'object hunt':
-        return Icons.explore;
-      case 'tictactoe':
-        return Icons.grid_3x3;
-      case 'puzzle':
-        return Icons.extension;
-      case 'riddle game':
-        return Icons.question_mark;
-      default:
-        return Icons.gamepad;
-    }
+  Widget _buildGamesRow(int totalGames) {
+    return Row(
+      children: [
+        Icon(Icons.sports_esports, size: 40, color: const Color(0xFF2D5A3D)),
+        const SizedBox(width: 16),
+        Text(
+          'GAMES',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: Colors.black.withOpacity(0.8),
+          ),
+        ),
+        const Spacer(),
+        Row(
+          children: List.generate(3, (index) {
+            if (index < totalGames) {
+              return Icon(
+                Icons.star,
+                size: 36,
+                color: Colors.amber,
+              );
+            } else {
+              return Icon(
+                Icons.star,
+                size: 36,
+                color: Colors.grey.withOpacity(0.5),
+              );
+            }
+          }).expand((star) => [star, const SizedBox(width: 8)]).toList()
+            ..removeLast(),
+        ),
+      ],
+    );
   }
 }
