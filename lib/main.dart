@@ -42,6 +42,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        
       ),
       initialRoute: user == null ? '/' : '/home',
       routes: {

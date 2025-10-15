@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'utils/sound_effects_manager.dart';
 
 class CongratulationsScreen extends StatefulWidget {
@@ -62,699 +63,271 @@ class _CongratulationsScreenState extends State<CongratulationsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop:
-          false, // Prevent back navigation - user must use "Go Back Home" button
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA), // Light clean background
-        body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-
-                  // Simple celebration header
-                  AnimatedBuilder(
-                    animation: _bounceAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _bounceAnimation.value,
-                        child: _buildSimpleCelebrationHeader(),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Clear stats section
-                  _buildSimpleStatsSection(),
-
-                  const SizedBox(height: 24),
-
-                  // Game records section
-                  if (widget.sessionRecords.isNotEmpty)
-                    _buildSimpleGameRecordsSection(),
-
-                  const SizedBox(height: 40),
-
-                  // Big, clear action button
-                  _buildSimpleActionButton(),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSimpleCelebrationHeader() {
-    return Stack(
-      children: [
-        // Animated sparkles/confetti
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: _sparkleAnimation,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: _ConfettiPainter(_sparkleAnimation.value),
-              );
-            },
-          ),
-        ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFDCFDF7), Color(0xFFFEF3C7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Trophy illustration
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFF59E0B), Color(0xFFFFF9C4)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.amber.withOpacity(0.3),
-                      blurRadius: 18,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.all(18),
-                child: Icon(
-                  Icons.emoji_events,
-                  color: Color(0xFFF59E0B),
-                  size: 64,
-                ),
-              ),
-              const SizedBox(height: 18),
-              // Animated stars
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.star, color: Colors.amber, size: 32),
-                  SizedBox(width: 8),
-                  Icon(Icons.star, color: Colors.amberAccent, size: 40),
-                  SizedBox(width: 8),
-                  Icon(Icons.star, color: Colors.amber, size: 32),
-                ],
-              ),
-              const SizedBox(height: 18),
-              // Big happy face
-              const Text('😊', style: TextStyle(fontSize: 80)),
-              const SizedBox(height: 18),
-              // Pop-out congratulation text
-              Text(
-                'GREAT JOB!',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF059669),
-                  letterSpacing: 2,
-                  shadows: [
-                    Shadow(
-                      color: Colors.greenAccent.withOpacity(0.5),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFDF7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF059669), width: 1),
-                ),
-                child: const Text(
-                  'You finished all your games! 🎮',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Color(0xFF065F46),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Student name - simple and clear
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${widget.student['fullName'] ?? 'Amazing Student'}!',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSimpleStatsSection() {
-    if (widget.sessionRecords.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text('🎮', style: TextStyle(fontSize: 32)),
-            ),
-            const SizedBox(width: 16),
-            const Text(
-              'Ready to start!',
-              style: TextStyle(
-                fontSize: 20,
-                color: Color(0xFF374151),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Safe calculation with division by zero protection
+    // Calculate stats
     final avgAccuracy = widget.sessionRecords.isNotEmpty
         ? widget.sessionRecords
                   .map((r) => (r['accuracy'] as num?)?.toDouble() ?? 0.0)
                   .reduce((a, b) => a + b) /
               widget.sessionRecords.length
         : 0.0;
-
     final avgCompletionTime = widget.sessionRecords.isNotEmpty
         ? widget.sessionRecords
                   .map((r) => (r['completionTime'] as num?)?.toDouble() ?? 0.0)
                   .reduce((a, b) => a + b) /
               widget.sessionRecords.length
         : 0.0;
-
     final totalGames = widget.sessionRecords.length;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return Scaffold(
+      backgroundColor: const Color(0xFF5B6F4A),
+      body: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFDF7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.bar_chart,
-                  color: Color(0xFF059669),
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Your Results',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF374151),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Simple stat cards in a row
-          Row(
-            children: [
-              Expanded(
-                child: _buildSimpleStatCard(
-                  '${avgAccuracy.toStringAsFixed(0)}%',
-                  'Score',
-                  Icons.star,
-                  const Color(0xFF059669), // Green
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSimpleStatCard(
-                  '${avgCompletionTime.toStringAsFixed(0)}s',
-                  'Time',
-                  Icons.timer,
-                  const Color(0xFF3B82F6), // Blue
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSimpleStatCard(
-                  '$totalGames',
-                  'Games',
-                  Icons.games,
-                  const Color(0xFF8B5CF6), // Purple
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleStatCard(
-    String value,
-    String title,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 2),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleGameRecordsSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Color(0xFFF59E0B),
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Games You Played',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF374151),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Show all played games in a scrollable container
-          if (widget.sessionRecords.isNotEmpty)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 400), // Limit height
-              child: SingleChildScrollView(
-                child: Column(
-                  children: widget.sessionRecords
-                      .map((record) => _buildSimpleRecordCard(record))
-                      .toList(),
-                ),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: const Text(
-                'No games played yet',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6B7280),
-                  fontStyle: FontStyle.italic,
+          // Background image
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/background.png'),
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleRecordCard(Map<String, dynamic> record) {
-    // Safely extract values with fallbacks
-    final gameName = record['game']?.toString() ?? 'Unknown Game';
-    final difficulty = record['difficulty']?.toString() ?? 'Easy';
-    final completionTime = record['completionTime']?.toString() ?? '0';
-    final accuracy = record['accuracy']?.toString() ?? '0';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-      ),
-      child: Row(
-        children: [
-          // Game icon with clear background
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: _getGameColor(gameName).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _getGameColor(gameName).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
+          ),
+          SafeArea(
             child: Center(
-              child: Text(
-                _getGameEmoji(gameName),
-                style: const TextStyle(fontSize: 28),
+              child: SingleChildScrollView(
+                child: Container(
+                  width: 600,
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 72,
+                    horizontal: 12,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 48,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDF6E3),
+                    borderRadius: BorderRadius.circular(40),
+                  
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 0,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title
+                      Text(
+                        'Congratulations',
+                        style: GoogleFonts.poppins(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF00A651),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      // Student Name
+                      Text(
+                        widget.student['fullName'] ?? '',
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      // Divider with label
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 3,
+                              color: const Color(0xFF00A651),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Your Results',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF00A651),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              height: 3,
+                              color: const Color(0xFF00A651),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      // Stats with icons
+                      _buildStatRow(
+                        icon: Icons.emoji_events,
+                        iconColor: Colors.amber,
+                        label: 'SCORE',
+                        value: '${avgAccuracy.toStringAsFixed(0)}%',
+                      ),
+                      const SizedBox(height: 24),
+                      _buildStatRow(
+                        icon: Icons.schedule,
+                        iconColor: Colors.orange,
+                        label: 'TIME',
+                        value: avgCompletionTime >= 60
+                            ? '${(avgCompletionTime / 60).round()}mins'
+                            : '${avgCompletionTime.toStringAsFixed(0)}s',
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGamesRow(totalGames),
+                      const SizedBox(height: 32),
+                      // Motivational message
+                      Text(
+                        'Great job, ${widget.student['fullName']?.split(' ').first ?? ''}! You\'re improving!',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF00A651),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      // Home Button
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/home',
+                            (route) => false,
+                          );
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 23,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFA500),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6B4423),
+                                offset: const Offset(0, 6),
+                                blurRadius: 0,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(0, 8),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.home,
+                                size: 28,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'HOME',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 20),
-
-          // Game info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  gameName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$difficulty Level',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF6B7280),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  'Time: ${completionTime}s',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF6B7280),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Score badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF059669),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'Score',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  '${accuracy}%',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildSimpleActionButton() {
-    return Container(
-      width: double.infinity,
-      height: 64,
-      decoration: BoxDecoration(
-        color: const Color(0xFF3B82F6), // Clear blue
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+  Widget _buildStatRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 40, color: iconColor),
+        const SizedBox(width: 16),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: Colors.black.withOpacity(0.8),
           ),
         ),
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/home', (route) => false);
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.home, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            const Text(
-              'Go Back Home',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        const Spacer(),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF00A651),
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Color _getGameColor(String gameName) {
-    switch (gameName.toLowerCase()) {
-      case 'match cards':
-        return const Color(0xFFEF4444); // Red
-      case 'tictactoe':
-        return const Color(0xFF10B981); // Green
-      case 'puzzle':
-        return const Color(0xFF8B5CF6); // Purple
-      case 'riddle game':
-        return const Color(0xFFF59E0B); // Orange
-      case 'word grid':
-        return const Color(0xFF3B82F6); // Blue
-      case 'scrabble':
-        return const Color(0xFF059669); // Teal
-      case 'who moved?':
-        return const Color(0xFF3B82F6); // Blue
-      case 'light tap':
-        return const Color(0xFFF59E0B); // Orange
-      case 'find me':
-        return const Color(0xFF10B981); // Green
-      case 'fruit shuffle':
-        return const Color(0xFFEF4444); // Red
-      case 'object hunt':
-        return const Color(0xFF8B5CF6); // Purple
-      case 'sound match':
-        return const Color(0xFF059669); // Teal
-      case 'rhyme time':
-        return const Color(0xFF8B5CF6); // Purple
-      case 'picture words':
-        return const Color(0xFFF59E0B); // Orange
-      default:
-        return const Color(0xFF6B7280); // Gray
-    }
+  Widget _buildGamesRow(int totalGames) {
+    return Row(
+      children: [
+        Icon(Icons.sports_esports, size: 40, color: const Color(0xFF2D5A3D)),
+        const SizedBox(width: 16),
+        Text(
+          'GAMES',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: Colors.black.withOpacity(0.8),
+          ),
+        ),
+        const Spacer(),
+        Row(
+          children: List.generate(3, (index) {
+            if (index < totalGames) {
+              return Icon(
+                Icons.star,
+                size: 36,
+                color: Colors.amber,
+              );
+            } else {
+              return Icon(
+                Icons.star,
+                size: 36,
+                color: Colors.grey.withOpacity(0.5),
+              );
+            }
+          }).expand((star) => [star, const SizedBox(width: 8)]).toList()
+            ..removeLast(),
+        ),
+      ],
+    );
   }
-
-  String _getGameEmoji(String gameName) {
-    switch (gameName.toLowerCase()) {
-      case 'match cards':
-        return '🃏';
-      case 'tictactoe':
-        return '⭕';
-      case 'puzzle':
-        return '🧩';
-      case 'riddle game':
-        return '🤔';
-      case 'word grid':
-        return '📝';
-      case 'scrabble':
-        return '🔤';
-      case 'anagram':
-        return '🔀';
-      case 'who moved?':
-        return '👀';
-      case 'light tap':
-        return '💡';
-      case 'find me':
-        return '🔍';
-      case 'fruit shuffle':
-        return '🍎';
-      case 'object hunt':
-        return '🕵️';
-      case 'sound match':
-        return '🔊';
-      case 'rhyme time':
-        return '🎵';
-      case 'picture words':
-        return '🖼️';
-      default:
-        return '🎮';
-    }
-  }
-}
-
-class _ConfettiPainter extends CustomPainter {
-  final double progress;
-  _ConfettiPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rand = math.Random(1234);
-    for (int i = 0; i < 18; i++) {
-      final x = rand.nextDouble() * size.width;
-      final y = (rand.nextDouble() * size.height * 0.4) + progress * 18;
-      final color = Color.lerp(
-        Colors.amber,
-        Colors.greenAccent,
-        rand.nextDouble(),
-      )!;
-      final radius = rand.nextDouble() * 7 + 5;
-      final paint = Paint()..color = color.withOpacity(0.7);
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) =>
-      oldDelegate.progress != progress;
 }
